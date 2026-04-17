@@ -6,7 +6,6 @@
 <title>Beyblade X Score Ultimate</title>
 
 <style>
-
 /* ===== GLOBAL FIXES ===== */
 *{
   -webkit-user-select:none;
@@ -109,6 +108,7 @@ body{
   gap:16px;
   z-index:10;
 }
+
 .dragBtn{
   font-size:42px;
   padding:26px 36px;
@@ -118,6 +118,57 @@ body{
   touch-action:none;
 }
 .dragBtn.active{box-shadow:0 0 45px red}
+
+/* ===== DRAG HINT ARROWS ===== */
+.dragWrapper{
+  position:relative;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+.arrow{
+  position:absolute;
+  font-size:90px;
+  font-weight:bold;
+  color:rgba(0,255,255,.35);
+  text-shadow:0 0 30px cyan;
+  pointer-events:none;
+}
+
+.leftArrow{
+  left:-120px;
+  animation:arrowLeft 1.6s infinite;
+}
+
+.rightArrow{
+  right:-120px;
+  animation:arrowRight 1.6s infinite;
+}
+
+@keyframes arrowLeft{
+  0%{transform:translateX(0);opacity:.2}
+  50%{transform:translateX(-30px);opacity:.7}
+  100%{transform:translateX(0);opacity:.2}
+}
+
+@keyframes arrowRight{
+  0%{transform:translateX(0);opacity:.2}
+  50%{transform:translateX(30px);opacity:.7}
+  100%{transform:translateX(0);opacity:.2}
+}
+
+.arrow.hidden{
+  animation:fadeOut .4s forwards;
+}
+
+@keyframes fadeOut{
+  to{opacity:0; transform:scale(.7)}
+}
+
+@keyframes fadeOut{
+  to{opacity:0;transform:scale(.8)}
+}
 
 /* ===== RESET ===== */
 .resetBtn{
@@ -147,7 +198,7 @@ body{
 }
 .screenReset.active{opacity:1}
 
-/* ===== OVERLAY FIX ===== */
+/* ===== OVERLAY ===== */
 .overlay{
   position:fixed;
   inset:0;
@@ -159,26 +210,22 @@ body{
   background:rgba(0,0,0,.85);
   opacity:0;
   transition:.3s;
-  z-index:100;              /* 🔥 NAD VŠÍM */
+  z-index:100;
   pointer-events:none;
 }
 .overlay.show{opacity:1}
 .win{color:#00ff9d;text-shadow:0 0 50px #00ff9d}
 .xtreme{color:#ff3030;text-shadow:0 0 50px red}
 
-/* ===== MENŠÍ TLAČÍTKA NA STOJÁKA ===== */
-@media (orientation: portrait) {
+/* ===== PORTRAIT ===== */
+@media (orientation:portrait){
   .dragBtn{
-    font-size: 28px;
-    padding: 16px 22px;
-    border-radius: 14px;
+    font-size:28px;
+    padding:16px 22px;
+    border-radius:14px;
   }
-
-  .center{
-    gap: 10px;
-  }
+  .center{gap:10px}
 }
-  
 </style>
 </head>
 
@@ -202,7 +249,13 @@ body{
 
 <div class="center">
   <div class="dragBtn" data-points="3">+3</div>
-  <div class="dragBtn" data-points="2">+2</div>
+
+  <div class="dragWrapper">
+    <div class="arrow leftArrow">‹‹</div>
+    <div class="dragBtn" data-points="2" id="hintBtn">+2</div>
+    <div class="arrow rightArrow">››</div>
+  </div>
+
   <div class="dragBtn" data-points="1">+1</div>
 </div>
 
@@ -215,13 +268,24 @@ body{
 
 <script>
 let score1=0,score2=0,winScore=7,history=[],isLandscape=false
-const s1 = document.getElementById("score1")
-const s2 = document.getElementById("score2")
 
+function changeWin(){
+  const values = [3, 5, 7, 9, 11]
+  let i = values.indexOf(winScore)
+  winScore = values[(i + 1) % values.length]
+  document.getElementById("winScore").innerText = winScore
+}
+
+let firstScoreUsed=false
+
+const s1=document.getElementById("score1")
+const s2=document.getElementById("score2")
 const left=document.getElementById("left")
 const right=document.getElementById("right")
 const topbar=document.getElementById("topbar")
 const resetScreen=document.getElementById("screenReset")
+const overlay=document.getElementById("overlay")
+const arrows=document.querySelectorAll(".arrow")
 
 function showText(t,c){
   overlay.innerText=t
@@ -231,6 +295,12 @@ function showText(t,c){
 
 function addScore(p,pts){
   history.push({p,pts})
+
+  if(!firstScoreUsed){
+    firstScoreUsed=true
+    arrows.forEach(a => a.classList.add("hidden"))
+  }
+
   if(pts==3)showText("XTREME FINISH","xtreme")
   if(p==1){score1+=pts;s1.innerText=score1}
   if(p==2){score2+=pts;s2.innerText=score2}
@@ -238,9 +308,24 @@ function addScore(p,pts){
   if(score2>=winScore)showText("RIGHT WINS","win")
 }
 
-function subtractScore(p){if(p==1&&score1>0)addScore(1,-1);if(p==2&&score2>0)addScore(2,-1)}
-function revert(){let h=history.pop();if(h)h.p==1?(score1-=h.pts,s1.innerText=score1):(score2-=h.pts,s2.innerText=score2)}
-function resetScore(){score1=score2=0;history=[];s1.innerText=s2.innerText=0}
+function subtractScore(p){
+  if(p==1&&score1>0)addScore(1,-1)
+  if(p==2&&score2>0)addScore(2,-1)
+}
+
+function revert(){
+  let h=history.pop()
+  if(!h)return
+  h.p==1?(score1-=h.pts,s1.innerText=score1):(score2-=h.pts,s2.innerText=score2)
+}
+
+function resetScore(){
+  score1=score2=0
+  history=[]
+  firstScoreUsed=false
+  s1.innerText=s2.innerText=0
+ arrows.forEach(a => a.classList.remove("hidden"))
+}
 
 function toggleMenu(){topbar.classList.toggle("hidden")}
 
@@ -252,9 +337,7 @@ async function toggleFullscreen(){
       await screen.orientation.lock("landscape")
       isLandscape=true
     }catch(e){}
-  }else{
-    document.exitFullscreen()
-  }
+  }else document.exitFullscreen()
 }
 
 async function rotateScreen(){
@@ -266,7 +349,11 @@ async function rotateScreen(){
 /* ===== DRAG SCORE ===== */
 document.querySelectorAll(".dragBtn").forEach(b=>{
   let sx=0,dx=0,d=false
-  b.addEventListener("pointerdown",e=>{d=true;sx=e.clientX;b.classList.add("active")})
+  b.addEventListener("pointerdown",e=>{
+    d=true
+    sx=e.clientX
+    b.classList.add("active")
+  })
   b.addEventListener("pointermove",e=>{
     if(!d)return
     dx=e.clientX-sx
@@ -305,3 +392,4 @@ resetBtn.addEventListener("pointerup",()=>{
 
 </body>
 </html>
+``
