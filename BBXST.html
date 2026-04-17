@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Beyblade X Score Ultimate</title>
+
+<style>
+
+/* ===== GLOBAL FIXES ===== */
+*{
+  -webkit-user-select:none;
+  -moz-user-select:none;
+  -ms-user-select:none;
+  user-select:none;
+}
+
+body{
+  margin:0;
+  font-family:Arial,sans-serif;
+  background:black;
+  color:white;
+  display:flex;
+  height:100vh;
+  overflow:hidden;
+}
+
+/* ===== ENERGY ===== */
+.energy{
+  position:fixed;
+  width:200%;
+  height:200%;
+  background:radial-gradient(circle,rgba(0,255,255,0.15),transparent 60%);
+  animation:spin 20s linear infinite;
+  pointer-events:none;
+}
+@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+
+/* ===== TOP MENU ===== */
+.topbar{
+  position:fixed;
+  top:0; left:0;
+  width:100%;
+  display:flex;
+  justify-content:center;
+  gap:10px;
+  padding:10px;
+  background:#000;
+  transition:.3s;
+  z-index:20;
+}
+.topbar.hidden{transform:translateY(-110%)}
+.topbar button{
+  font-size:20px;
+  padding:10px 16px;
+  border:none;
+  border-radius:8px;
+  background:#111;
+  color:white;
+  box-shadow:0 0 12px cyan;
+}
+
+/* ===== MENU TOGGLE ===== */
+.menuToggle{
+  position:fixed;
+  right:20px;
+  bottom:20px;
+  font-size:26px;
+  padding:14px 18px;
+  border-radius:14px;
+  background:#111;
+  color:white;
+  box-shadow:0 0 20px cyan;
+  z-index:30;
+}
+
+/* ===== PLAYERS ===== */
+.player{
+  flex:1;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  transition:box-shadow .2s;
+}
+.left{
+  background:linear-gradient(135deg,#0f1b2a,#000);
+  border-right:3px solid #333;
+}
+.right{
+  background:linear-gradient(135deg,#2a0f0f,#000);
+}
+.left.active{box-shadow:inset 0 0 80px cyan}
+.right.active{box-shadow:inset 0 0 80px red}
+
+.score{
+  font-size:150px;
+  font-weight:bold;
+  text-shadow:0 0 30px cyan;
+  cursor:pointer;
+}
+
+/* ===== CENTER SCORE ===== */
+.center{
+  position:fixed;
+  top:50%; left:50%;
+  transform:translate(-50%,-50%);
+  display:flex;
+  flex-direction:column;
+  gap:16px;
+  z-index:10;
+}
+.dragBtn{
+  font-size:42px;
+  padding:26px 36px;
+  border-radius:18px;
+  background:#111;
+  box-shadow:0 0 22px cyan;
+  touch-action:none;
+}
+.dragBtn.active{box-shadow:0 0 45px red}
+
+/* ===== RESET ===== */
+.resetBtn{
+  position:fixed;
+  left:20px;
+  bottom:20px;
+  width:70px; height:70px;
+  border-radius:50%;
+  background:#300;
+  color:white;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  box-shadow:0 0 20px red;
+  touch-action:none;
+  z-index:25;
+}
+
+.screenReset{
+  position:fixed;
+  inset:0;
+  pointer-events:none;
+  box-shadow:inset 0 0 120px red;
+  opacity:0;
+  transition:.2s;
+  z-index:40;
+}
+.screenReset.active{opacity:1}
+
+/* ===== OVERLAY FIX ===== */
+.overlay{
+  position:fixed;
+  inset:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:80px;
+  font-weight:bold;
+  background:rgba(0,0,0,.85);
+  opacity:0;
+  transition:.3s;
+  z-index:100;              /* 🔥 NAD VŠÍM */
+  pointer-events:none;
+}
+.overlay.show{opacity:1}
+.win{color:#00ff9d;text-shadow:0 0 50px #00ff9d}
+.xtreme{color:#ff3030;text-shadow:0 0 50px red}
+
+</style>
+</head>
+
+<body>
+
+<div class="energy"></div>
+<div id="screenReset" class="screenReset"></div>
+
+<div id="topbar" class="topbar">
+  <button onclick="toggleFullscreen()">FULLSCREEN</button>
+  <button onclick="rotateScreen()">ROTATE</button>
+  <button onclick="changeWin()">WIN: <span id="winScore">7</span></button>
+  <button onclick="revert()">REVERT</button>
+</div>
+
+<button class="menuToggle" onclick="toggleMenu()">☰</button>
+
+<div id="left" class="player left">
+  <div id="score1" class="score" onclick="subtractScore(1)">0</div>
+</div>
+
+<div class="center">
+  <div class="dragBtn" data-points="3">+3</div>
+  <div class="dragBtn" data-points="2">+2</div>
+  <div class="dragBtn" data-points="1">+1</div>
+</div>
+
+<div id="right" class="player right">
+  <div id="score2" class="score" onclick="subtractScore(2)">0</div>
+</div>
+
+<div class="resetBtn">RESET</div>
+<div id="overlay" class="overlay"></div>
+
+<script>
+let score1=0,score2=0,winScore=7,history=[],isLandscape=false
+const s1 = document.getElementById("score1")
+const s2 = document.getElementById("score2")
+
+const left=document.getElementById("left")
+const right=document.getElementById("right")
+const topbar=document.getElementById("topbar")
+const resetScreen=document.getElementById("screenReset")
+
+function showText(t,c){
+  overlay.innerText=t
+  overlay.className="overlay show "+c
+  setTimeout(()=>overlay.className="overlay",1200)
+}
+
+function addScore(p,pts){
+  history.push({p,pts})
+  if(pts==3)showText("XTREME FINISH","xtreme")
+  if(p==1){score1+=pts;s1.innerText=score1}
+  if(p==2){score2+=pts;s2.innerText=score2}
+  if(score1>=winScore)showText("LEFT WINS","win")
+  if(score2>=winScore)showText("RIGHT WINS","win")
+}
+
+function subtractScore(p){if(p==1&&score1>0)addScore(1,-1);if(p==2&&score2>0)addScore(2,-1)}
+function revert(){let h=history.pop();if(h)h.p==1?(score1-=h.pts,s1.innerText=score1):(score2-=h.pts,s2.innerText=score2)}
+function resetScore(){score1=score2=0;history=[];s1.innerText=s2.innerText=0}
+
+function toggleMenu(){topbar.classList.toggle("hidden")}
+
+async function toggleFullscreen(){
+  if(!document.fullscreenElement){
+    await document.documentElement.requestFullscreen()
+    topbar.classList.add("hidden")
+    try{
+      await screen.orientation.lock("landscape")
+      isLandscape=true
+    }catch(e){}
+  }else{
+    document.exitFullscreen()
+  }
+}
+
+async function rotateScreen(){
+  if(!document.fullscreenElement)return alert("Jen ve fullscreen")
+  await screen.orientation.lock(isLandscape?"portrait":"landscape")
+  isLandscape=!isLandscape
+}
+
+/* ===== DRAG SCORE ===== */
+document.querySelectorAll(".dragBtn").forEach(b=>{
+  let sx=0,dx=0,d=false
+  b.addEventListener("pointerdown",e=>{d=true;sx=e.clientX;b.classList.add("active")})
+  b.addEventListener("pointermove",e=>{
+    if(!d)return
+    dx=e.clientX-sx
+    b.style.transform=`translateX(${dx}px)`
+    left.classList.toggle("active",dx<-80)
+    right.classList.toggle("active",dx>80)
+  })
+  b.addEventListener("pointerup",()=>{
+    b.style.transform=""
+    b.classList.remove("active")
+    left.classList.remove("active")
+    right.classList.remove("active")
+    if(dx<-120)addScore(1,+b.dataset.points)
+    if(dx>120)addScore(2,+b.dataset.points)
+    d=false;dx=0
+  })
+})
+
+/* ===== DRAG RESET ===== */
+const resetBtn=document.querySelector(".resetBtn")
+let rx=0,ry=0,drag=false
+resetBtn.addEventListener("pointerdown",e=>{drag=true;rx=e.clientX;ry=e.clientY})
+resetBtn.addEventListener("pointermove",e=>{
+  if(!drag)return
+  let dx=e.clientX-rx,dy=e.clientY-ry
+  resetBtn.style.transform=`translate(${dx}px,${dy}px)`
+  resetScreen.classList.toggle("active",dx>80||dy<-80)
+})
+resetBtn.addEventListener("pointerup",()=>{
+  resetBtn.style.transform=""
+  if(resetScreen.classList.contains("active"))resetScore()
+  resetScreen.classList.remove("active")
+  drag=false
+})
+</script>
+
+</body>
+</html>
