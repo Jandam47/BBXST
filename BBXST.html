@@ -479,6 +479,22 @@ function updateWakeBtnPosition(){
 
 updateWakeBtnPosition()
 window.addEventListener("resize", updateWakeBtnPosition)
+function changeWin() {
+  // Nabídne uživateli zadání nového limitu
+  let newVal = prompt("Zadejte počet bodů pro vítězství:", winScore);
+  
+  if (newVal !== null && !isNaN(newVal) && newVal > 0) {
+    winScore = parseInt(newVal);
+    // Aktualizuje text přímo v tlačítku
+    document.getElementById("winScore").innerText = winScore;
+  }
+}
+  console.log(
+  "%c BEYBLADE X %c Developed by Jandam47 ",
+  "background: #00ffff; color: #000; font-weight: bold; border-radius: 4px 0 0 4px; padding: 2px 8px;",
+  "background: #333; color: #00ffff; border-radius: 0 4px 4px 0; padding: 2px 8px;"
+);
+  
 </script>
 
 </body>
