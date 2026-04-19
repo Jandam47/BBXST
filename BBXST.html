@@ -226,10 +226,70 @@ body{
   }
   .center{gap:10px}
 }
+
+/* ===== WAKE BUTTON ===== */
+.wakeBtn{
+  position:fixed;
+  top:20px;
+  right:20px;
+  width:70px;
+  height:70px;
+  border-radius:50%;
+  background:#111;
+  color:white;
+  font-size:26px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  box-shadow:0 0 20px cyan;
+  z-index:35;
+  touch-action:none;
+  overflow:hidden;
+
+  transition:top .3s; /* důležité */
+}
+
+.wakeBtn{
+  position:fixed;
+  top:20px;
+  right:20px;
+  transition:top .3s;
+}
+
+/* cooldown circle */
+.wakeBtn svg{
+  position:absolute;
+  width:100%;
+  height:100%;
+  transform:rotate(-90deg);
+}
+
+.wakeBtn circle{
+  fill:none;
+  stroke:cyan;
+  stroke-width:6;
+  stroke-dasharray:188; /* circumference */
+  stroke-dashoffset:188;
+  transition:stroke-dashoffset linear;
+}
+
+.wakeBtn.cooldown{
+  box-shadow:0 0 20px red;
+}
+
+
 </style>
 </head>
 
 <body>
+
+<div id="wakeBtn" class="wakeBtn">
+  ⏰
+  <svg>
+    <circle cx="35" cy="35" r="30"></circle>
+  </svg>
+</div>
+
 
 <div class="energy"></div>
 <div id="screenReset" class="screenReset"></div>
@@ -267,6 +327,10 @@ body{
 <div id="overlay" class="overlay"></div>
 
 <script>
+
+
+
+
 let score1=0,score2=0,winScore=7,history=[],isLandscape=false
 
 function changeWin(){
@@ -327,7 +391,10 @@ function resetScore(){
  arrows.forEach(a => a.classList.remove("hidden"))
 }
 
-function toggleMenu(){topbar.classList.toggle("hidden")}
+function toggleMenu(){
+  topbar.classList.toggle("hidden")
+  updateWakeBtnPosition()
+}
 
 async function toggleFullscreen(){
   if(!document.fullscreenElement){
@@ -388,8 +455,80 @@ resetBtn.addEventListener("pointerup",()=>{
   resetScreen.classList.remove("active")
   drag=false
 })
+
+/* ===== WAKE BUTTON ===== */
+const wakeBtn = document.getElementById("wakeBtn")
+const circle = wakeBtn.querySelector("circle")
+
+let cooldownTime = 30
+let cooling = false
+let holdTimer = null
+let cooldownTimeout = null
+
+// HOLD (nastavení času)
+wakeBtn.addEventListener("pointerdown", () => {
+  holdTimer = setTimeout(() => {
+    let val = prompt("Cooldown v sekundách:", cooldownTime)
+    if(val !== null && !isNaN(val) && val > 0){
+      cooldownTime = parseInt(val)
+    }
+  }, 2500)
+})
+
+wakeBtn.addEventListener("pointerup", () => {
+  clearTimeout(holdTimer)
+  startCooldown() // vždy spustí / resetuje
+})
+
+wakeBtn.addEventListener("pointerleave", () => {
+  clearTimeout(holdTimer)
+})
+
+function startCooldown(){
+  // RESET pokud už běží
+  if(cooldownTimeout){
+    clearTimeout(cooldownTimeout)
+  }
+
+  cooling = true
+  wakeBtn.classList.add("cooldown")
+
+  circle.style.transition = "none"
+  circle.style.strokeDashoffset = 188
+
+  setTimeout(() => {
+    circle.style.transition = `stroke-dashoffset ${cooldownTime}s linear`
+    circle.style.strokeDashoffset = 0
+  }, 50)
+
+  cooldownTimeout = setTimeout(() => {
+    cooling = false
+    wakeBtn.classList.remove("cooldown")
+    circle.style.transition = "none"
+    circle.style.strokeDashoffset = 188
+  }, cooldownTime * 1000)
+}
+
+
+function updateWakeBtnPosition(){
+  const isHidden = topbar.classList.contains("hidden")
+
+  if(isHidden){
+    // menu schované → tlačítko nahoru
+    wakeBtn.style.top = "20px"
+  }else{
+    // menu otevřené → tlačítko POD menu (dynamicky)
+    const h = topbar.offsetHeight
+    wakeBtn.style.top = (h + 10) + "px"
+  }
+}
+
+updateWakeBtnPosition()
+
+window.addEventListener("resize", updateWakeBtnPosition)
+
+
 </script>
 
 </body>
 </html>
-``
