@@ -166,10 +166,6 @@ body{
   to{opacity:0; transform:scale(.7)}
 }
 
-@keyframes fadeOut{
-  to{opacity:0;transform:scale(.8)}
-}
-
 /* ===== RESET ===== */
 .resetBtn{
   position:fixed;
@@ -217,17 +213,7 @@ body{
 .win{color:#00ff9d;text-shadow:0 0 50px #00ff9d}
 .xtreme{color:#ff3030;text-shadow:0 0 50px red}
 
-/* ===== PORTRAIT ===== */
-@media (orientation:portrait){
-  .dragBtn{
-    font-size:28px;
-    padding:16px 22px;
-    border-radius:14px;
-  }
-  .center{gap:10px}
-}
-
-/* ===== WAKE BUTTON ===== */
+/* ===== WAKE BUTTON STYLES ===== */
 .wakeBtn{
   position:fixed;
   top:20px;
@@ -245,18 +231,9 @@ body{
   z-index:35;
   touch-action:none;
   overflow:hidden;
-
-  transition:top .3s; /* důležité */
+  transition:top .3s, background 0.3s;
 }
 
-.wakeBtn{
-  position:fixed;
-  top:20px;
-  right:20px;
-  transition:top .3s;
-}
-
-/* cooldown circle */
 .wakeBtn svg{
   position:absolute;
   width:100%;
@@ -268,16 +245,14 @@ body{
   fill:none;
   stroke:cyan;
   stroke-width:6;
-  stroke-dasharray:188; /* circumference */
+  stroke-dasharray:188;
   stroke-dashoffset:188;
-  transition:stroke-dashoffset linear;
+  transition:none;
 }
 
 .wakeBtn.cooldown{
   box-shadow:0 0 20px red;
 }
-
-
 </style>
 </head>
 
@@ -289,7 +264,6 @@ body{
     <circle cx="35" cy="35" r="30"></circle>
   </svg>
 </div>
-
 
 <div class="energy"></div>
 <div id="screenReset" class="screenReset"></div>
@@ -309,13 +283,11 @@ body{
 
 <div class="center">
   <div class="dragBtn" data-points="3">+3</div>
-
   <div class="dragWrapper">
     <div class="arrow leftArrow">‹‹</div>
     <div class="dragBtn" data-points="2" id="hintBtn">+2</div>
     <div class="arrow rightArrow">››</div>
   </div>
-
   <div class="dragBtn" data-points="1">+1</div>
 </div>
 
@@ -327,20 +299,9 @@ body{
 <div id="overlay" class="overlay"></div>
 
 <script>
-
-
-
-
 let score1=0,score2=0,winScore=7,history=[],isLandscape=false
-
-function changeWin(){
-  const values = [3, 5, 7, 9, 11]
-  let i = values.indexOf(winScore)
-  winScore = values[(i + 1) % values.length]
-  document.getElementById("winScore").innerText = winScore
-}
-
 let firstScoreUsed=false
+let wakeActive = false; // Budík je na začátku neaktivní
 
 const s1=document.getElementById("score1")
 const s2=document.getElementById("score2")
@@ -350,6 +311,8 @@ const topbar=document.getElementById("topbar")
 const resetScreen=document.getElementById("screenReset")
 const overlay=document.getElementById("overlay")
 const arrows=document.querySelectorAll(".arrow")
+const wakeBtn = document.getElementById("wakeBtn")
+const circle = wakeBtn.querySelector("circle")
 
 function showText(t,c){
   overlay.innerText=t
@@ -359,17 +322,18 @@ function showText(t,c){
 
 function addScore(p,pts){
   history.push({p,pts})
-
   if(!firstScoreUsed){
     firstScoreUsed=true
     arrows.forEach(a => a.classList.add("hidden"))
   }
-
   if(pts==3)showText("XTREME FINISH","xtreme")
   if(p==1){score1+=pts;s1.innerText=score1}
   if(p==2){score2+=pts;s2.innerText=score2}
   if(score1>=winScore)showText("LEFT WINS","win")
   if(score2>=winScore)showText("RIGHT WINS","win")
+
+  // Spustí cooldown jen pokud byl budík už aktivován ručně
+  if(pts > 0) startCooldown()
 }
 
 function subtractScore(p){
@@ -388,7 +352,8 @@ function resetScore(){
   history=[]
   firstScoreUsed=false
   s1.innerText=s2.innerText=0
- arrows.forEach(a => a.classList.remove("hidden"))
+  arrows.forEach(a => a.classList.remove("hidden"))
+  startCooldown()
 }
 
 function toggleMenu(){
@@ -400,10 +365,7 @@ async function toggleFullscreen(){
   if(!document.fullscreenElement){
     await document.documentElement.requestFullscreen()
     topbar.classList.add("hidden")
-    try{
-      await screen.orientation.lock("landscape")
-      isLandscape=true
-    }catch(e){}
+    try{ await screen.orientation.lock("landscape"); isLandscape=true }catch(e){}
   }else document.exitFullscreen()
 }
 
@@ -417,9 +379,7 @@ async function rotateScreen(){
 document.querySelectorAll(".dragBtn").forEach(b=>{
   let sx=0,dx=0,d=false
   b.addEventListener("pointerdown",e=>{
-    d=true
-    sx=e.clientX
-    b.classList.add("active")
+    d=true; sx=e.clientX; b.classList.add("active")
   })
   b.addEventListener("pointermove",e=>{
     if(!d)return
@@ -456,28 +416,30 @@ resetBtn.addEventListener("pointerup",()=>{
   drag=false
 })
 
-/* ===== WAKE BUTTON ===== */
-const wakeBtn = document.getElementById("wakeBtn")
-const circle = wakeBtn.querySelector("circle")
-
+/* ===== WAKE BUTTON LOGIC ===== */
 let cooldownTime = 30
 let cooling = false
 let holdTimer = null
 let cooldownTimeout = null
 
-// HOLD (nastavení času)
 wakeBtn.addEventListener("pointerdown", () => {
   holdTimer = setTimeout(() => {
     let val = prompt("Cooldown v sekundách:", cooldownTime)
-    if(val !== null && !isNaN(val) && val > 0){
-      cooldownTime = parseInt(val)
-    }
+    if(val !== null && !isNaN(val) && val > 0) cooldownTime = parseInt(val)
   }, 2500)
 })
 
 wakeBtn.addEventListener("pointerup", () => {
   clearTimeout(holdTimer)
-  startCooldown() // vždy spustí / resetuje
+  
+  // PRVNÍ KLIKNUTÍ AKTIVUJE FUNKCI
+  if(!wakeActive){
+    wakeActive = true;
+    wakeBtn.style.background = "#004444"; // Krátké bliknutí pro potvrzení
+    setTimeout(() => wakeBtn.style.background = "#111", 300);
+  }
+  
+  startCooldown()
 })
 
 wakeBtn.addEventListener("pointerleave", () => {
@@ -485,49 +447,38 @@ wakeBtn.addEventListener("pointerleave", () => {
 })
 
 function startCooldown(){
-  // RESET pokud už běží
-  if(cooldownTimeout){
-    clearTimeout(cooldownTimeout)
-  }
+  // Pokud není funkce aktivovaná ručním kliknutím, nic neděláme
+  if(!wakeActive) return;
+
+  if(cooldownTimeout) clearTimeout(cooldownTimeout)
 
   cooling = true
   wakeBtn.classList.add("cooldown")
 
   circle.style.transition = "none"
-  circle.style.strokeDashoffset = 188
+  circle.style.strokeDashoffset = "188"
 
   setTimeout(() => {
     circle.style.transition = `stroke-dashoffset ${cooldownTime}s linear`
-    circle.style.strokeDashoffset = 0
+    circle.style.strokeDashoffset = "0"
   }, 50)
 
   cooldownTimeout = setTimeout(() => {
     cooling = false
     wakeBtn.classList.remove("cooldown")
     circle.style.transition = "none"
-    circle.style.strokeDashoffset = 188
+    circle.style.strokeDashoffset = "188"
   }, cooldownTime * 1000)
 }
 
-
 function updateWakeBtnPosition(){
   const isHidden = topbar.classList.contains("hidden")
-
-  if(isHidden){
-    // menu schované → tlačítko nahoru
-    wakeBtn.style.top = "20px"
-  }else{
-    // menu otevřené → tlačítko POD menu (dynamicky)
-    const h = topbar.offsetHeight
-    wakeBtn.style.top = (h + 10) + "px"
-  }
+  if(isHidden) wakeBtn.style.top = "20px"
+  else wakeBtn.style.top = (topbar.offsetHeight + 10) + "px"
 }
 
 updateWakeBtnPosition()
-
 window.addEventListener("resize", updateWakeBtnPosition)
-
-
 </script>
 
 </body>
