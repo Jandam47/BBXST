@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Beyblade X – Rozpis zápasů</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --cyan: #00ffff;
+    --red:  #ff2244;
+    --gold: #ffd700;
+    --bg:   #020609;
+    --text: #c8e8f0;
+    --dim:  #2a4a58;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Rajdhani', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── BG EFFECTS ── */
+  .bg-glow {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    background:
+      radial-gradient(ellipse 80% 40% at 50% -10%, rgba(0,255,255,0.08) 0%, transparent 70%),
+      radial-gradient(ellipse 60% 30% at 50% 110%, rgba(255,34,68,0.06) 0%, transparent 70%);
+  }
+
+  .bg-grid {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    background-image:
+      linear-gradient(rgba(0,255,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,255,255,0.03) 1px, transparent 1px);
+    background-size: 50px 50px;
+  }
+
+  .content {
+    position: relative;
+    z-index: 1;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 30px 20px 60px;
+  }
+
+  /* ── HEADER ── */
+  header {
+    text-align: center;
+    margin-bottom: 40px;
+  }
+
+  .logo {
+    font-family: 'Orbitron', monospace;
+    font-size: clamp(28px, 7vw, 52px);
+    font-weight: 900;
+    letter-spacing: 6px;
+    background: linear-gradient(90deg, var(--cyan), #ffffff, var(--red));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-shadow: none;
+    margin-bottom: 6px;
+  }
+
+  .subtitle {
+    font-size: 13px;
+    letter-spacing: 5px;
+    color: var(--dim);
+    text-transform: uppercase;
+    margin-bottom: 20px;
+  }
+
+  /* ── AUTO REFRESH RING ── */
+  .refresh-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+
+  .ring-btn {
+    position: relative;
+    width: 44px;
+    height: 44px;
+    background: #0a1a22;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    box-shadow: 0 0 14px rgba(0,255,255,0.2);
+    transition: box-shadow .2s;
+  }
+
+  .ring-btn:hover { box-shadow: 0 0 24px rgba(0,255,255,0.4); }
+
+  .ring-btn svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg);
+  }
+
+  .ring-btn circle {
+    fill: none;
+    stroke: var(--cyan);
+    stroke-width: 3;
+    stroke-dasharray: 126;
+    stroke-dashoffset: 126;
+  }
+
+  .ring-btn circle.anim {
+    transition: stroke-dashoffset 30s linear;
+    stroke-dashoffset: 0;
+  }
+
+  .refresh-label {
+    font-size: 13px;
+    color: var(--dim);
+    letter-spacing: 2px;
+  }
+
+  #lastUpdate {
+    font-size: 12px;
+    color: var(--dim);
+    letter-spacing: 1px;
+    text-align: center;
+    margin-bottom: 30px;
+  }
+
+  /* ── SEARCH ── */
+  .search-wrap {
+    position: relative;
+    margin-bottom: 30px;
+  }
+
+  .search-wrap input {
+    width: 100%;
+    padding: 14px 20px 14px 48px;
+    background: #080f16;
+    border: 1px solid #0e2a3a;
+    border-radius: 10px;
+    color: var(--text);
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 18px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    transition: border-color .2s, box-shadow .2s;
+  }
+
+  .search-wrap input:focus {
+    outline: none;
+    border-color: var(--cyan);
+    box-shadow: 0 0 16px rgba(0,255,255,0.15);
+  }
+
+  .search-wrap input::placeholder { color: var(--dim); font-weight: 400; }
+
+  .search-icon {
+    position: absolute;
+    left: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 20px;
+    opacity: 0.4;
+  }
+
+  /* ── MATCH CARDS ── */
+  .section-title {
+    font-family: 'Orbitron', monospace;
+    font-size: 11px;
+    color: var(--dim);
+    letter-spacing: 4px;
+    margin-bottom: 16px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #0e1e28;
+  }
+
+  .match-card {
+    background: linear-gradient(135deg, #080f18, #040b12);
+    border: 1px solid #0e2030;
+    border-radius: 14px;
+    padding: 0;
+    margin-bottom: 14px;
+    overflow: hidden;
+    animation: fadeUp .4s ease both;
+    transition: box-shadow .25s, transform .25s;
+  }
+
+  .match-card:hover {
+    box-shadow: 0 0 30px rgba(0,255,255,0.08);
+    transform: translateY(-2px);
+  }
+
+  .match-card.highlight {
+    border-color: var(--gold);
+    box-shadow: 0 0 30px rgba(255,215,0,0.15);
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .card-top {
+    display: flex;
+    align-items: stretch;
+  }
+
+  .player-block {
+    flex: 1;
+    padding: 20px 24px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .player-block.left  { align-items: flex-start; }
+  .player-block.right { align-items: flex-end; background: linear-gradient(135deg, transparent, rgba(255,34,68,0.04)); }
+
+  .player-label {
+    font-size: 10px;
+    letter-spacing: 3px;
+    color: var(--dim);
+    margin-bottom: 4px;
+    text-transform: uppercase;
+  }
+
+  .player-nick {
+    font-family: 'Orbitron', monospace;
+    font-size: clamp(16px, 3.5vw, 22px);
+    font-weight: 700;
+    letter-spacing: 2px;
+  }
+
+  .player-block.left  .player-nick { color: var(--cyan); text-shadow: 0 0 12px rgba(0,255,255,0.35); }
+  .player-block.right .player-nick { color: var(--red);  text-shadow: 0 0 12px rgba(255,34,68,0.35); }
+
+  .vs-block {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 16px;
+    background: rgba(255,255,255,0.02);
+    border-left: 1px solid #0e2030;
+    border-right: 1px solid #0e2030;
+  }
+
+  .vs-text {
+    font-family: 'Orbitron', monospace;
+    font-size: 11px;
+    color: var(--dim);
+    letter-spacing: 3px;
+  }
+
+  .card-bottom {
+    background: rgba(255,215,0,0.04);
+    border-top: 1px solid rgba(255,215,0,0.1);
+    padding: 10px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .arena-icon { font-size: 14px; }
+
+  .arena-text {
+    font-family: 'Orbitron', monospace;
+    font-size: 12px;
+    color: var(--gold);
+    letter-spacing: 3px;
+  }
+
+  /* ── EMPTY / LOADING ── */
+  .empty {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--dim);
+  }
+
+  .empty .icon { font-size: 60px; margin-bottom: 16px; opacity: 0.3; }
+
+  .empty .msg {
+    font-family: 'Orbitron', monospace;
+    font-size: 14px;
+    letter-spacing: 3px;
+    margin-bottom: 8px;
+  }
+
+  .empty .sub { font-size: 13px; letter-spacing: 1px; opacity: 0.6; }
+
+  .loading-pulse {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    padding: 50px;
+  }
+
+  .dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: var(--cyan);
+    animation: pulse 1.2s infinite;
+  }
+
+  .dot:nth-child(2) { animation-delay: .2s; }
+  .dot:nth-child(3) { animation-delay: .4s; }
+
+  @keyframes pulse {
+    0%, 80%, 100% { opacity: .2; transform: scale(.8); }
+    40%           { opacity: 1;  transform: scale(1); }
+  }
+
+  /* ── TICKER ── */
+  .ticker-bar {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    background: #000;
+    border-top: 1px solid #0e2030;
+    padding: 8px 0;
+    overflow: hidden;
+    z-index: 10;
+  }
+
+  .ticker-inner {
+    display: inline-flex;
+    gap: 60px;
+    white-space: nowrap;
+    animation: ticker 20s linear infinite;
+    font-size: 13px;
+    letter-spacing: 2px;
+    color: var(--dim);
+  }
+
+  .ticker-inner span { color: var(--cyan); }
+
+  @keyframes ticker {
+    from { transform: translateX(100vw); }
+    to   { transform: translateX(-100%); }
+  }
+</style>
+</head>
+<body>
+
+<div class="bg-glow"></div>
+<div class="bg-grid"></div>
+
+<div class="content">
+
+  <header>
+    <div class="logo">BEYBLADE X</div>
+    <div class="subtitle">Rozpis zápasů</div>
+
+    <div class="refresh-wrap">
+      <button class="ring-btn" id="ringBtn" onclick="manualRefresh()" title="Obnovit">
+        ↻
+        <svg viewBox="0 0 44 44">
+          <circle id="progressCircle" cx="22" cy="22" r="20"></circle>
+        </svg>
+      </button>
+      <span class="refresh-label">AUTO-REFRESH / 30s</span>
+    </div>
+
+    <div id="lastUpdate">–</div>
+  </header>
+
+  <div class="search-wrap">
+    <span class="search-icon">🔍</span>
+    <input type="text" id="searchInput" placeholder="Hledej svůj nick…" oninput="renderMatches()">
+  </div>
+
+  <div class="section-title">ČEKAJÍCÍ ZÁPASY</div>
+  <div id="matchList">
+    <div class="loading-pulse">
+      <div class="dot"></div>
+      <div class="dot"></div>
+      <div class="dot"></div>
+    </div>
+  </div>
+
+</div>
+
+<div class="ticker-bar">
+  <div class="ticker-inner" id="ticker">
+    <span>BEYBLADE X TOURNAMENT</span> načítám zápasy…
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════
+//  !! ZMĚŇ TUTO URL NA SVŮJ APPS SCRIPT URL !!
+// ══════════════════════════════════════════════
+const API = "https://script.google.com/macros/s/AKfycbzO8rgTmgJ55LUsDcP7lu2qXhA3Gt7IuLHYrjjiI06aHcxD2Lp7bP1gTcsNw3EtmgBt/exec"
+
+let matches = []
+
+// ── Načti zápasy ──────────────────────────────
+async function loadMatches() {
+  try {
+    const res = await fetch(API + "?action=getMatches&t=" + Date.now())
+    matches = await res.json()
+    renderMatches()
+    updateTicker()
+    document.getElementById("lastUpdate").textContent =
+      "Poslední aktualizace: " + new Date().toLocaleTimeString("cs-CZ")
+  } catch(e) {
+    document.getElementById("matchList").innerHTML =
+      `<div class="empty"><div class="icon">⚠️</div><div class="msg">CHYBA SPOJENÍ</div><div class="sub">Zkus obnovit stránku</div></div>`
+  }
+}
+
+// ── Vykresli zápasy ───────────────────────────
+function renderMatches() {
+  const query = document.getElementById("searchInput").value.trim().toLowerCase()
+  const list  = document.getElementById("matchList")
+
+  let filtered = matches
+  if (query) {
+    filtered = matches.filter(m =>
+      m.player1.toLowerCase().includes(query) ||
+      m.player2.toLowerCase().includes(query)
+    )
+  }
+
+  if (filtered.length === 0) {
+    list.innerHTML = query
+      ? `<div class="empty"><div class="icon">🔎</div><div class="msg">HRÁČ NENALEZEN</div><div class="sub">${query} nemá naplánovaný zápas</div></div>`
+      : `<div class="empty"><div class="icon">🏆</div><div class="msg">ŽÁDNÉ ČEKAJÍCÍ ZÁPASY</div><div class="sub">Všechny zápasy byly odehrány nebo ještě nebyly naplánovány</div></div>`
+    return
+  }
+
+  list.innerHTML = filtered.map((m, i) => {
+    const hl = query &&
+      (m.player1.toLowerCase().includes(query) || m.player2.toLowerCase().includes(query))
+    return `
+    <div class="match-card ${hl ? "highlight" : ""}" style="animation-delay:${i * 0.06}s">
+      <div class="card-top">
+        <div class="player-block left">
+          <div class="player-label">Hráč 1</div>
+          <div class="player-nick">${m.player1}</div>
+        </div>
+        <div class="vs-block">
+          <div class="vs-text">VS</div>
+        </div>
+        <div class="player-block right">
+          <div class="player-label">Hráč 2</div>
+          <div class="player-nick">${m.player2}</div>
+        </div>
+      </div>
+      <div class="card-bottom">
+        <span class="arena-icon">🏟</span>
+        <span class="arena-text">ARÉNA ${m.arena}</span>
+      </div>
+    </div>`
+  }).join("")
+}
+
+// ── Ticker ────────────────────────────────────
+function updateTicker() {
+  const t = document.getElementById("ticker")
+  if (matches.length === 0) {
+    t.innerHTML = `<span>BEYBLADE X TOURNAMENT</span> Žádné čekající zápasy`
+    return
+  }
+  t.innerHTML = matches.map(m =>
+    `<span>⚡ ${m.player1}</span> vs <span>${m.player2}</span> — Aréna ${m.arena} &nbsp;&nbsp;`
+  ).join("") + matches.map(m =>
+    `<span>⚡ ${m.player1}</span> vs <span>${m.player2}</span> — Aréna ${m.arena} &nbsp;&nbsp;`
+  ).join("")
+}
+
+// ── Auto-refresh s progress kruhem ────────────
+const circle  = document.getElementById("progressCircle")
+const INTERVAL = 30
+
+function startRing() {
+  circle.classList.remove("anim")
+  void circle.offsetWidth // reflow
+  circle.classList.add("anim")
+}
+
+function manualRefresh() {
+  loadMatches()
+  startRing()
+}
+
+setInterval(() => {
+  loadMatches()
+  startRing()
+}, INTERVAL * 1000)
+
+// ── Init ──────────────────────────────────────
+loadMatches()
+startRing()
+</script>
+</body>
+</html>
