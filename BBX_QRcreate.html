@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BBX – Registrace & QR</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Rajdhani:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/qrcodejs@1.0.0/qrcode.min.js"></script>
+<style>
+  :root {
+    --cyan: #00ffff;
+    --red:  #ff2244;
+    --gold: #ffd700;
+    --bg:   #050a0f;
+    --panel: #0a1520;
+    --border: #0e2a3a;
+    --text: #c8e8f0;
+    --dim:  #4a7080;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Rajdhani', sans-serif;
+    min-height: 100vh;
+    padding: 24px 16px 48px;
+    background-image:
+      radial-gradient(ellipse at 20% 0%, rgba(0,255,255,0.06) 0%, transparent 60%),
+      radial-gradient(ellipse at 80% 100%, rgba(255,34,68,0.05) 0%, transparent 60%);
+  }
+
+  .content {
+    max-width: 480px;
+    margin: 0 auto;
+  }
+
+  h1 {
+    font-family: 'Orbitron', monospace;
+    font-size: clamp(16px, 5vw, 24px);
+    color: var(--cyan);
+    text-shadow: 0 0 20px rgba(0,255,255,0.5);
+    text-align: center;
+    letter-spacing: 4px;
+    margin-bottom: 6px;
+  }
+
+  h1 span { color: var(--red); }
+
+  .subtitle {
+    text-align: center;
+    font-size: 12px;
+    letter-spacing: 3px;
+    color: var(--dim);
+    margin-bottom: 28px;
+  }
+
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 24px;
+    margin-bottom: 20px;
+    box-shadow: 0 0 30px rgba(0,255,255,0.03);
+  }
+
+  .panel-title {
+    font-family: 'Orbitron', monospace;
+    font-size: 11px;
+    color: var(--cyan);
+    letter-spacing: 3px;
+    margin-bottom: 18px;
+    opacity: 0.8;
+  }
+
+  .field {
+    margin-bottom: 14px;
+  }
+
+  label {
+    display: block;
+    font-size: 11px;
+    color: var(--dim);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+
+  input {
+    width: 100%;
+    padding: 12px 14px;
+    background: #050e18;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 17px;
+    font-weight: 600;
+    transition: border-color .2s, box-shadow .2s;
+  }
+
+  input:focus {
+    outline: none;
+    border-color: var(--cyan);
+    box-shadow: 0 0 12px rgba(0,255,255,0.2);
+  }
+
+  input::placeholder { color: var(--dim); font-weight: 400; }
+
+  .btn {
+    width: 100%;
+    padding: 14px;
+    border: none;
+    border-radius: 10px;
+    font-family: 'Orbitron', monospace;
+    font-size: 12px;
+    letter-spacing: 2px;
+    cursor: pointer;
+    transition: all .2s;
+    margin-bottom: 10px;
+  }
+
+  .btn:last-child { margin-bottom: 0; }
+
+  .btn-send {
+    background: linear-gradient(135deg, #001a3a, #002a5a);
+    color: var(--cyan);
+    box-shadow: 0 0 16px rgba(0,255,255,0.15);
+    border: 1px solid rgba(0,255,255,0.2);
+  }
+
+  .btn-send:hover { box-shadow: 0 0 26px rgba(0,255,255,0.3); transform: translateY(-1px); }
+  .btn-send:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+  .btn-generate {
+    background: linear-gradient(135deg, #1a1000, #2a1a00);
+    color: var(--gold);
+    box-shadow: 0 0 16px rgba(255,215,0,0.1);
+    border: 1px solid rgba(255,215,0,0.2);
+  }
+
+  .btn-generate:hover { box-shadow: 0 0 26px rgba(255,215,0,0.25); transform: translateY(-1px); }
+
+  .btn-download {
+    background: linear-gradient(135deg, #0a1a0a, #0a2a0a);
+    color: #00ff9d;
+    box-shadow: 0 0 16px rgba(0,255,157,0.1);
+    border: 1px solid rgba(0,255,157,0.2);
+  }
+
+  .btn-download:hover { box-shadow: 0 0 26px rgba(0,255,157,0.25); transform: translateY(-1px); }
+  .btn-download:disabled { opacity: 0.3; cursor: not-allowed; transform: none; }
+
+  /* ── STATUS BAR ── */
+  .status-bar {
+    text-align: center;
+    padding: 10px 16px;
+    font-size: 13px;
+    letter-spacing: 1px;
+    border-radius: 8px;
+    margin-bottom: 16px;
+    transition: all .3s;
+    min-height: 38px;
+  }
+
+  .status-bar.ok   { background: rgba(0,255,157,0.08); color: #00ff9d; border: 1px solid #00ff9d33; }
+  .status-bar.err  { background: rgba(255,34,68,0.08);  color: var(--red); border: 1px solid #ff224433; }
+  .status-bar.info { background: rgba(0,255,255,0.05);  color: var(--cyan); border: 1px solid #00ffff22; }
+  .status-bar.hidden { display: none; }
+
+  /* ── QR VÝSTUP ── */
+  .qr-section {
+    display: none;
+    animation: fadeUp .4s ease;
+  }
+
+  .qr-section.visible { display: block; }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .qr-wrap {
+    display: flex;
+    justify-content: center;
+    margin: 20px 0;
+  }
+
+  /* Bílý okraj kolem QR kódu */
+  #qrcode {
+    background: white;
+    padding: 16px;
+    border-radius: 10px;
+    display: inline-block;
+    box-shadow: 0 0 30px rgba(255,255,255,0.15);
+  }
+
+  #qrcode canvas,
+  #qrcode img {
+    display: block;
+  }
+
+  .qr-nick {
+    text-align: center;
+    font-family: 'Orbitron', monospace;
+    font-size: 14px;
+    color: var(--cyan);
+    letter-spacing: 3px;
+    margin-bottom: 16px;
+  }
+</style>
+</head>
+<body>
+<div class="content">
+
+  <h1>BBX <span>REG</span></h1>
+  <div class="subtitle">REGISTRACE DO TURNAJE</div>
+
+  <div id="statusBar" class="status-bar hidden"></div>
+
+  <!-- FORMULÁŘ -->
+  <div class="panel">
+    <div class="panel-title">👤 ÚDAJE HRÁČE</div>
+
+    <div class="field">
+      <label>Nick</label>
+      <input id="nick" placeholder="Tvůj herní nick" autocomplete="off">
+    </div>
+    <div class="field">
+      <label>Beyblade 1</label>
+      <input id="b1" placeholder="Název beybladu" autocomplete="off">
+    </div>
+    <div class="field">
+      <label>Beyblade 2</label>
+      <input id="b2" placeholder="Název beybladu" autocomplete="off">
+    </div>
+    <div class="field">
+      <label>Beyblade 3</label>
+      <input id="b3" placeholder="Název beybladu" autocomplete="off">
+    </div>
+  </div>
+
+  <!-- TLAČÍTKA -->
+  <div class="panel">
+    <div class="panel-title">⚡ AKCE</div>
+    <button class="btn btn-send" id="sendBtn" onclick="sendForReview()">📤 ODESLAT KE KONTROLE</button>
+    <button class="btn btn-generate" onclick="generateQR()">⬡ VYGENEROVAT QR KÓD</button>
+    <button class="btn btn-download" id="downloadBtn" onclick="downloadQR()" disabled>⬇ STÁHNOUT QR KÓD</button>
+  </div>
+
+  <!-- QR VÝSTUP -->
+  <div class="panel qr-section" id="qrSection">
+    <div class="panel-title">🔳 VÁŠ QR KÓD</div>
+    <div class="qr-nick" id="qrNick"></div>
+    <div class="qr-wrap">
+      <div id="qrcode"></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const API = "https://script.google.com/macros/s/AKfycbzO8rgTmgJ55LUsDcP7lu2qXhA3Gt7IuLHYrjjiI06aHcxD2Lp7bP1gTcsNw3EtmgBt/exec"
+
+let qr = null
+
+function showStatus(msg, type, duration = 4000) {
+  const bar = document.getElementById("statusBar")
+  bar.textContent = msg
+  bar.className = "status-bar " + type
+  if (duration) setTimeout(() => bar.className = "status-bar hidden", duration)
+}
+
+/* ===== GENEROVÁNÍ QR ===== */
+function generateQR() {
+  const nick = document.getElementById("nick").value.trim()
+  const b1   = document.getElementById("b1").value.trim()
+  const b2   = document.getElementById("b2").value.trim()
+  const b3   = document.getElementById("b3").value.trim()
+
+  if (!nick) return showStatus("✗ Vyplň prosím nick", "err")
+
+  const text =
+    "Nick: " + nick + "\n" +
+    "Beyblade 1: " + b1 + "\n" +
+    "Beyblade 2: " + b2 + "\n" +
+    "Beyblade 3: " + b3
+
+  const container = document.getElementById("qrcode")
+  container.innerHTML = ""
+
+  qr = new QRCode(container, {
+    text: text,
+    width: 256,
+    height: 256,
+    colorDark: "#000000",
+    colorLight: "#ffffff",
+    correctLevel: QRCode.CorrectLevel.M
+  })
+
+  document.getElementById("qrNick").textContent = nick.toUpperCase()
+  document.getElementById("qrSection").classList.add("visible")
+  document.getElementById("downloadBtn").disabled = false
+
+  showStatus("✓ QR kód vygenerován", "ok")
+
+  // scroll na QR
+  setTimeout(() => {
+    document.getElementById("qrSection").scrollIntoView({ behavior: "smooth" })
+  }, 100)
+}
+
+/* ===== STAŽENÍ QR ===== */
+function downloadQR() {
+  // Zkusíme canvas, pak img fallback
+  const canvas = document.querySelector("#qrcode canvas")
+  const img    = document.querySelector("#qrcode img")
+
+  if (canvas) {
+    // Přidáme bílý padding i do staženého souboru
+    const pad = 20
+    const out = document.createElement("canvas")
+    out.width  = canvas.width  + pad * 2
+    out.height = canvas.height + pad * 2
+    const ctx = out.getContext("2d")
+    ctx.fillStyle = "#ffffff"
+    ctx.fillRect(0, 0, out.width, out.height)
+    ctx.drawImage(canvas, pad, pad)
+
+    const link = document.createElement("a")
+    link.href = out.toDataURL("image/png")
+    link.download = "bbx_qr_" + (document.getElementById("nick").value.trim() || "hrac") + ".png"
+    link.click()
+  } else if (img) {
+    const link = document.createElement("a")
+    link.href = img.src
+    link.download = "bbx_qr.png"
+    link.click()
+  } else {
+    showStatus("✗ Nejdřív vygeneruj QR kód", "err")
+  }
+}
+
+/* ===== ODESLÁNÍ KE KONTROLE ===== */
+function sendForReview() {
+  const nick = document.getElementById("nick").value.trim()
+  const b1   = document.getElementById("b1").value.trim()
+  const b2   = document.getElementById("b2").value.trim()
+  const b3   = document.getElementById("b3").value.trim()
+
+  if (!nick || !b1 || !b2 || !b3) {
+    return showStatus("✗ Vyplň prosím všechna pole", "err")
+  }
+
+  const btn = document.getElementById("sendBtn")
+  btn.disabled = true
+  btn.innerText = "⟳ ODESÍLÁM…"
+  showStatus("⟳ Odesílám registraci…", "info", 0)
+
+  fetch(API, {
+    method: "POST",
+    mode: "no-cors",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      nick, beyblade1: b1, beyblade2: b2, beyblade3: b3,
+      time: new Date().toISOString()
+    })
+  }).finally(() => {
+    showStatus("✓ Registrace odeslána! Počkej na schválení.", "ok", 6000)
+    btn.disabled = false
+    btn.innerText = "📤 ODESLAT KE KONTROLE"
+  })
+}
+</script>
+</body>
+</html>
