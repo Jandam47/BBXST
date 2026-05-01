@@ -314,7 +314,6 @@ body {
   justify-content: center;
   box-shadow: 0 0 18px rgba(0,255,255,0.2);
   z-index: 35;
-  touch-action: none;
   overflow: hidden;
   cursor: pointer;
   transition: box-shadow .3s;
@@ -845,7 +844,9 @@ document.querySelectorAll(".dragBtn").forEach(b => {
 /* ══════════════════════════════════════════════
    WAKE BUTTON
 ══════════════════════════════════════════════ */
-wakeBtn.addEventListener("pointerdown", () => {
+wakeBtn.addEventListener("pointerdown", e => {
+  e.preventDefault()
+  wakeBtn.setPointerCapture(e.pointerId)
   holdTimer = setTimeout(() => {
     const val = prompt("Cooldown v sekundách:", cooldownTime)
     if (val !== null && !isNaN(val) && val > 0) cooldownTime = parseInt(val)
