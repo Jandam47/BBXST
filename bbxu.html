@@ -1,0 +1,835 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Beyblade X – Přihlášení na akci</title>
+
+<!-- ================================================================
+  SEM VLOŽ URL TVÉHO GOOGLE APPS SCRIPTU po nasazení (Deploy)
+  Viz komentář v Code.gs
+================================================================ -->
+<script>
+  const APPS_SCRIPT_URL = 'SEM_VLOZ_APPS_SCRIPT_URL';
+</script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Orbitron:wght@700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet" />
+
+<style>
+/* ============================================================
+   ROOT & RESET
+============================================================ */
+:root {
+  --bg:          #080c14;
+  --panel:       #0e1624;
+  --border:      #1c2e4a;
+  --accent-b:    #00c3ff;   /* modrá – trénink */
+  --accent-g:    #ffd000;   /* zlatá – turnaj  */
+  --accent-r:    #ff3a3a;   /* červená – canceled */
+  --text:        #c8ddf5;
+  --text-dim:    #4a6a8a;
+  --neon-glow-b: 0 0 8px #00c3ff88, 0 0 24px #00c3ff44;
+  --neon-glow-g: 0 0 8px #ffd00088, 0 0 24px #ffd00044;
+  --card-w:      320px;
+  --radius:      12px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Rajdhani', sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ============================================================
+   BG GRID
+============================================================ */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(0,195,255,.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,195,255,.04) 1px, transparent 1px);
+  background-size: 48px 48px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ============================================================
+   HEADER
+============================================================ */
+header {
+  position: relative;
+  z-index: 2;
+  text-align: center;
+  padding: 52px 20px 32px;
+}
+.logo-spin {
+  display: inline-block;
+  font-size: 64px;
+  line-height: 1;
+  animation: spin3d 8s linear infinite;
+  filter: drop-shadow(0 0 12px #00c3ff99);
+  margin-bottom: 12px;
+}
+@keyframes spin3d {
+  0%   { transform: rotateY(0deg);   }
+  100% { transform: rotateY(360deg); }
+}
+header h1 {
+  font-family: 'Orbitron', sans-serif;
+  font-size: clamp(1.6rem, 5vw, 3rem);
+  font-weight: 900;
+  letter-spacing: .12em;
+  color: #fff;
+  text-shadow: var(--neon-glow-b);
+  text-transform: uppercase;
+}
+header p {
+  margin-top: 8px;
+  color: var(--text-dim);
+  font-size: 1.05rem;
+  letter-spacing: .06em;
+}
+
+/* ============================================================
+   SEKCE – AKCE (dlaždice)
+============================================================ */
+#events-section {
+  position: relative;
+  z-index: 2;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px 80px;
+}
+#events-section h2 {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 1rem;
+  letter-spacing: .2em;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  margin-bottom: 28px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+.cards-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  justify-content: center;
+}
+
+/* ============================================================
+   KARTA AKCE
+============================================================ */
+.card {
+  width: var(--card-w);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: transform .2s, box-shadow .2s, border-color .2s;
+  animation: cardIn .4s ease both;
+}
+@keyframes cardIn {
+  from { opacity:0; transform: translateY(18px); }
+  to   { opacity:1; transform: translateY(0);    }
+}
+.card:hover:not(.card--canceled) {
+  transform: translateY(-4px) scale(1.015);
+}
+.card.card--trenink {
+  --clr: var(--accent-b);
+  --glow: var(--neon-glow-b);
+}
+.card.card--turnaj {
+  --clr: var(--accent-g);
+  --glow: var(--neon-glow-g);
+}
+.card:hover:not(.card--canceled) {
+  border-color: var(--clr);
+  box-shadow: var(--glow), 0 8px 32px #0006;
+}
+.card.selected:not(.card--canceled) {
+  border-color: var(--clr);
+  box-shadow: var(--glow), 0 8px 32px #0006;
+}
+
+/* Horní pruh s ikonou a typem */
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 18px 12px;
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(135deg, #0a1525 0%, #111d30 100%);
+  position: relative;
+}
+.card-icon {
+  font-size: 2.2rem;
+  line-height: 1;
+  filter: drop-shadow(0 0 6px var(--clr));
+  flex-shrink: 0;
+}
+.card-type {
+  font-family: 'Orbitron', sans-serif;
+  font-size: .75rem;
+  font-weight: 700;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  color: var(--clr);
+  text-shadow: var(--glow);
+}
+.card-id {
+  margin-left: auto;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: .7rem;
+  color: var(--text-dim);
+  opacity: .6;
+}
+
+/* Indikátorová čára */
+.card::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0;
+  width: 4px; height: 100%;
+  background: var(--clr);
+  box-shadow: 0 0 12px var(--clr);
+  border-radius: var(--radius) 0 0 var(--radius);
+}
+
+/* Tělo karty */
+.card-body {
+  padding: 16px 18px 18px;
+}
+.card-date {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: .04em;
+  margin-bottom: 6px;
+}
+.card-time {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: .9rem;
+  color: var(--clr);
+  margin-bottom: 12px;
+  opacity: .9;
+}
+.card-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.card-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: .9rem;
+  color: var(--text-dim);
+}
+.card-meta-row .mi { font-size: 1rem; flex-shrink: 0; }
+.card-meta-row span { color: var(--text); }
+
+/* Počet účastníků */
+.card-count {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  font-size: .85rem;
+  color: var(--text-dim);
+}
+.card-count strong {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 1.1rem;
+  color: var(--clr);
+  text-shadow: var(--glow);
+}
+
+/* Canceled overlay */
+.card--canceled {
+  cursor: default;
+  filter: saturate(.3);
+}
+.canceled-overlay {
+  display: none;
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,.55);
+  z-index: 5;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius);
+}
+.card--canceled .canceled-overlay {
+  display: flex;
+}
+.canceled-label {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 1.5rem;
+  font-weight: 900;
+  letter-spacing: .2em;
+  color: var(--accent-r);
+  text-shadow: 0 0 12px var(--accent-r);
+  transform: rotate(-12deg);
+  border: 3px solid var(--accent-r);
+  padding: 6px 18px;
+  border-radius: 6px;
+}
+
+/* ============================================================
+   PLOVOUCÍ TLAČÍTKO REGISTROVAT
+============================================================ */
+#btn-register {
+  display: none;
+  position: fixed;
+  bottom: 32px;
+  right: 32px;
+  z-index: 100;
+  width: 72px; height: 72px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  background: linear-gradient(135deg, #0080cc 0%, #00c3ff 100%);
+  color: #fff;
+  font-size: .72rem;
+  font-family: 'Orbitron', sans-serif;
+  font-weight: 700;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  line-height: 1.2;
+  text-align: center;
+  box-shadow: 0 0 0 0 #00c3ff66;
+  animation: pulse-ring 2s ease-in-out infinite;
+  transition: transform .15s;
+  padding: 8px;
+}
+#btn-register.turnaj-btn {
+  background: linear-gradient(135deg, #b88c00 0%, #ffd000 100%);
+  color: #0a0a00;
+  box-shadow: 0 0 0 0 #ffd00066;
+}
+#btn-register:hover { transform: scale(1.1); }
+@keyframes pulse-ring {
+  0%   { box-shadow: 0 0 0  0 currentColor; }
+  70%  { box-shadow: 0 0 0 16px transparent; }
+  100% { box-shadow: 0 0 0  0 transparent;  }
+}
+
+/* ============================================================
+   REGISTRAČNÍ FORMULÁŘ
+============================================================ */
+#register-section {
+  position: relative;
+  z-index: 2;
+  max-width: 540px;
+  margin: 0 auto 80px;
+  padding: 0 24px;
+  display: none;
+}
+#register-section h2 {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 1rem;
+  letter-spacing: .18em;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  margin-bottom: 20px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+.form-box {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 28px 28px 32px;
+  position: relative;
+  overflow: hidden;
+}
+.form-box::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0;
+  width: 4px; height: 100%;
+  background: var(--accent-b);
+  box-shadow: 0 0 12px var(--accent-b);
+  border-radius: var(--radius) 0 0 var(--radius);
+}
+.form-box.turnaj-form::after {
+  background: var(--accent-g);
+  box-shadow: 0 0 12px var(--accent-g);
+}
+
+/* Shrnutí vybrané akce */
+.form-event-summary {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  margin-bottom: 24px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--border);
+}
+.fes-icon { font-size: 2rem; flex-shrink: 0; }
+.fes-info {}
+.fes-type {
+  font-family: 'Orbitron', sans-serif;
+  font-size: .7rem;
+  letter-spacing: .15em;
+  color: var(--accent-b);
+  text-transform: uppercase;
+}
+.form-box.turnaj-form .fes-type { color: var(--accent-g); }
+.fes-date { font-size: 1.15rem; font-weight: 700; color: #fff; margin: 2px 0; }
+.fes-sub  { font-size: .85rem; color: var(--text-dim); }
+
+/* Pole formuláře */
+.field {
+  margin-bottom: 20px;
+}
+.field label {
+  display: block;
+  font-size: .8rem;
+  letter-spacing: .15em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: 7px;
+  font-weight: 600;
+}
+.field input {
+  width: 100%;
+  background: #0a1422;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 14px;
+  color: #fff;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 1rem;
+  outline: none;
+  transition: border-color .2s, box-shadow .2s;
+}
+.field input:focus {
+  border-color: var(--accent-b);
+  box-shadow: 0 0 0 3px rgba(0,195,255,.15);
+}
+.form-box.turnaj-form .field input:focus {
+  border-color: var(--accent-g);
+  box-shadow: 0 0 0 3px rgba(255,208,0,.12);
+}
+.field .hint {
+  font-size: .75rem;
+  color: var(--text-dim);
+  margin-top: 5px;
+}
+
+/* Tlačítko odeslat */
+#btn-submit {
+  width: 100%;
+  padding: 14px;
+  border: none;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #0080cc, #00c3ff);
+  color: #fff;
+  font-family: 'Orbitron', sans-serif;
+  font-size: .85rem;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: opacity .2s, transform .15s;
+  margin-top: 6px;
+}
+.form-box.turnaj-form #btn-submit {
+  background: linear-gradient(135deg, #b88c00, #ffd000);
+  color: #0a0a00;
+}
+#btn-submit:hover:not(:disabled) { opacity: .88; transform: scale(1.01); }
+#btn-submit:disabled { opacity: .45; cursor: default; }
+
+/* ============================================================
+   TOAST / ZPRÁVY
+============================================================ */
+#toast {
+  position: fixed;
+  bottom: 120px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: #0e2a20;
+  border: 1px solid #00ff8844;
+  color: #00ff88;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: .9rem;
+  padding: 12px 24px;
+  border-radius: 40px;
+  z-index: 200;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .3s, transform .3s;
+  white-space: nowrap;
+}
+#toast.error {
+  background: #2a0e0e;
+  border-color: #ff3a3a44;
+  color: var(--accent-r);
+}
+#toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* ============================================================
+   LOADER
+============================================================ */
+#loader {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  transition: opacity .5s;
+}
+#loader.hidden { opacity: 0; pointer-events: none; }
+.loader-spinner {
+  width: 56px; height: 56px;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent-b);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+#loader p {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: .8rem;
+  color: var(--text-dim);
+  letter-spacing: .1em;
+}
+
+/* ============================================================
+   ERROR STATE
+============================================================ */
+#error-box {
+  display: none;
+  max-width: 480px;
+  margin: 40px auto;
+  background: #1a0a0a;
+  border: 1px solid #ff3a3a44;
+  border-radius: var(--radius);
+  padding: 28px;
+  text-align: center;
+  color: var(--accent-r);
+  font-family: 'Share Tech Mono', monospace;
+  font-size: .88rem;
+  line-height: 1.6;
+}
+
+/* ============================================================
+   RESPONSIVE
+============================================================ */
+@media (max-width: 600px) {
+  :root { --card-w: min(320px, 90vw); }
+  #btn-register { bottom: 20px; right: 20px; }
+  .form-box { padding: 20px 16px 24px; }
+}
+</style>
+</head>
+<body>
+
+<!-- LOADER -->
+<div id="loader">
+  <div class="loader-spinner"></div>
+  <p>Načítám akce…</p>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<!-- HEADER -->
+<header>
+  <div class="logo-spin">🌀</div>
+  <h1>Beyblade&nbsp;X</h1>
+  <p>Přihlašování na tréninky &amp; turnaje</p>
+</header>
+
+<!-- DLAŽDICE AKCÍ -->
+<section id="events-section">
+  <h2>Nadcházející akce</h2>
+  <div class="cards-grid" id="cards-grid">
+    <!-- generováno JS -->
+  </div>
+  <div id="error-box"></div>
+</section>
+
+<!-- PLOVOUCÍ REGISTRACE TLAČÍTKO -->
+<button id="btn-register" onclick="scrollToForm()">
+  Regis<br>trovat
+</button>
+
+<!-- REGISTRAČNÍ FORMULÁŘ -->
+<section id="register-section">
+  <h2>Registrace</h2>
+  <div class="form-box" id="form-box">
+    <!-- shrnutí akce -->
+    <div class="form-event-summary" id="fes">
+      <span class="fes-icon" id="fes-icon">🌀</span>
+      <div class="fes-info">
+        <div class="fes-type" id="fes-type">—</div>
+        <div class="fes-date" id="fes-date">—</div>
+        <div class="fes-sub"  id="fes-sub">—</div>
+      </div>
+    </div>
+
+    <!-- Nick -->
+    <div class="field">
+      <label for="inp-nick">Nick hráče</label>
+      <input type="text" id="inp-nick" placeholder="TvůjNick" autocomplete="off" spellcheck="false" />
+      <div class="hint">Zadej svůj herní nick.</div>
+    </div>
+
+    <!-- Čas příchodu -->
+    <div class="field">
+      <label for="inp-time">Čas příchodu</label>
+      <input type="time" id="inp-time" />
+      <div class="hint">Zadej přibližný čas kdy přijdeš (HH:MM).</div>
+    </div>
+
+    <button id="btn-submit" onclick="submitRegistration()">
+      Odeslat registraci
+    </button>
+  </div>
+</section>
+
+<script>
+/* =============================================================
+   STAV APLIKACE
+============================================================= */
+let allActions    = [];   // pole objektů z listu ACTIONS
+let allRegistered = [];   // pole objektů z listu REGISTERED
+let selectedId    = null; // ID vybrané akce
+
+/* =============================================================
+   NAČTENÍ DAT
+============================================================= */
+async function loadData() {
+  try {
+    const url = APPS_SCRIPT_URL + '?action=data&t=' + Date.now();
+    const res  = await fetch(url);
+    const data = await res.json();
+
+    if (!data.success) throw new Error(data.error || 'Neznámá chyba serveru.');
+
+    allActions    = data.actions    || [];
+    allRegistered = data.registered || [];
+
+    renderCards();
+  } catch (err) {
+    showError('Nepodařilo se načíst data.<br><small>' + err.message + '</small>');
+  } finally {
+    document.getElementById('loader').classList.add('hidden');
+  }
+}
+
+/* =============================================================
+   RENDEROVÁNÍ KARET
+============================================================= */
+function renderCards() {
+  const grid = document.getElementById('cards-grid');
+  grid.innerHTML = '';
+
+  // Zobrazujeme jen stav 1 (zobrazit) a 2 (zrušeno) – stav 0 skryjeme
+  const visible = allActions.filter(a => a.stav === '1' || a.stav === '2');
+
+  if (visible.length === 0) {
+    grid.innerHTML = '<p style="color:var(--text-dim);font-family:\'Share Tech Mono\',monospace;font-size:.9rem;padding:20px 0;">Zatím žádné naplánované akce.</p>';
+    return;
+  }
+
+  visible.forEach((a, idx) => {
+    const count    = allRegistered.filter(r => r.idAkce === a.id).length;
+    const canceled = a.stav === '2';
+    const isTurnaj = a.druh.toLowerCase().includes('turnaj');
+    const typeClass = isTurnaj ? 'card--turnaj' : 'card--trenink';
+    const icon     = isTurnaj ? '🏆' : '⚙️';
+
+    const card = document.createElement('div');
+    card.className = 'card ' + typeClass + (canceled ? ' card--canceled' : '');
+    card.dataset.id = a.id;
+    card.style.animationDelay = (idx * 80) + 'ms';
+
+    if (!canceled) {
+      card.addEventListener('click', () => selectCard(a.id));
+    }
+
+    card.innerHTML = `
+      <div class="card-header">
+        <span class="card-icon">${icon}</span>
+        <span class="card-type">${escHtml(a.druh)}</span>
+        <span class="card-id">#${escHtml(a.id)}</span>
+      </div>
+      <div class="card-body">
+        <div class="card-date">${escHtml(a.datum)}</div>
+        <div class="card-time">${escHtml(a.casOd)} – ${escHtml(a.casDo)}</div>
+        <div class="card-meta">
+          <div class="card-meta-row">
+            <span class="mi">📍</span>
+            <span>${escHtml(a.misto)}</span>
+          </div>
+        </div>
+        <div class="card-count">
+          <span>Přihlášeno:</span>
+          <strong>${count}</strong>
+          <span>hráčů</span>
+        </div>
+      </div>
+      <div class="canceled-overlay">
+        <div class="canceled-label">ZRUŠENO</div>
+      </div>
+    `;
+
+    grid.appendChild(card);
+  });
+}
+
+/* =============================================================
+   VÝBĚR KARTY
+============================================================= */
+function selectCard(id) {
+  selectedId = id;
+
+  // Vizuální zvýraznění
+  document.querySelectorAll('.card').forEach(c => c.classList.remove('selected'));
+  const el = document.querySelector(`.card[data-id="${id}"]`);
+  if (el) el.classList.add('selected');
+
+  const action   = allActions.find(a => a.id === id);
+  const isTurnaj = action.druh.toLowerCase().includes('turnaj');
+
+  // Tlačítko "Registrovat"
+  const btn = document.getElementById('btn-register');
+  btn.style.display = 'flex';
+  btn.className      = isTurnaj ? 'turnaj-btn' : '';
+
+  // Formulář – aktualizace shrnutí
+  const formBox = document.getElementById('form-box');
+  formBox.className = 'form-box' + (isTurnaj ? ' turnaj-form' : '');
+
+  document.getElementById('fes-icon').textContent = isTurnaj ? '🏆' : '⚙️';
+  document.getElementById('fes-type').textContent = action.druh;
+  document.getElementById('fes-date').textContent = action.datum;
+  document.getElementById('fes-sub').textContent  =
+    action.casOd + ' – ' + action.casDo + '  |  ' + action.misto;
+
+  document.getElementById('register-section').style.display = 'block';
+}
+
+function scrollToForm() {
+  document.getElementById('register-section').scrollIntoView({ behavior: 'smooth' });
+}
+
+/* =============================================================
+   ODESLÁNÍ REGISTRACE
+============================================================= */
+async function submitRegistration() {
+  const nickRaw = document.getElementById('inp-nick').value.trim();
+  const timeRaw = document.getElementById('inp-time').value.trim();
+
+  if (!selectedId) { showToast('Nejprve vyber akci!', true); return; }
+  if (!nickRaw)    { showToast('Zadej svůj nick.', true);    return; }
+  if (!timeRaw)    { showToast('Zadej čas příchodu.', true); return; }
+
+  // Ošetření: odstraníme nebezpečné znaky
+  const nick = nickRaw.replace(/['"=+\-@|\\]/g, '');
+
+  if (!nick) { showToast('Nick obsahuje nepovolené znaky.', true); return; }
+
+  // Validace formátu HH:MM
+  if (!/^\d{2}:\d{2}$/.test(timeRaw)) {
+    showToast('Čas musí být ve formátu HH:MM.', true);
+    return;
+  }
+
+  const btn = document.getElementById('btn-submit');
+  btn.disabled     = true;
+  btn.textContent  = 'Odesílám…';
+
+  try {
+    const params = new URLSearchParams({
+      action:      'register',
+      idAkce:      selectedId,
+      nick:        nick,
+      casPrichodu: timeRaw,
+      t:           Date.now()
+    });
+
+    const res  = await fetch(APPS_SCRIPT_URL + '?' + params.toString());
+    const data = await res.json();
+
+    if (!data.success) throw new Error(data.error || 'Chyba serveru.');
+
+    // Aktualizuj lokální počítadlo
+    allRegistered.push({ idAkce: selectedId, nick: nick, casPrichodu: timeRaw });
+    renderCards();
+
+    // Znovu vyber stejnou kartu (kvůli aktualizaci selected stavu)
+    const el = document.querySelector(`.card[data-id="${selectedId}"]`);
+    if (el) el.classList.add('selected');
+
+    showToast('✅ Registrace odeslána! Těšíme se na tebe.');
+
+    // Reset formuláře
+    document.getElementById('inp-nick').value = '';
+    document.getElementById('inp-time').value = '';
+
+  } catch (err) {
+    showToast('Chyba: ' + err.message, true);
+  } finally {
+    btn.disabled    = false;
+    btn.textContent = 'Odeslat registraci';
+  }
+}
+
+/* =============================================================
+   POMOCNÉ FUNKCE
+============================================================= */
+function showToast(msg, isError = false) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className   = 'show' + (isError ? ' error' : '');
+  setTimeout(() => { el.className = isError ? 'error' : ''; }, 3500);
+}
+
+function showError(html) {
+  const box = document.getElementById('error-box');
+  box.innerHTML = html;
+  box.style.display = 'block';
+}
+
+function escHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+/* =============================================================
+   SPUŠTĚNÍ
+============================================================= */
+loadData();
+</script>
+</body>
+</html>
