@@ -5,14 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Beyblade X – Přihlášení na akci</title>
 
-<!-- ================================================================
-  SEM VLOŽ URL TVÉHO GOOGLE APPS SCRIPTU po nasazení (Deploy)
-  Viz komentář v Code.gs
-================================================================ -->
-<script>
-  const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwzZ6yc92byYbYbKpoWF5EtNYFve2ElegX9x19KkrTxSn_TabwKFZVvIV_IpMVVkgzG/exec';
-</script>
-
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Orbitron:wght@700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet" />
@@ -615,21 +607,78 @@ header p {
 
 <script>
 /* =============================================================
+   ⚙️ KONFIGURACE – VLOŽ SVOJI APPS SCRIPT URL
+   Po nasazení Code.gs zkopíruj URL a vlož ji sem.
+   Vypadá přibližně takto:
+   https://script.google.com/macros/s/XXXX.../exec
+============================================================= */
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwC9xV0TZTSVgKFcCoRVfqesHTJbSrnzXbJ7NjzNgAPwMYYKLBOxULX_w5jVlCiTTax/exec';
+
+/* =============================================================
    STAV APLIKACE
 ============================================================= */
-let allActions    = [];   // pole objektů z listu ACTIONS
-let allRegistered = [];   // pole objektů z listu REGISTERED
-let selectedId    = null; // ID vybrané akce
+let allActions    = [];
+let allRegistered = [];
+let selectedId    = null;
+
+/* =============================================================
+   JSONP HELPER – obchází CORS omezení Google Apps Scriptu
+============================================================= */
+function jsonp(params) {
+  return new Promise((resolve, reject) => {
+    const cbName = 'bbx_cb_' + Date.now() + '_' + Math.floor(Math.random() * 1e6);
+    const timeout = setTimeout(() => {
+      cleanup();
+      reject(new Error('Časový limit požadavku vypršel (10 s).'));
+    }, 10000);
+
+    function cleanup() {
+      delete window[cbName];
+      const el = document.getElementById(cbName);
+      if (el) el.remove();
+    }
+
+    window[cbName] = function(data) {
+      clearTimeout(timeout);
+      cleanup();
+      resolve(data);
+    };
+
+    params.callback = cbName;
+    params.t = Date.now();
+
+    const qs  = Object.entries(params).map(([k, v]) => encodeURIComponent(k) + '=' + encodeURIComponent(v)).join('&');
+    const url = APPS_SCRIPT_URL + '?' + qs;
+
+    const script = document.createElement('script');
+    script.id  = cbName;
+    script.src = url;
+    script.onerror = () => {
+      clearTimeout(timeout);
+      cleanup();
+      reject(new Error('Nepodařilo se načíst skript (síťová chyba nebo špatná URL).'));
+    };
+    document.head.appendChild(script);
+  });
+}
 
 /* =============================================================
    NAČTENÍ DAT
 ============================================================= */
 async function loadData() {
-  try {
-    const url = APPS_SCRIPT_URL + '?action=data&t=' + Date.now();
-    const res  = await fetch(url);
-    const data = await res.json();
+  if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL === 'SEM_VLOZ_APPS_SCRIPT_URL') {
+    document.getElementById('loader').classList.add('hidden');
+    showError(
+      '⚙️ <strong>Aplikace není nakonfigurována.</strong><br><br>' +
+      'Otevři soubor <code>index.html</code> a do proměnné<br>' +
+      '<code>APPS_SCRIPT_URL</code> vlož URL svého Google Apps Scriptu.<br><br>' +
+      '<small>Viz komentář v souboru a návod v <code>Code.gs</code>.</small>'
+    );
+    return;
+  }
 
+  try {
+    const data = await jsonp({ action: 'data' });
     if (!data.success) throw new Error(data.error || 'Neznámá chyba serveru.');
 
     allActions    = data.actions    || [];
@@ -751,9 +800,8 @@ async function submitRegistration() {
   if (!nickRaw)    { showToast('Zadej svůj nick.', true);    return; }
   if (!timeRaw)    { showToast('Zadej čas příchodu.', true); return; }
 
-  // Ošetření: odstraníme nebezpečné znaky
-  const nick = nickRaw.replace(/['"=+\-@|\\]/g, '');
-
+  // Ošetření: odstraníme nebezpečné znaky ze nicku
+  const nick = nickRaw.replace(/['"=+\-@|\\<>]/g, '').trim();
   if (!nick) { showToast('Nick obsahuje nepovolené znaky.', true); return; }
 
   // Validace formátu HH:MM
@@ -763,34 +811,27 @@ async function submitRegistration() {
   }
 
   const btn = document.getElementById('btn-submit');
-  btn.disabled     = true;
-  btn.textContent  = 'Odesílám…';
+  btn.disabled    = true;
+  btn.textContent = 'Odesílám…';
 
   try {
-    const params = new URLSearchParams({
+    const data = await jsonp({
       action:      'register',
       idAkce:      selectedId,
       nick:        nick,
-      casPrichodu: timeRaw,
-      t:           Date.now()
+      casPrichodu: timeRaw
     });
-
-    const res  = await fetch(APPS_SCRIPT_URL + '?' + params.toString());
-    const data = await res.json();
 
     if (!data.success) throw new Error(data.error || 'Chyba serveru.');
 
-    // Aktualizuj lokální počítadlo
     allRegistered.push({ idAkce: selectedId, nick: nick, casPrichodu: timeRaw });
     renderCards();
 
-    // Znovu vyber stejnou kartu (kvůli aktualizaci selected stavu)
     const el = document.querySelector(`.card[data-id="${selectedId}"]`);
     if (el) el.classList.add('selected');
 
     showToast('✅ Registrace odeslána! Těšíme se na tebe.');
 
-    // Reset formuláře
     document.getElementById('inp-nick').value = '';
     document.getElementById('inp-time').value = '';
 
