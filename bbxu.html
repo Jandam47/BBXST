@@ -1019,15 +1019,15 @@ async function loadMessages() {
   if (!res.success) return;
 
   const wrap = document.getElementById('messages-wrap');
-  const wasAtBottom = wrap.scrollHeight - wrap.scrollTop <= wrap.clientHeight + 60;
 
   wrap.innerHTML = res.messages.length === 0
     ? `<div class="empty-chat"><div class="empty-chat-icon">💬</div><div>Zatím žádné zprávy. Buď první!</div></div>`
     : res.messages.map(m => renderMessage(m)).join('');
 
-  if (wasAtBottom || res.messages.length === 1) {
+  // Vždycky scrollnout na konec (na poslední zprávu)
+  setTimeout(() => {
     wrap.scrollTop = wrap.scrollHeight;
-  }
+  }, 0);
 
   // Reset refresh timer
   startRefreshTimer();
