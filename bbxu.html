@@ -1,0 +1,1145 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pardubice Beyblade X – Team Chat</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Rajdhani:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a14;
+    --bg2: #0f0f1e;
+    --bg3: #14142a;
+    --card: #16162e;
+    --card2: #1c1c38;
+    --accent: #e63946;
+    --accent2: #ff6b6b;
+    --blue: #4361ee;
+    --blue2: #4cc9f0;
+    --gold: #ffd60a;
+    --text: #e8e8f0;
+    --muted: #7878a0;
+    --border: rgba(255,255,255,0.07);
+    --glow: 0 0 20px rgba(230,57,70,0.3);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Rajdhani', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ===== BACKGROUND ===== */
+  .bg-grid {
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background-image:
+      linear-gradient(rgba(67,97,238,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(67,97,238,0.04) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+  .bg-orb {
+    position: fixed; border-radius: 50%; pointer-events: none; z-index: 0;
+    filter: blur(80px); opacity: 0.15;
+  }
+  .orb1 { width: 500px; height: 500px; background: #e63946; top: -200px; right: -150px; }
+  .orb2 { width: 400px; height: 400px; background: #4361ee; bottom: -150px; left: -100px; }
+
+  /* ===== SCREENS ===== */
+  .screen { position: relative; z-index: 1; display: none; }
+  .screen.active { display: flex; }
+
+  /* ===== MODAL / OVERLAY ===== */
+  #screen-landing {
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 20px;
+  }
+  .logo-wrap { text-align: center; margin-bottom: 36px; }
+  .logo-main {
+    font-family: 'Orbitron', sans-serif;
+    font-size: clamp(22px, 5vw, 42px);
+    font-weight: 900;
+    line-height: 1.1;
+    letter-spacing: 2px;
+    background: linear-gradient(135deg, #e63946, #ff6b6b, #ffd60a);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-shadow: none;
+  }
+  .logo-sub {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 13px;
+    letter-spacing: 8px;
+    color: var(--muted);
+    margin-top: 6px;
+    text-transform: uppercase;
+  }
+  .beyblade-icon {
+    width: 80px; height: 80px;
+    margin: 0 auto 20px;
+    display: block;
+    animation: spin 4s linear infinite;
+  }
+  @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+  .warning-box {
+    background: rgba(230,57,70,0.08);
+    border: 1px solid rgba(230,57,70,0.3);
+    border-radius: 10px;
+    padding: 14px 20px;
+    margin-bottom: 28px;
+    max-width: 440px;
+    font-size: 14px;
+    color: #ff9da5;
+    text-align: center;
+    line-height: 1.6;
+  }
+  .warning-box strong { color: var(--accent2); display: block; margin-bottom: 4px; font-size: 15px; }
+
+  .landing-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 32px;
+    width: 100%; max-width: 420px;
+    backdrop-filter: blur(10px);
+  }
+  .landing-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 24px;
+    text-align: center;
+    letter-spacing: 1px;
+  }
+
+  /* ===== TABS ===== */
+  .tabs {
+    display: flex; gap: 4px;
+    background: var(--bg);
+    border-radius: 10px;
+    padding: 4px;
+    margin-bottom: 24px;
+  }
+  .tab {
+    flex: 1; padding: 10px 8px;
+    border: none; border-radius: 7px;
+    background: transparent;
+    color: var(--muted);
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .2s;
+    letter-spacing: 0.5px;
+  }
+  .tab.active {
+    background: var(--accent);
+    color: #fff;
+    box-shadow: 0 2px 12px rgba(230,57,70,0.4);
+  }
+
+  /* ===== FORMS ===== */
+  .form-group { margin-bottom: 16px; }
+  .form-group label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--muted);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin-bottom: 7px;
+  }
+  .form-group input {
+    width: 100%;
+    padding: 12px 16px;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 16px;
+    font-weight: 500;
+    outline: none;
+    transition: border-color .2s;
+  }
+  .form-group input:focus { border-color: rgba(67,97,238,0.6); }
+  .form-group input[type="number"]::-webkit-inner-spin-button { opacity: 0; }
+
+  .btn {
+    width: 100%;
+    padding: 13px;
+    border: none;
+    border-radius: 8px;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    cursor: pointer;
+    transition: all .2s;
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--accent), #c1121f);
+    color: #fff;
+    box-shadow: 0 4px 15px rgba(230,57,70,0.35);
+  }
+  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(230,57,70,0.5); }
+  .btn-primary:active { transform: scale(0.98); }
+  .btn-ghost {
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid var(--border);
+    margin-top: 10px;
+    font-size: 13px;
+  }
+  .btn-ghost:hover { border-color: rgba(255,255,255,0.2); color: var(--text); }
+
+  .error-msg {
+    background: rgba(230,57,70,0.12);
+    border: 1px solid rgba(230,57,70,0.3);
+    border-radius: 7px;
+    padding: 10px 14px;
+    font-size: 14px;
+    color: var(--accent2);
+    margin-bottom: 16px;
+    display: none;
+  }
+  .success-msg {
+    background: rgba(38,182,100,0.12);
+    border: 1px solid rgba(38,182,100,0.3);
+    border-radius: 7px;
+    padding: 10px 14px;
+    font-size: 14px;
+    color: #26b664;
+    margin-bottom: 16px;
+    display: none;
+  }
+
+  .divider {
+    display: flex; align-items: center; gap: 12px;
+    margin: 20px 0;
+    color: var(--muted); font-size: 13px;
+  }
+  .divider::before, .divider::after {
+    content: ''; flex: 1;
+    height: 1px; background: var(--border);
+  }
+
+  /* ===== LOBBY ===== */
+  #screen-lobby {
+    flex-direction: column;
+    min-height: 100vh;
+    padding: 0;
+  }
+  .top-bar {
+    background: var(--card);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    position: sticky; top: 0; z-index: 10;
+  }
+  .top-logo {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 14px;
+    font-weight: 900;
+    letter-spacing: 2px;
+    background: linear-gradient(135deg, var(--accent), var(--gold));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .user-badge {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 6px 14px;
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .user-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: #26b664;
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; } 50% { opacity: 0.4; }
+  }
+  .ghost-icon { font-size: 16px; }
+
+  .lobby-content {
+    padding: 32px 24px;
+    max-width: 900px;
+    margin: 0 auto;
+    width: 100%;
+  }
+  .section-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 16px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .section-title::after {
+    content: ''; flex: 1; height: 1px; background: var(--border);
+  }
+
+  .rooms-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 14px;
+    margin-bottom: 40px;
+  }
+  .room-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    cursor: pointer;
+    transition: all .25s;
+    position: relative;
+    overflow: hidden;
+  }
+  .room-card::before {
+    content: '';
+    position: absolute; top: 0; left: 0;
+    width: 3px; height: 100%;
+    transition: opacity .2s;
+    opacity: 0;
+  }
+  .room-card:hover { border-color: rgba(255,255,255,0.15); transform: translateY(-2px); }
+  .room-card:hover::before { opacity: 1; }
+  .room-card.r1::before { background: #4cc9f0; }
+  .room-card.r2::before { background: var(--gold); }
+  .room-card.r3::before { background: #7bed9f; }
+  .room-card.r4::before { background: #ff6b6b; }
+  .room-card.r5::before { background: #a29bfe; }
+  .room-card.r6::before { background: var(--accent); }
+
+  .room-icon { font-size: 28px; margin-bottom: 10px; }
+  .room-name {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 5px;
+  }
+  .room-desc {
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.4;
+  }
+
+  .links-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+  }
+  .link-tile {
+    background: var(--card2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 18px;
+    text-decoration: none;
+    color: var(--text);
+    transition: all .2s;
+    display: flex; align-items: center; gap: 10px;
+    font-weight: 600;
+    font-size: 15px;
+    cursor: pointer;
+  }
+  .link-tile:hover {
+    border-color: rgba(76,201,240,0.4);
+    background: rgba(76,201,240,0.05);
+    transform: translateY(-1px);
+  }
+  .link-tile-icon {
+    width: 36px; height: 36px;
+    background: rgba(67,97,238,0.15);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+
+  .logout-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--muted);
+    padding: 7px 14px;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .2s;
+  }
+  .logout-btn:hover { color: var(--accent); border-color: rgba(230,57,70,0.4); }
+
+  /* ===== CHAT ROOM ===== */
+  #screen-chat {
+    flex-direction: column;
+    min-height: 100vh;
+  }
+  .chat-header {
+    background: var(--card);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 20px;
+    display: flex; align-items: center; gap: 14px;
+    position: sticky; top: 0; z-index: 10;
+    justify-content: space-between;
+  }
+  .chat-header-left {
+    display: flex; align-items: center; gap: 14px;
+  }
+  .back-btn {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--muted);
+    padding: 7px 12px;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 14px; font-weight: 600;
+    cursor: pointer; transition: all .2s;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .back-btn:hover { color: var(--text); border-color: rgba(255,255,255,0.2); }
+  .chat-room-name {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 16px; font-weight: 700;
+    color: var(--text);
+  }
+  .chat-room-icon { font-size: 22px; }
+
+  /* ===== REFRESH TIMER ===== */
+  .refresh-timer {
+    position: relative;
+    width: 40px;
+    height: 40px;
+  }
+  .timer-circle {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    background: var(--bg3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--muted);
+    position: relative;
+    overflow: hidden;
+  }
+  .timer-circle::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    border: 2px solid var(--accent);
+    border-top-color: transparent;
+    border-right-color: transparent;
+    border-bottom-color: transparent;
+    transform: rotate(0deg);
+    opacity: 0;
+  }
+  .timer-circle.active::before {
+    animation: rotateTimer 1s linear;
+    opacity: 1;
+  }
+  @keyframes rotateTimer {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+  .timer-circle.loading {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .messages-wrap {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-height: 0;
+    max-height: calc(100vh - 140px);
+  }
+  .message {
+    display: flex;
+    gap: 10px;
+    max-width: 75%;
+  }
+  .message.own { align-self: flex-end; flex-direction: row-reverse; }
+  .avatar {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--blue), var(--accent));
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 14px;
+    flex-shrink: 0;
+    font-family: 'Rajdhani', sans-serif;
+  }
+  .avatar.ghost {
+    background: linear-gradient(135deg, #555, #333);
+    font-size: 18px;
+  }
+  .msg-body {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .msg-nick {
+    font-weight: 700;
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .msg-text {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-size: 15px;
+    line-height: 1.4;
+    word-wrap: break-word;
+  }
+  .message.own .msg-text {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+  .msg-time {
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  .empty-chat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 200px;
+    gap: 12px;
+    color: var(--muted);
+  }
+  .empty-chat-icon { font-size: 40px; }
+
+  .chat-input-wrap {
+    background: var(--card);
+    border-top: 1px solid var(--border);
+    padding: 16px 20px;
+    display: flex; gap: 10px;
+    align-items: flex-end;
+  }
+  #chat-input {
+    flex: 1;
+    padding: 10px 14px;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 15px;
+    outline: none;
+    transition: border-color .2s;
+    resize: none;
+    max-height: 100px;
+    min-height: 40px;
+  }
+  #chat-input:focus { border-color: rgba(67,97,238,0.6); }
+
+  .send-btn {
+    background: linear-gradient(135deg, var(--accent), #c1121f);
+    border: none;
+    border-radius: 8px;
+    color: #fff;
+    padding: 10px 18px;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all .2s;
+    flex-shrink: 0;
+    height: 40px;
+  }
+  .send-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(230,57,70,0.4); }
+  .send-btn:active { transform: scale(0.98); }
+
+  /* ===== LOADING OVERLAY ===== */
+  .loading-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(10, 10, 20, 0.95);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    flex-direction: column;
+    gap: 30px;
+  }
+  .loading-overlay.active {
+    display: flex;
+  }
+
+  .spinner-container {
+    position: relative;
+    width: 120px;
+    height: 120px;
+  }
+  .spinner-circle {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border: 3px solid var(--border);
+    border-radius: 50%;
+    border-top-color: var(--accent);
+    border-right-color: var(--accent);
+    animation: spinnerRotate 2s linear infinite;
+  }
+  @keyframes spinnerRotate {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+
+  .countdown-display {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--accent);
+    text-align: center;
+  }
+  .countdown-label {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 13px;
+    color: var(--muted);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  .toast {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 18px;
+    font-size: 14px;
+    color: var(--text);
+    z-index: 1000;
+    animation: slideIn 0.3s ease-out;
+  }
+  @keyframes slideIn {
+    from { transform: translateX(400px); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+  }
+</style>
+</head>
+<body>
+<div class="bg-grid"></div>
+<div class="bg-orb orb1"></div>
+<div class="bg-orb orb2"></div>
+
+<!-- ===== LOADING SCREEN ===== -->
+<div id="loading" style="position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:9999;">
+  <div style="text-align:center;">
+    <div style="width:60px;height:60px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;margin:0 auto 20px;animation:spin 1.5s linear infinite;"></div>
+    <div style="font-size:13px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;">Načítání...</div>
+  </div>
+</div>
+
+<!-- ===== LOADING OVERLAY (pro místnosti) ===== -->
+<div id="loading-overlay" class="loading-overlay">
+  <div class="spinner-container">
+    <div class="spinner-circle"></div>
+  </div>
+  <div>
+    <div class="countdown-display" id="countdown-display">5</div>
+    <div class="countdown-label">Načítání konverzace</div>
+  </div>
+</div>
+
+<!-- ===== LANDING ===== -->
+<div id="screen-landing" class="screen">
+  <div class="logo-wrap">
+    <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='45' fill='none' stroke='%23e63946' stroke-width='2'/%3E%3Cpolygon points='50,15 85,75 15,75' fill='%23e63946' opacity='0.8'/%3E%3C/svg%3E" class="beyblade-icon" />
+    <h1 class="logo-main">PBX CHAT</h1>
+    <p class="logo-sub">TEAM HUB</p>
+  </div>
+
+  <div class="landing-card">
+    <div class="warning-box">
+      <strong>⚠️ BETA</strong>
+      Aplikace je stále ve vývoji. Hlašte chyby!
+    </div>
+
+    <div class="landing-title">Přihlášení</div>
+
+    <div class="tabs">
+      <button class="tab active" onclick="showTab('login')">Přihlášení</button>
+      <button class="tab" onclick="showTab('register')">Registrace</button>
+    </div>
+
+    <!-- ===== LOGIN ===== -->
+    <div id="tab-login">
+      <div class="form-group">
+        <label>Nick</label>
+        <input type="text" id="login-nick" placeholder="Tvůj nick...">
+      </div>
+      <div class="form-group">
+        <label>PIN (4 číslice)</label>
+        <input type="password" id="login-pin" placeholder="0000">
+      </div>
+      <div id="login-error" class="error-msg"></div>
+      <button class="btn btn-primary" onclick="doLogin()">VSTOUPIT</button>
+      <button class="btn btn-ghost" onclick="guestLogin()">GUEST (bez přihlášení)</button>
+    </div>
+
+    <!-- ===== REGISTER ===== -->
+    <div id="tab-register" style="display:none;">
+      <div class="form-group">
+        <label>Nový nick</label>
+        <input type="text" id="reg-nick" placeholder="Vymysli si nick...">
+      </div>
+      <div class="form-group">
+        <label>PIN (4 číslice)</label>
+        <input type="password" id="reg-pin" placeholder="0000">
+      </div>
+      <div id="reg-error" class="error-msg"></div>
+      <div id="reg-success" class="success-msg"></div>
+      <button class="btn btn-primary" onclick="doRegister()">REGISTROVAT</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== LOBBY ===== -->
+<div id="screen-lobby" class="screen">
+  <div class="top-bar">
+    <div class="top-logo">⚔️ PBX CHAT</div>
+    <div style="display:flex; align-items:center; gap:12px;">
+      <div class="user-badge">
+        <div class="user-dot"></div>
+        <span id="badge-name">-</span>
+        <span id="badge-ghost" class="ghost-icon" style="display:none;">👻</span>
+      </div>
+      <button class="logout-btn" onclick="logout()">LOGOUT</button>
+    </div>
+  </div>
+
+  <div class="lobby-content">
+    <div class="section-title">Místnosti</div>
+    <div class="rooms-grid">
+      <div class="room-card r1" onclick="openRoom('Tréninky')">
+        <div class="room-icon">⚙️</div>
+        <div class="room-name">Tréninky</div>
+        <div class="room-desc">Tréninkový program a tipy</div>
+      </div>
+      <div class="room-card r2" onclick="openRoom('Turnaje')">
+        <div class="room-icon">🏆</div>
+        <div class="room-name">Turnaje</div>
+        <div class="room-desc">Registrace a výsledky</div>
+      </div>
+      <div class="room-card r3" onclick="openRoom('Cestování')">
+        <div class="room-icon">🚗</div>
+        <div class="room-name">Cestování</div>
+        <div class="room-desc">Koordinace cest</div>
+      </div>
+      <div class="room-card r4" onclick="openRoom('Poptávky')">
+        <div class="room-icon">🔍</div>
+        <div class="room-name">Poptávky</div>
+        <div class="room-desc">Hledání a nákupy</div>
+      </div>
+      <div class="room-card r5" onclick="openRoom('Prodeje')">
+        <div class="room-icon">💎</div>
+        <div class="room-name">Prodeje</div>
+        <div class="room-desc">Nabídky a prodej</div>
+      </div>
+      <div class="room-card r6" onclick="openRoom('Volný talk')">
+        <div class="room-icon">💬</div>
+        <div class="room-name">Volný talk</div>
+        <div class="room-desc">Všechno ostatní</div>
+      </div>
+    </div>
+
+    <div class="section-title">Užitečné odkazy</div>
+    <div id="links-grid" class="links-grid"></div>
+  </div>
+</div>
+
+<!-- ===== CHAT ===== -->
+<div id="screen-chat" class="screen">
+  <div class="chat-header">
+    <div class="chat-header-left">
+      <button class="back-btn" onclick="backToLobby()">← Zpět</button>
+      <span class="chat-room-icon" id="chat-room-icon">💬</span>
+      <span class="chat-room-name" id="chat-room-name">Místnost</span>
+    </div>
+    <div class="refresh-timer">
+      <div class="timer-circle" id="timer-circle">-</div>
+    </div>
+  </div>
+
+  <div id="messages-wrap" class="messages-wrap"></div>
+
+  <div class="chat-input-wrap">
+    <textarea id="chat-input" placeholder="Napiš zprávu..." rows="1"></textarea>
+    <button class="send-btn" onclick="sendMsg()">POSLAT</button>
+  </div>
+</div>
+
+<script>
+// =============================================
+//  CONFIG — vlož svou Apps Script URL sem:
+// =============================================
+const API_URL = 'https://script.google.com/macros/s/AKfycbxXtEyvMvyrO7URDKW7H9rg1DR1eTx81SBWMcLNWBh6ilHmlwHN9-CB6cR2XAc_L8Jb/exec';
+// Příklad: "https://script.google.com/macros/s/AKfycb.../exec"
+
+const ROOMS_ICONS = {
+  'Tréninky': '⚙️',
+  'Turnaje': '🏆',
+  'Cestování': '🚗',
+  'Poptávky': '🔍',
+  'Prodeje': '💎',
+  'Volný talk': '💬'
+};
+
+let currentUser = null;
+let isGuest = false;
+let currentRoom = null;
+let pollInterval = null;
+let refreshInterval = null;
+let refreshCountdown = 0;
+const REFRESH_INTERVAL = 4000; // 4 sekundy
+
+// ===== INIT =====
+window.addEventListener('load', () => {
+  setTimeout(() => {
+    document.getElementById('loading').style.display = 'none';
+    showScreen('landing');
+  }, 1000);
+});
+
+// ===== SCREENS =====
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + name).classList.add('active');
+}
+
+// ===== TABS =====
+function showTab(tab) {
+  document.getElementById('tab-login').style.display = tab === 'login' ? '' : 'none';
+  document.getElementById('tab-register').style.display = tab === 'register' ? '' : 'none';
+  document.querySelectorAll('.tab').forEach((t, i) => {
+    t.classList.toggle('active', (tab === 'login' && i === 0) || (tab === 'register' && i === 1));
+  });
+}
+
+// ===== AUTH =====
+async function doRegister() {
+  const nick = document.getElementById('reg-nick').value.trim();
+  const pin = document.getElementById('reg-pin').value.trim();
+  const errEl = document.getElementById('reg-error');
+  const sucEl = document.getElementById('reg-success');
+  errEl.style.display = 'none';
+  sucEl.style.display = 'none';
+
+  if (!nick) return showError('reg-error', 'Zadej nick.');
+  if (nick.length < 2) return showError('reg-error', 'Nick musí mít alespoň 2 znaky.');
+  if (!/^\d{4}$/.test(pin)) return showError('reg-error', 'PIN musí být přesně 4 číslice.');
+
+  const res = await apiCall({ action: 'register', nick, pin });
+  if (res.success) {
+    sucEl.textContent = '✓ Registrace úspěšná! Přihlaš se.';
+    sucEl.style.display = 'block';
+    document.getElementById('reg-nick').value = '';
+    document.getElementById('reg-pin').value = '';
+    setTimeout(() => showTab('login'), 2000);
+  } else {
+    showError('reg-error', res.error || 'Chyba registrace.');
+  }
+}
+
+async function doLogin() {
+  const nick = document.getElementById('login-nick').value.trim();
+  const pin = document.getElementById('login-pin').value.trim();
+  showError('login-error', '');
+
+  if (!nick) return showError('login-error', 'Zadej nick.');
+  if (!pin) return showError('login-error', 'Zadej PIN.');
+
+  const res = await apiCall({ action: 'login', nick, pin });
+  if (res.success) {
+    currentUser = nick;
+    isGuest = false;
+    enterLobby();
+  } else {
+    showError('login-error', res.error || 'Přihlášení selhalo.');
+  }
+}
+
+function guestLogin() {
+  currentUser = 'Host_' + Math.floor(Math.random() * 9000 + 1000);
+  isGuest = true;
+  enterLobby();
+}
+
+function logout() {
+  currentUser = null;
+  isGuest = false;
+  clearInterval(pollInterval);
+  clearInterval(refreshInterval);
+  pollInterval = null;
+  refreshInterval = null;
+  showScreen('landing');
+}
+
+// ===== LOBBY =====
+async function enterLobby() {
+  document.getElementById('badge-name').textContent = currentUser;
+  document.getElementById('badge-ghost').style.display = isGuest ? '' : 'none';
+  showScreen('lobby');
+  loadLinks();
+}
+
+async function loadLinks() {
+  const grid = document.getElementById('links-grid');
+  const res = await apiCall({ action: 'getLinks' });
+  if (res.success && res.links.length > 0) {
+    grid.innerHTML = res.links.map(l => `
+      <div class="link-tile" onclick="openLink('${escHtml(l.url)}')">
+        <div class="link-tile-icon">🔗</div>
+        <span>${escHtml(l.name)}</span>
+      </div>
+    `).join('');
+  } else {
+    grid.innerHTML = '<div style="color:var(--muted);font-size:14px;padding:10px;">Zatím žádné odkazy.</div>';
+  }
+}
+
+function openLink(url) {
+  window.open(url, '_blank', 'noopener');
+}
+
+// ===== CHAT =====
+async function openRoom(room) {
+  currentRoom = room;
+  
+  // Nastavit header
+  document.getElementById('chat-room-name').textContent = room;
+  document.getElementById('chat-room-icon').textContent = ROOMS_ICONS[room] || '💬';
+  
+  // Skrýt messages a ukazit loading
+  const messagesWrap = document.getElementById('messages-wrap');
+  const overlay = document.getElementById('loading-overlay');
+  
+  messagesWrap.style.display = 'none';
+  messagesWrap.innerHTML = '';
+  overlay.classList.add('active');
+  
+  showScreen('chat');
+  
+  // Spustit countdown
+  let countdown = 5;
+  document.getElementById('countdown-display').textContent = countdown;
+  const countdownInterval = setInterval(() => {
+    countdown--;
+    document.getElementById('countdown-display').textContent = countdown;
+  }, 1000);
+
+  // Načíst zprávy v pozadí
+  await loadMessages();
+  
+  // Po načtení - skrýt loading a ukazit zprávy
+  clearInterval(countdownInterval);
+  overlay.classList.remove('active');
+  messagesWrap.style.display = 'flex';
+  
+  // Spustit refresh loop
+  clearInterval(pollInterval);
+  clearInterval(refreshInterval);
+  startRefreshTimer();
+  pollInterval = setInterval(loadMessages, REFRESH_INTERVAL);
+}
+
+function backToLobby() {
+  clearInterval(pollInterval);
+  clearInterval(refreshInterval);
+  pollInterval = null;
+  refreshInterval = null;
+  currentRoom = null;
+  showScreen('lobby');
+}
+
+// ===== REFRESH TIMER =====
+function startRefreshTimer() {
+  refreshCountdown = REFRESH_INTERVAL / 1000;
+  updateTimerDisplay();
+  
+  clearInterval(refreshInterval);
+  refreshInterval = setInterval(() => {
+    refreshCountdown--;
+    updateTimerDisplay();
+    if (refreshCountdown <= 0) {
+      refreshCountdown = REFRESH_INTERVAL / 1000;
+    }
+  }, 1000);
+}
+
+function updateTimerDisplay() {
+  const timerCircle = document.getElementById('timer-circle');
+  const percent = ((REFRESH_INTERVAL / 1000) - refreshCountdown) / (REFRESH_INTERVAL / 1000);
+  
+  timerCircle.textContent = Math.ceil(refreshCountdown);
+  timerCircle.classList.toggle('active', percent > 0 && percent < 1);
+}
+
+async function loadMessages() {
+  if (!currentRoom) return;
+  
+  const res = await apiCall({ action: 'getMessages', room: currentRoom });
+  if (!res.success) return;
+
+  const wrap = document.getElementById('messages-wrap');
+  const wasAtBottom = wrap.scrollHeight - wrap.scrollTop <= wrap.clientHeight + 60;
+
+  wrap.innerHTML = res.messages.length === 0
+    ? `<div class="empty-chat"><div class="empty-chat-icon">💬</div><div>Zatím žádné zprávy. Buď první!</div></div>`
+    : res.messages.map(m => renderMessage(m)).join('');
+
+  if (wasAtBottom || res.messages.length === 1) {
+    wrap.scrollTop = wrap.scrollHeight;
+  }
+
+  // Reset refresh timer
+  startRefreshTimer();
+}
+
+function renderMessage(m) {
+  const isOwn = m.nick === currentUser;
+  const avatarContent = m.nick.startsWith('Host_')
+    ? `<span>👻</span>`
+    : `<span>${escHtml(m.nick.charAt(0).toUpperCase())}</span>`;
+  const avatarClass = m.nick.startsWith('Host_') ? 'avatar ghost' : 'avatar';
+  const msgClass = isOwn ? 'message own' : 'message';
+
+  return `
+    <div class="${msgClass}">
+      <div class="${avatarClass}">${avatarContent}</div>
+      <div class="msg-body">
+        <div class="msg-nick">${escHtml(m.nick)}</div>
+        <div class="msg-text">${escHtml(m.text)}</div>
+        ${m.time ? `<div class="msg-time">${escHtml(m.time)}</div>` : ''}
+      </div>
+    </div>
+  `;
+}
+
+async function sendMsg() {
+  const input = document.getElementById('chat-input');
+  const text = input.value.trim();
+  if (!text) return;
+
+  input.value = '';
+  const res = await apiCall({ action: 'sendMessage', room: currentRoom, nick: currentUser, text });
+  if (res.success) {
+    // Hned refreshnout po odeslání
+    await loadMessages();
+  } else {
+    showToast('Chyba při odesílání: ' + (res.error || '?'));
+  }
+}
+
+// ===== API =====
+async function apiCall(data) {
+  if (API_URL === "VLOZ_SEM_URL_TVEHO_APPS_SCRIPTU") {
+    return mockApi(data);
+  }
+  try {
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+    return await res.json();
+  } catch (e) {
+    console.error(e);
+    return { success: false, error: 'Chyba sítě' };
+  }
+}
+
+// DEMO mód (bez API) — odstraň po nastavení Apps Script
+function mockApi(data) {
+  const store = JSON.parse(localStorage.getItem('pbx_mock') || '{"users":[],"rooms":{},"links":[{"name":"Beyblade X Official","url":"https://www.beyblade.com"},{"name":"WBO Forum","url":"https://worldbeyblade.org"}]}');
+  if (data.action === 'register') {
+    if (store.users.find(u => u.nick.toLowerCase() === data.nick.toLowerCase()))
+      return { success: false, error: 'Nick je již obsazený' };
+    store.users.push({ nick: data.nick, pin: data.pin });
+    localStorage.setItem('pbx_mock', JSON.stringify(store));
+    return { success: true };
+  }
+  if (data.action === 'login') {
+    const u = store.users.find(u => u.nick.toLowerCase() === data.nick.toLowerCase());
+    if (!u) return { success: false, error: 'Nick neexistuje' };
+    if (u.pin !== data.pin) return { success: false, error: 'Špatný PIN' };
+    return { success: true };
+  }
+  if (data.action === 'sendMessage') {
+    if (!store.rooms[data.room]) store.rooms[data.room] = [];
+    const now = new Date();
+    const time = now.toLocaleDateString('cs-CZ') + ' ' + now.toLocaleTimeString('cs-CZ', {hour:'2-digit',minute:'2-digit'});
+    store.rooms[data.room].push({ nick: data.nick, text: data.text, time });
+    localStorage.setItem('pbx_mock', JSON.stringify(store));
+    return { success: true };
+  }
+  if (data.action === 'getMessages') {
+    return { success: true, messages: store.rooms[data.room] || [] };
+  }
+  if (data.action === 'getLinks') {
+    return { success: true, links: store.links || [] };
+  }
+  return { success: false, error: 'Neznámá akce' };
+}
+
+// ===== HELPERS =====
+function showError(id, msg) {
+  const el = document.getElementById(id);
+  el.textContent = msg;
+  el.style.display = msg ? 'block' : 'none';
+}
+
+function escHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function showToast(msg, duration = 3000) {
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), duration);
+}
+</script>
+</body>
+</html>
