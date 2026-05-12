@@ -419,6 +419,15 @@ header p {
   border-color: var(--accent-g);
   box-shadow: 0 0 0 3px rgba(255,208,0,.12);
 }
+.field input:disabled {
+  opacity: .55;
+  cursor: not-allowed;
+  border-color: var(--border);
+  box-shadow: none;
+}
+.form-box.turnaj-form .field input:disabled {
+  border-color: var(--border);
+}
 .field .hint {
   font-size: .75rem;
   color: var(--text-dim);
@@ -596,7 +605,7 @@ header p {
     <div class="field">
       <label for="inp-time">Čas příchodu</label>
       <input type="time" id="inp-time" />
-      <div class="hint">Zadej přibližný čas kdy přijdeš (HH:MM).</div>
+      <div class="hint" id="hint-time">Čas je předvyplněn dle začátku akce, můžeš ho upravit.</div>
     </div>
 
     <button id="btn-submit" onclick="submitRegistration()">
@@ -782,6 +791,18 @@ function selectCard(id) {
   document.getElementById('fes-sub').textContent  =
     action.casOd + ' – ' + action.casDo + '  |  ' + action.misto;
 
+  // Předvyplnění a zamčení času příchodu
+  const timeInput = document.getElementById('inp-time');
+  const hintTime  = document.getElementById('hint-time');
+  timeInput.value = action.casOd;
+  if (isTurnaj) {
+    timeInput.disabled = true;
+    hintTime.textContent = '⚠️ Turnaj – čas příchodu je pevně daný (' + action.casOd + ') a nelze ho změnit.';
+  } else {
+    timeInput.disabled = false;
+    hintTime.textContent = 'Čas je předvyplněn dle začátku akce, můžeš ho upravit.';
+  }
+
   document.getElementById('register-section').style.display = 'block';
 }
 
@@ -794,7 +815,8 @@ function scrollToForm() {
 ============================================================= */
 async function submitRegistration() {
   const nickRaw = document.getElementById('inp-nick').value.trim();
-  const timeRaw = document.getElementById('inp-time').value.trim();
+  const timeEl  = document.getElementById('inp-time');
+  const timeRaw = timeEl.value.trim();
 
   if (!selectedId) { showToast('Nejprve vyber akci!', true); return; }
   if (!nickRaw)    { showToast('Zadej svůj nick.', true);    return; }
