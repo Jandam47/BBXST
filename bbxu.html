@@ -429,48 +429,25 @@
     position: relative;
     width: 40px;
     height: 40px;
-  }
-  .timer-circle {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    border: 2px solid var(--border);
-    background: var(--bg3);
     display: flex;
     align-items: center;
     justify-content: center;
+    flex-shrink: 0;
+  }
+  .timer-ring {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    animation: spin 2s linear infinite;
+  }
+  #timer-text {
     font-size: 12px;
     font-weight: 700;
     color: var(--muted);
     position: relative;
-    overflow: hidden;
-  }
-  .timer-circle::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    border-radius: 50%;
-    border: 2px solid var(--accent);
-    border-top-color: transparent;
-    border-right-color: transparent;
-    border-bottom-color: transparent;
-    transform: rotate(0deg);
-    opacity: 0;
-  }
-  .timer-circle.active::before {
-    animation: rotateTimer 1s linear;
-    opacity: 1;
-  }
-  @keyframes rotateTimer {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
-  }
-  .timer-circle.loading {
-    border-color: var(--accent);
-    color: var(--accent);
+    z-index: 1;
   }
 
   .messages-wrap {
@@ -620,19 +597,13 @@
     to { transform: rotate(360deg); }
   }
 
-  .countdown-display {
-    font-family: 'Orbitron', sans-serif;
-    font-size: 24px;
-    font-weight: 700;
-    color: var(--accent);
-    text-align: center;
-  }
   .countdown-label {
     font-family: 'Rajdhani', sans-serif;
     font-size: 13px;
     color: var(--muted);
     letter-spacing: 2px;
     text-transform: uppercase;
+    margin-top: 16px;
   }
 
   .toast {
@@ -672,10 +643,7 @@
   <div class="spinner-container">
     <div class="spinner-circle"></div>
   </div>
-  <div>
-    <div class="countdown-display" id="countdown-display">5</div>
-    <div class="countdown-label">Načítání konverzace</div>
-  </div>
+  <div class="countdown-label">Načítání konverzace</div>
 </div>
 
 <!-- ===== LANDING ===== -->
@@ -794,7 +762,8 @@
       <span class="chat-room-name" id="chat-room-name">Místnost</span>
     </div>
     <div class="refresh-timer">
-      <div class="timer-circle" id="timer-circle">-</div>
+      <div class="timer-ring"></div>
+      <span id="timer-text">-</span>
     </div>
   </div>
 
@@ -828,7 +797,9 @@ let currentRoom = null;
 let pollInterval = null;
 let refreshInterval = null;
 let refreshCountdown = 0;
-const REFRESH_INTERVAL = 4000; // 4 sekundy
+let isLoadingMessages = false;
+let isSendingMessage = false;
+const REFRESH_INTERVAL = 2000; // 2 sekundy
 
 // ===== INIT =====
 window.addEventListener('load', () => {
@@ -956,20 +927,9 @@ async function openRoom(room) {
   overlay.classList.add('active');
   
   showScreen('chat');
-  
-  // Spustit countdown
-  let countdown = 5;
-  document.getElementById('countdown-display').textContent = countdown;
-  const countdownInterval = setInterval(() => {
-    countdown--;
-    document.getElementById('countdown-display').textContent = countdown;
-  }, 1000);
 
   // Načíst zprávy v pozadí
-  await loadMessages();
-  
-  // Po načtení - skrýt loading a ukazit zprávy
-  clearInterval(countdownInterval);
+  await loadMessages(true);
   overlay.classList.remove('active');
   messagesWrap.style.display = 'flex';
   
@@ -1005,32 +965,70 @@ function startRefreshTimer() {
 }
 
 function updateTimerDisplay() {
-  const timerCircle = document.getElementById('timer-circle');
-  const percent = ((REFRESH_INTERVAL / 1000) - refreshCountdown) / (REFRESH_INTERVAL / 1000);
-  
-  timerCircle.textContent = Math.ceil(refreshCountdown);
-  timerCircle.classList.toggle('active', percent > 0 && percent < 1);
+  const el = document.getElementById('timer-text');
+  if (el) el.textContent = Math.ceil(refreshCountdown);
 }
 
-async function loadMessages() {
-  if (!currentRoom) return;
-  
-  const res = await apiCall({ action: 'getMessages', room: currentRoom });
-  if (!res.success) return;
+async function loadMessages(scrollToBottom = false) {
+  if (!currentRoom || isLoadingMessages) return;
+  isLoadingMessages = true;
 
-  const wrap = document.getElementById('messages-wrap');
+  try {
+    const res = await apiCall({ action: 'getMessages', room: currentRoom });
+    if (!res.success) return;
 
-  wrap.innerHTML = res.messages.length === 0
-    ? `<div class="empty-chat"><div class="empty-chat-icon">💬</div><div>Zatím žádné zprávy. Buď první!</div></div>`
-    : res.messages.map(m => renderMessage(m)).join('');
+    const wrap = document.getElementById('messages-wrap');
+    const messages = res.messages || [];
 
-  // Vždycky scrollnout na konec (na poslední zprávu)
-  setTimeout(() => {
-    wrap.scrollTop = wrap.scrollHeight;
-  }, 0);
+    if (messages.length === 0) {
+      if (!isSendingMessage) {
+        wrap.innerHTML = `<div class="empty-chat"><div class="empty-chat-icon">💬</div><div>Zatím žádné zprávy. Buď první!</div></div>`;
+      }
+      return;
+    }
 
-  // Reset refresh timer
-  startRefreshTimer();
+    const emptyChat = wrap.querySelector('.empty-chat');
+    if (emptyChat) wrap.innerHTML = '';
+
+    if (!isSendingMessage) {
+      wrap.querySelectorAll('[data-pending]').forEach(el => el.remove());
+    }
+
+    const currentCount = wrap.querySelectorAll('.message:not([data-pending])').length;
+
+    if (currentCount === messages.length) {
+      return;
+    }
+
+    if (currentCount < messages.length) {
+      const newMessages = messages.slice(currentCount);
+      const pendingEl = wrap.querySelector('[data-pending]');
+      newMessages.forEach(m => {
+        const html = renderMessage(m);
+        if (pendingEl) {
+          pendingEl.insertAdjacentHTML('beforebegin', html);
+        } else {
+          wrap.insertAdjacentHTML('beforeend', html);
+        }
+      });
+      if (!isSendingMessage) {
+        wrap.querySelectorAll('[data-pending]').forEach(el => el.remove());
+      }
+      if (scrollToBottom) {
+        setTimeout(() => { wrap.scrollTop = wrap.scrollHeight; }, 0);
+      }
+    } else {
+      if (!isSendingMessage) {
+        wrap.innerHTML = messages.map(m => renderMessage(m)).join('');
+        if (scrollToBottom) {
+          setTimeout(() => { wrap.scrollTop = wrap.scrollHeight; }, 0);
+        }
+      }
+    }
+  } finally {
+    isLoadingMessages = false;
+    startRefreshTimer();
+  }
 }
 
 function renderMessage(m) {
@@ -1040,13 +1038,14 @@ function renderMessage(m) {
     : `<span>${escHtml(m.nick.charAt(0).toUpperCase())}</span>`;
   const avatarClass = m.nick.startsWith('Host_') ? 'avatar ghost' : 'avatar';
   const msgClass = isOwn ? 'message own' : 'message';
+  const pendingAttr = m.pending ? 'data-pending="true" style="opacity:0.55;"' : '';
 
   return `
-    <div class="${msgClass}">
+    <div class="${msgClass}" ${pendingAttr}>
       <div class="${avatarClass}">${avatarContent}</div>
       <div class="msg-body">
         <div class="msg-nick">${escHtml(m.nick)}</div>
-        <div class="msg-text">${escHtml(m.text)}</div>
+        <div class="msg-text">${escHtml(m.text)}${m.pending ? ' <span style="font-size:11px;opacity:0.6;">⏳</span>' : ''}</div>
         ${m.time ? `<div class="msg-time">${escHtml(m.time)}</div>` : ''}
       </div>
     </div>
@@ -1055,16 +1054,43 @@ function renderMessage(m) {
 
 async function sendMsg() {
   const input = document.getElementById('chat-input');
+  const btn = document.querySelector('.send-btn');
   const text = input.value.trim();
-  if (!text) return;
+  if (!text || !currentRoom) return;
 
   input.value = '';
+
+  const wrap = document.getElementById('messages-wrap');
+  const now = new Date();
+  const time = now.toLocaleDateString('cs-CZ') + ' ' + now.toLocaleTimeString('cs-CZ', {hour:'2-digit',minute:'2-digit'});
+
+  // Smazat empty-chat pokud existuje
+  const emptyChat = wrap.querySelector('.empty-chat');
+  if (emptyChat) wrap.innerHTML = '';
+
+  // Přidat pending zprávu HNED do DOM
+  wrap.insertAdjacentHTML('beforeend', renderMessage({ nick: currentUser, text, time, pending: true }));
+  setTimeout(() => { wrap.scrollTop = wrap.scrollHeight; }, 0);
+
+  // Označ že posíláme – loadMessages() pending zprávu nesmaže
+  isSendingMessage = true;
+  btn.disabled = true;
+  btn.textContent = '...';
+
   const res = await apiCall({ action: 'sendMessage', room: currentRoom, nick: currentUser, text });
+
+  isSendingMessage = false;
+  btn.disabled = false;
+  btn.textContent = 'POSLAT';
+  input.focus();
+
   if (res.success) {
-    // Hned refreshnout po odeslání
-    await loadMessages();
+    // Server potvrdil – teď loadMessages() smaže pending a přidá skutečnou
+    await loadMessages(true);
   } else {
-    showToast('Chyba při odesílání: ' + (res.error || '?'));
+    // Chyba – smaž pending zprávu
+    wrap.querySelectorAll('[data-pending]').forEach(el => el.remove());
+    showToast('❌ Chyba: ' + (res.error || 'Zkus znovu'), 4000);
   }
 }
 
