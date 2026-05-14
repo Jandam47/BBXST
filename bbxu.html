@@ -6,623 +6,230 @@
 <title>Pardubice Beyblade X – Team Chat</title>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Rajdhani:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --bg: #0a0a14;
-    --bg2: #0f0f1e;
-    --bg3: #14142a;
-    --card: #16162e;
-    --card2: #1c1c38;
-    --accent: #e63946;
-    --accent2: #ff6b6b;
-    --blue: #4361ee;
-    --blue2: #4cc9f0;
-    --gold: #ffd60a;
-    --text: #e8e8f0;
-    --muted: #7878a0;
-    --border: rgba(255,255,255,0.07);
-    --glow: 0 0 20px rgba(230,57,70,0.3);
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    font-family: 'Rajdhani', sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    min-height: 100vh;
-    overflow-x: hidden;
-  }
+:root {
+  --bg:     #0a0a14;
+  --bg2:    #0f0f1e;
+  --bg3:    #14142a;
+  --card:   #16162e;
+  --card2:  #1c1c38;
+  --accent: #e63946;
+  --accent2:#ff6b6b;
+  --blue:   #4361ee;
+  --blue2:  #4cc9f0;
+  --gold:   #ffd60a;
+  --green:  #26b664;
+  --text:   #e8e8f0;
+  --muted:  #7878a0;
+  --border: rgba(255,255,255,0.07);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Rajdhani', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; overflow-x: hidden; }
 
-  /* ===== BACKGROUND ===== */
-  .bg-grid {
-    position: fixed; inset: 0; z-index: 0; pointer-events: none;
-    background-image:
-      linear-gradient(rgba(67,97,238,0.04) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(67,97,238,0.04) 1px, transparent 1px);
-    background-size: 40px 40px;
-  }
-  .bg-orb {
-    position: fixed; border-radius: 50%; pointer-events: none; z-index: 0;
-    filter: blur(80px); opacity: 0.15;
-  }
-  .orb1 { width: 500px; height: 500px; background: #e63946; top: -200px; right: -150px; }
-  .orb2 { width: 400px; height: 400px; background: #4361ee; bottom: -150px; left: -100px; }
+/* BG */
+.bg-grid { position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background-image: linear-gradient(rgba(67,97,238,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(67,97,238,0.04) 1px, transparent 1px);
+  background-size: 40px 40px; }
+.bg-orb { position: fixed; border-radius: 50%; pointer-events: none; z-index: 0; filter: blur(80px); opacity: 0.15; }
+.orb1 { width: 500px; height: 500px; background: #e63946; top: -200px; right: -150px; }
+.orb2 { width: 400px; height: 400px; background: #4361ee; bottom: -150px; left: -100px; }
 
-  /* ===== SCREENS ===== */
-  .screen { position: relative; z-index: 1; display: none; }
-  .screen.active { display: flex; }
+/* SCREENS */
+.screen { position: relative; z-index: 1; display: none; }
+.screen.active { display: flex; }
 
-  /* ===== MODAL / OVERLAY ===== */
-  #screen-landing {
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    min-height: 100vh;
-    padding: 20px;
-  }
-  .logo-wrap { text-align: center; margin-bottom: 36px; }
-  .logo-main {
-    font-family: 'Orbitron', sans-serif;
-    font-size: clamp(22px, 5vw, 42px);
-    font-weight: 900;
-    line-height: 1.1;
-    letter-spacing: 2px;
-    background: linear-gradient(135deg, #e63946, #ff6b6b, #ffd60a);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    text-shadow: none;
-  }
-  .logo-sub {
-    font-family: 'Orbitron', sans-serif;
-    font-size: 13px;
-    letter-spacing: 8px;
-    color: var(--muted);
-    margin-top: 6px;
-    text-transform: uppercase;
-  }
-  .beyblade-icon {
-    width: 80px; height: 80px;
-    margin: 0 auto 20px;
-    display: block;
-    animation: spin 4s linear infinite;
-  }
-  @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+/* LANDING */
+#screen-landing { flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
+.logo-wrap { text-align: center; margin-bottom: 36px; }
+.logo-main { font-family: 'Orbitron', sans-serif; font-size: clamp(22px, 5vw, 42px); font-weight: 900;
+  background: linear-gradient(135deg, #e63946, #ff6b6b, #ffd60a); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.logo-sub { font-family: 'Orbitron', sans-serif; font-size: 13px; letter-spacing: 8px; color: var(--muted); margin-top: 6px; }
+.beyblade-icon { width: 80px; height: 80px; margin: 0 auto 20px; display: block; animation: spin 4s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
 
-  .warning-box {
-    background: rgba(230,57,70,0.08);
-    border: 1px solid rgba(230,57,70,0.3);
-    border-radius: 10px;
-    padding: 14px 20px;
-    margin-bottom: 28px;
-    max-width: 440px;
-    font-size: 14px;
-    color: #ff9da5;
-    text-align: center;
-    line-height: 1.6;
-  }
-  .warning-box strong { color: var(--accent2); display: block; margin-bottom: 4px; font-size: 15px; }
+.warning-box { background: rgba(230,57,70,0.08); border: 1px solid rgba(230,57,70,0.3); border-radius: 10px;
+  padding: 14px 20px; margin-bottom: 28px; max-width: 440px; font-size: 14px; color: #ff9da5; text-align: center; line-height: 1.6; }
+.warning-box strong { color: var(--accent2); display: block; margin-bottom: 4px; font-size: 15px; }
 
-  .landing-card {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    padding: 32px;
-    width: 100%; max-width: 420px;
-    backdrop-filter: blur(10px);
-  }
-  .landing-title {
-    font-family: 'Orbitron', sans-serif;
-    font-size: 18px;
-    font-weight: 700;
-    color: var(--text);
-    margin-bottom: 24px;
-    text-align: center;
-    letter-spacing: 1px;
-  }
+.landing-card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 32px; width: 100%; max-width: 420px; }
+.landing-title { font-family: 'Orbitron', sans-serif; font-size: 18px; font-weight: 700; margin-bottom: 24px; text-align: center; }
+.tabs { display: flex; gap: 4px; background: var(--bg); border-radius: 10px; padding: 4px; margin-bottom: 24px; }
+.tab { flex: 1; padding: 10px 8px; border: none; border-radius: 7px; background: transparent; color: var(--muted);
+  font-family: 'Rajdhani', sans-serif; font-size: 15px; font-weight: 600; cursor: pointer; transition: all .2s; }
+.tab.active { background: var(--accent); color: #fff; box-shadow: 0 2px 12px rgba(230,57,70,0.4); }
+.form-group { margin-bottom: 16px; }
+.form-group label { display: block; font-size: 12px; font-weight: 600; color: var(--muted); letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 7px; }
+.form-group input { width: 100%; padding: 12px 16px; background: var(--bg2); border: 1px solid var(--border); border-radius: 8px;
+  color: var(--text); font-family: 'Rajdhani', sans-serif; font-size: 16px; outline: none; transition: border-color .2s; }
+.form-group input:focus { border-color: rgba(67,97,238,0.6); }
+.btn { width: 100%; padding: 13px; border: none; border-radius: 8px; font-family: 'Orbitron', sans-serif; font-size: 14px; font-weight: 700; letter-spacing: 2px; cursor: pointer; transition: all .2s; }
+.btn-primary { background: linear-gradient(135deg, var(--accent), #c1121f); color: #fff; box-shadow: 0 4px 15px rgba(230,57,70,0.35); }
+.btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(230,57,70,0.5); }
+.btn-ghost { background: transparent; color: var(--muted); border: 1px solid var(--border); margin-top: 10px; font-size: 13px; }
+.btn-ghost:hover { border-color: rgba(255,255,255,0.2); color: var(--text); }
+.error-msg { background: rgba(230,57,70,0.12); border: 1px solid rgba(230,57,70,0.3); border-radius: 7px; padding: 10px 14px; font-size: 14px; color: var(--accent2); margin-bottom: 16px; display: none; }
+.success-msg { background: rgba(38,182,100,0.12); border: 1px solid rgba(38,182,100,0.3); border-radius: 7px; padding: 10px 14px; font-size: 14px; color: var(--green); margin-bottom: 16px; display: none; }
 
-  /* ===== TABS ===== */
-  .tabs {
-    display: flex; gap: 4px;
-    background: var(--bg);
-    border-radius: 10px;
-    padding: 4px;
-    margin-bottom: 24px;
-  }
-  .tab {
-    flex: 1; padding: 10px 8px;
-    border: none; border-radius: 7px;
-    background: transparent;
-    color: var(--muted);
-    font-family: 'Rajdhani', sans-serif;
-    font-size: 15px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all .2s;
-    letter-spacing: 0.5px;
-  }
-  .tab.active {
-    background: var(--accent);
-    color: #fff;
-    box-shadow: 0 2px 12px rgba(230,57,70,0.4);
-  }
+/* LOBBY */
+#screen-lobby { flex-direction: column; min-height: 100vh; }
+.top-bar { background: var(--card); border-bottom: 1px solid var(--border); padding: 14px 24px;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; position: sticky; top: 0; z-index: 10; }
+.top-logo { font-family: 'Orbitron', sans-serif; font-size: 14px; font-weight: 900; letter-spacing: 2px;
+  background: linear-gradient(135deg, var(--accent), var(--gold)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.user-badge { display: flex; align-items: center; gap: 8px; background: var(--bg3); border: 1px solid var(--border); border-radius: 20px; padding: 6px 14px; font-size: 14px; font-weight: 600; }
+.user-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); transition: background .5s; }
+.user-dot.active { background: var(--green); animation: pulse 2s infinite; }
+.user-dot.away   { background: var(--muted); animation: none; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+.logout-btn { background: transparent; border: 1px solid var(--border); border-radius: 8px; color: var(--muted); padding: 7px 14px; font-family: 'Rajdhani', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; transition: all .2s; }
+.logout-btn:hover { color: var(--accent); border-color: rgba(230,57,70,0.4); }
+.lobby-content { padding: 32px 24px; max-width: 900px; margin: 0 auto; width: 100%; }
+.section-title { font-family: 'Orbitron', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 3px; color: var(--muted);
+  text-transform: uppercase; margin-bottom: 16px; display: flex; align-items: center; gap: 10px; }
+.section-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
 
-  /* ===== FORMS ===== */
-  .form-group { margin-bottom: 16px; }
-  .form-group label {
-    display: block;
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--muted);
-    letter-spacing: 1.5px;
-    text-transform: uppercase;
-    margin-bottom: 7px;
-  }
-  .form-group input {
-    width: 100%;
-    padding: 12px 16px;
-    background: var(--bg2);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    color: var(--text);
-    font-family: 'Rajdhani', sans-serif;
-    font-size: 16px;
-    font-weight: 500;
-    outline: none;
-    transition: border-color .2s;
-  }
-  .form-group input:focus { border-color: rgba(67,97,238,0.6); }
-  .form-group input[type="number"]::-webkit-inner-spin-button { opacity: 0; }
+/* ROOM CARDS */
+.rooms-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; margin-bottom: 40px; }
+.room-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; cursor: pointer;
+  transition: all .25s; position: relative; overflow: hidden; }
+.room-card::before { content: ''; position: absolute; top: 0; left: 0; width: 3px; height: 100%; opacity: 0; transition: opacity .2s; }
+.room-card:hover { border-color: rgba(255,255,255,0.15); transform: translateY(-2px); }
+.room-card:hover::before { opacity: 1; }
+.room-card.r1::before { background: #4cc9f0; }
+.room-card.r2::before { background: var(--gold); }
+.room-card.r3::before { background: #7bed9f; }
+.room-card.r4::before { background: #ff6b6b; }
+.room-card.r5::before { background: #a29bfe; }
+.room-card.r6::before { background: var(--accent); }
+.room-icon { font-size: 28px; margin-bottom: 10px; }
+.room-name { font-family: 'Orbitron', sans-serif; font-size: 14px; font-weight: 700; margin-bottom: 5px; }
+.room-desc { font-size: 13px; color: var(--muted); line-height: 1.4; }
+/* Unread badge */
+.unread-badge { position: absolute; top: 10px; right: 10px; background: var(--accent); color: #fff;
+  font-family: 'Orbitron', sans-serif; font-size: 11px; font-weight: 700; border-radius: 20px;
+  padding: 2px 7px; min-width: 22px; text-align: center; animation: badgePop .3s ease-out; }
+@keyframes badgePop { from { transform: scale(0.5); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 
-  .btn {
-    width: 100%;
-    padding: 13px;
-    border: none;
-    border-radius: 8px;
-    font-family: 'Orbitron', sans-serif;
-    font-size: 14px;
-    font-weight: 700;
-    letter-spacing: 2px;
-    cursor: pointer;
-    transition: all .2s;
-  }
-  .btn-primary {
-    background: linear-gradient(135deg, var(--accent), #c1121f);
-    color: #fff;
-    box-shadow: 0 4px 15px rgba(230,57,70,0.35);
-  }
-  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(230,57,70,0.5); }
-  .btn-primary:active { transform: scale(0.98); }
-  .btn-ghost {
-    background: transparent;
-    color: var(--muted);
-    border: 1px solid var(--border);
-    margin-top: 10px;
-    font-size: 13px;
-  }
-  .btn-ghost:hover { border-color: rgba(255,255,255,0.2); color: var(--text); }
+/* Online count in room card */
+.room-online { display: flex; align-items: center; gap: 5px; margin-top: 8px; font-size: 12px; font-weight: 600; }
+.room-online-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.room-online-dot.active { background: var(--green); box-shadow: 0 0 5px var(--green); animation: pulse 2s infinite; }
+.room-online-dot.away { background: var(--muted); }
+.room-online-count { color: var(--muted); }
+.room-online-count .cnt-active { color: var(--green); font-weight: 700; }
+.room-online-count .cnt-away   { color: var(--muted); }
 
-  .error-msg {
-    background: rgba(230,57,70,0.12);
-    border: 1px solid rgba(230,57,70,0.3);
-    border-radius: 7px;
-    padding: 10px 14px;
-    font-size: 14px;
-    color: var(--accent2);
-    margin-bottom: 16px;
-    display: none;
-  }
-  .success-msg {
-    background: rgba(38,182,100,0.12);
-    border: 1px solid rgba(38,182,100,0.3);
-    border-radius: 7px;
-    padding: 10px 14px;
-    font-size: 14px;
-    color: #26b664;
-    margin-bottom: 16px;
-    display: none;
-  }
+/* LINKS */
+.links-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+.link-tile { background: var(--card2); border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px;
+  color: var(--text); transition: all .2s; display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 15px; cursor: pointer; }
+.link-tile:hover { border-color: rgba(76,201,240,0.4); background: rgba(76,201,240,0.05); transform: translateY(-1px); }
+.link-tile-icon { width: 36px; height: 36px; background: rgba(67,97,238,0.15); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
 
-  .divider {
-    display: flex; align-items: center; gap: 12px;
-    margin: 20px 0;
-    color: var(--muted); font-size: 13px;
-  }
-  .divider::before, .divider::after {
-    content: ''; flex: 1;
-    height: 1px; background: var(--border);
-  }
+/* CHAT */
+#screen-chat { flex-direction: column; min-height: 100vh; }
+.chat-header { background: var(--card); border-bottom: 1px solid var(--border); padding: 14px 20px;
+  display: flex; align-items: center; justify-content: space-between; gap: 14px; position: sticky; top: 0; z-index: 10; }
+.chat-header-left { display: flex; align-items: center; gap: 14px; }
+.back-btn { background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; color: var(--muted);
+  padding: 7px 12px; font-family: 'Rajdhani', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; transition: all .2s; }
+.back-btn:hover { color: var(--text); border-color: rgba(255,255,255,0.2); }
+.chat-room-name { font-family: 'Orbitron', sans-serif; font-size: 16px; font-weight: 700; }
+.chat-room-icon { font-size: 22px; }
 
-  /* ===== LOBBY ===== */
-  #screen-lobby {
-    flex-direction: column;
-    min-height: 100vh;
-    padding: 0;
-  }
-  .top-bar {
-    background: var(--card);
-    border-bottom: 1px solid var(--border);
-    padding: 14px 24px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    position: sticky; top: 0; z-index: 10;
-  }
-  .top-logo {
-    font-family: 'Orbitron', sans-serif;
-    font-size: 14px;
-    font-weight: 900;
-    letter-spacing: 2px;
-    background: linear-gradient(135deg, var(--accent), var(--gold));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-  .user-badge {
-    display: flex; align-items: center; gap: 8px;
-    background: var(--bg3);
-    border: 1px solid var(--border);
-    border-radius: 20px;
-    padding: 6px 14px;
-    font-size: 14px;
-    font-weight: 600;
-  }
-  .user-dot {
-    width: 8px; height: 8px;
-    border-radius: 50%;
-    background: #26b664;
-    animation: pulse 2s infinite;
-  }
-  @keyframes pulse {
-    0%, 100% { opacity: 1; } 50% { opacity: 0.4; }
-  }
-  .ghost-icon { font-size: 16px; }
+/* Online users */
+.online-bar { background: var(--bg2); border-bottom: 1px solid var(--border); padding: 8px 20px;
+  display: none; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+.online-label { font-size: 12px; letter-spacing: 1px; text-transform: uppercase; flex-shrink: 0; }
+.online-avatar { width: 26px; height: 26px; border-radius: 50%; background: linear-gradient(135deg, var(--blue), var(--accent));
+  display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700;
+  border: 2px solid var(--green); flex-shrink: 0; cursor: default; }
 
-  .lobby-content {
-    padding: 32px 24px;
-    max-width: 900px;
-    margin: 0 auto;
-    width: 100%;
-  }
-  .section-title {
-    font-family: 'Orbitron', sans-serif;
-    font-size: 13px;
-    font-weight: 700;
-    letter-spacing: 3px;
-    color: var(--muted);
-    text-transform: uppercase;
-    margin-bottom: 16px;
-    display: flex; align-items: center; gap: 10px;
-  }
-  .section-title::after {
-    content: ''; flex: 1; height: 1px; background: var(--border);
-  }
+/* Refresh timer */
+.refresh-timer { position: relative; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.timer-ring { position: absolute; inset: 0; border-radius: 50%; border: 2px solid var(--border); border-top-color: var(--accent); animation: spin 2s linear infinite; }
+#timer-text { font-size: 12px; font-weight: 700; color: var(--muted); position: relative; z-index: 1; }
 
-  .rooms-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-    gap: 14px;
-    margin-bottom: 40px;
-  }
-  .room-card {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 20px;
-    cursor: pointer;
-    transition: all .25s;
-    position: relative;
-    overflow: hidden;
-  }
-  .room-card::before {
-    content: '';
-    position: absolute; top: 0; left: 0;
-    width: 3px; height: 100%;
-    transition: opacity .2s;
-    opacity: 0;
-  }
-  .room-card:hover { border-color: rgba(255,255,255,0.15); transform: translateY(-2px); }
-  .room-card:hover::before { opacity: 1; }
-  .room-card.r1::before { background: #4cc9f0; }
-  .room-card.r2::before { background: var(--gold); }
-  .room-card.r3::before { background: #7bed9f; }
-  .room-card.r4::before { background: #ff6b6b; }
-  .room-card.r5::before { background: #a29bfe; }
-  .room-card.r6::before { background: var(--accent); }
+/* Messages */
+.messages-area { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.messages-wrap { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 12px;
+  min-height: 0; max-height: calc(100vh - 160px); }
 
-  .room-icon { font-size: 28px; margin-bottom: 10px; }
-  .room-name {
-    font-family: 'Orbitron', sans-serif;
-    font-size: 14px;
-    font-weight: 700;
-    color: var(--text);
-    margin-bottom: 5px;
-  }
-  .room-desc {
-    font-size: 13px;
-    color: var(--muted);
-    line-height: 1.4;
-  }
+/* New messages button */
+#new-msgs-btn { position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%);
+  background: var(--accent); color: #fff; border: none; border-radius: 20px; padding: 8px 18px;
+  font-family: 'Rajdhani', sans-serif; font-size: 14px; font-weight: 700; cursor: pointer;
+  display: none; align-items: center; gap: 6px; white-space: nowrap; z-index: 5;
+  box-shadow: 0 4px 16px rgba(230,57,70,0.5); animation: slideUp .25s ease-out; }
+@keyframes slideUp { from { transform: translateX(-50%) translateY(20px); opacity: 0; } to { transform: translateX(-50%) translateY(0); opacity: 1; } }
+#new-msgs-btn:hover { background: var(--accent2); }
 
-  .links-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 12px;
-  }
-  .link-tile {
-    background: var(--card2);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 16px 18px;
-    text-decoration: none;
-    color: var(--text);
-    transition: all .2s;
-    display: flex; align-items: center; gap: 10px;
-    font-weight: 600;
-    font-size: 15px;
-    cursor: pointer;
-  }
-  .link-tile:hover {
-    border-color: rgba(76,201,240,0.4);
-    background: rgba(76,201,240,0.05);
-    transform: translateY(-1px);
-  }
-  .link-tile-icon {
-    width: 36px; height: 36px;
-    background: rgba(67,97,238,0.15);
-    border-radius: 8px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 18px;
-    flex-shrink: 0;
-  }
+/* Messages */
+.message { display: flex; gap: 10px; max-width: 75%; }
+.message.own { align-self: flex-end; flex-direction: row-reverse; }
+.message.mention { --mention-color: rgba(255,214,10,0.12); }
+.message.mention .msg-text { background: var(--mention-color); border-color: rgba(255,214,10,0.35); }
+.avatar { width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, var(--blue), var(--accent));
+  display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; flex-shrink: 0; }
+.avatar.ghost { background: linear-gradient(135deg, #555, #333); font-size: 18px; }
+.msg-body { display: flex; flex-direction: column; gap: 3px; }
+.msg-nick { font-weight: 700; font-size: 13px; color: var(--muted); }
+.msg-text-wrap { position: relative; display: flex; align-items: flex-start; gap: 4px; }
+.msg-text { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; font-size: 15px; line-height: 1.4; word-break: break-word; }
+.message.own .msg-text { background: var(--accent); border-color: var(--accent); color: #fff; }
+.msg-time { font-size: 11px; color: var(--muted); opacity: 0.4; transition: opacity .2s; }
+.message:hover .msg-time { opacity: 0.9; }
+.mention-tag { background: rgba(255,214,10,0.25); color: var(--gold); border-radius: 4px; padding: 0 3px; font-weight: 700; }
 
-  .logout-btn {
-    background: transparent;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    color: var(--muted);
-    padding: 7px 14px;
-    font-family: 'Rajdhani', sans-serif;
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all .2s;
-  }
-  .logout-btn:hover { color: var(--accent); border-color: rgba(230,57,70,0.4); }
+/* React trigger button */
+.react-trigger { background: transparent; border: 1px solid transparent; border-radius: 6px; padding: 3px 5px;
+  font-size: 14px; cursor: pointer; opacity: 0; transition: all .15s; flex-shrink: 0; margin-top: 6px; }
+.message:hover .react-trigger { opacity: 0.6; }
+.react-trigger:hover { opacity: 1 !important; background: var(--card2); border-color: var(--border); }
 
-  /* ===== CHAT ROOM ===== */
-  #screen-chat {
-    flex-direction: column;
-    min-height: 100vh;
-  }
-  .chat-header {
-    background: var(--card);
-    border-bottom: 1px solid var(--border);
-    padding: 14px 20px;
-    display: flex; align-items: center; gap: 14px;
-    position: sticky; top: 0; z-index: 10;
-    justify-content: space-between;
-  }
-  .chat-header-left {
-    display: flex; align-items: center; gap: 14px;
-  }
-  .back-btn {
-    background: var(--bg3);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    color: var(--muted);
-    padding: 7px 12px;
-    font-family: 'Rajdhani', sans-serif;
-    font-size: 14px; font-weight: 600;
-    cursor: pointer; transition: all .2s;
-    display: flex; align-items: center; gap: 6px;
-  }
-  .back-btn:hover { color: var(--text); border-color: rgba(255,255,255,0.2); }
-  .chat-room-name {
-    font-family: 'Orbitron', sans-serif;
-    font-size: 16px; font-weight: 700;
-    color: var(--text);
-  }
-  .chat-room-icon { font-size: 22px; }
+/* Emoji picker */
+.emoji-picker { position: absolute; top: -50px; left: 0; background: var(--card2); border: 1px solid var(--border);
+  border-radius: 10px; padding: 6px; display: flex; gap: 4px; z-index: 50; box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
+.emoji-picker button { background: transparent; border: none; font-size: 20px; cursor: pointer; padding: 4px 6px;
+  border-radius: 6px; transition: all .15s; line-height: 1; }
+.emoji-picker button:hover { background: rgba(255,255,255,0.1); transform: scale(1.2); }
 
-  /* ===== REFRESH TIMER ===== */
-  .refresh-timer {
-    position: relative;
-    width: 40px;
-    height: 40px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-  }
-  .timer-ring {
-    position: absolute;
-    inset: 0;
-    border-radius: 50%;
-    border: 2px solid var(--border);
-    border-top-color: var(--accent);
-    animation: spin 2s linear infinite;
-  }
-  #timer-text {
-    font-size: 12px;
-    font-weight: 700;
-    color: var(--muted);
-    position: relative;
-    z-index: 1;
-  }
+/* Reaction bar */
+.reaction-bar { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; min-height: 0; }
+.reaction-btn { background: var(--bg3); border: 1px solid var(--border); border-radius: 12px; padding: 2px 8px;
+  font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 4px; transition: all .15s; color: var(--text); }
+.reaction-btn:hover { border-color: rgba(255,255,255,0.2); background: var(--card2); }
+.reaction-btn.mine { background: rgba(67,97,238,0.2); border-color: rgba(67,97,238,0.5); }
+.reaction-btn span { font-size: 12px; font-weight: 700; color: var(--muted); }
 
-  .messages-wrap {
-    flex: 1;
-    overflow-y: auto;
-    padding: 20px;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    min-height: 0;
-    max-height: calc(100vh - 140px);
-  }
-  .message {
-    display: flex;
-    gap: 10px;
-    max-width: 75%;
-  }
-  .message.own { align-self: flex-end; flex-direction: row-reverse; }
-  .avatar {
-    width: 36px; height: 36px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, var(--blue), var(--accent));
-    display: flex; align-items: center; justify-content: center;
-    font-weight: 700; font-size: 14px;
-    flex-shrink: 0;
-    font-family: 'Rajdhani', sans-serif;
-  }
-  .avatar.ghost {
-    background: linear-gradient(135deg, #555, #333);
-    font-size: 18px;
-  }
-  .msg-body {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-  }
-  .msg-nick {
-    font-weight: 700;
-    font-size: 13px;
-    color: var(--muted);
-  }
-  .msg-text {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 10px 14px;
-    font-size: 15px;
-    line-height: 1.4;
-    word-wrap: break-word;
-  }
-  .message.own .msg-text {
-    background: var(--accent);
-    border-color: var(--accent);
-    color: #fff;
-  }
-  .msg-time {
-    font-size: 11px;
-    color: var(--muted);
-  }
+/* Empty chat */
+.empty-chat { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 200px; gap: 12px; color: var(--muted); }
+.empty-chat-icon { font-size: 40px; }
 
-  .empty-chat {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    min-height: 200px;
-    gap: 12px;
-    color: var(--muted);
-  }
-  .empty-chat-icon { font-size: 40px; }
+/* Chat input */
+.chat-input-wrap { background: var(--card); border-top: 1px solid var(--border); padding: 16px 20px; display: flex; gap: 10px; align-items: flex-end; }
+#chat-input { flex: 1; padding: 10px 14px; background: var(--bg2); border: 1px solid var(--border); border-radius: 8px;
+  color: var(--text); font-family: 'Rajdhani', sans-serif; font-size: 15px; outline: none; transition: border-color .2s;
+  resize: none; max-height: 100px; min-height: 40px; }
+#chat-input:focus { border-color: rgba(67,97,238,0.6); }
+.send-btn { background: linear-gradient(135deg, var(--accent), #c1121f); border: none; border-radius: 8px; color: #fff;
+  padding: 10px 18px; font-family: 'Orbitron', sans-serif; font-size: 12px; font-weight: 700; letter-spacing: 1px;
+  cursor: pointer; transition: all .2s; flex-shrink: 0; height: 40px; }
+.send-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(230,57,70,0.4); }
+.send-btn:active { transform: scale(0.98); }
+.send-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
 
-  .chat-input-wrap {
-    background: var(--card);
-    border-top: 1px solid var(--border);
-    padding: 16px 20px;
-    display: flex; gap: 10px;
-    align-items: flex-end;
-  }
-  #chat-input {
-    flex: 1;
-    padding: 10px 14px;
-    background: var(--bg2);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    color: var(--text);
-    font-family: 'Rajdhani', sans-serif;
-    font-size: 15px;
-    outline: none;
-    transition: border-color .2s;
-    resize: none;
-    max-height: 100px;
-    min-height: 40px;
-  }
-  #chat-input:focus { border-color: rgba(67,97,238,0.6); }
+/* Loading overlays */
+#loading-initial { position: fixed; inset: 0; background: var(--bg); display: flex; align-items: center; justify-content: center; z-index: 9999; }
+.loading-overlay { position: fixed; inset: 0; background: rgba(10,10,20,0.95); display: none; align-items: center; justify-content: center; z-index: 100; flex-direction: column; gap: 24px; }
+.loading-overlay.active { display: flex; }
+.spinner-big { width: 80px; height: 80px; border: 3px solid var(--border); border-top-color: var(--accent); border-right-color: var(--accent); border-radius: 50%; animation: spin 1.5s linear infinite; }
+.loading-label { font-family: 'Rajdhani', sans-serif; font-size: 14px; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; }
 
-  .send-btn {
-    background: linear-gradient(135deg, var(--accent), #c1121f);
-    border: none;
-    border-radius: 8px;
-    color: #fff;
-    padding: 10px 18px;
-    font-family: 'Orbitron', sans-serif;
-    font-size: 12px;
-    font-weight: 700;
-    letter-spacing: 1px;
-    cursor: pointer;
-    transition: all .2s;
-    flex-shrink: 0;
-    height: 40px;
-  }
-  .send-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(230,57,70,0.4); }
-  .send-btn:active { transform: scale(0.98); }
-
-  /* ===== LOADING OVERLAY ===== */
-  .loading-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(10, 10, 20, 0.95);
-    display: none;
-    align-items: center;
-    justify-content: center;
-    z-index: 100;
-    flex-direction: column;
-    gap: 30px;
-  }
-  .loading-overlay.active {
-    display: flex;
-  }
-
-  .spinner-container {
-    position: relative;
-    width: 120px;
-    height: 120px;
-  }
-  .spinner-circle {
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    border: 3px solid var(--border);
-    border-radius: 50%;
-    border-top-color: var(--accent);
-    border-right-color: var(--accent);
-    animation: spinnerRotate 2s linear infinite;
-  }
-  @keyframes spinnerRotate {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
-  }
-
-  .countdown-label {
-    font-family: 'Rajdhani', sans-serif;
-    font-size: 13px;
-    color: var(--muted);
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    margin-top: 16px;
-  }
-
-  .toast {
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 14px 18px;
-    font-size: 14px;
-    color: var(--text);
-    z-index: 1000;
-    animation: slideIn 0.3s ease-out;
-  }
-  @keyframes slideIn {
-    from { transform: translateX(400px); opacity: 0; }
-    to { transform: translateX(0); opacity: 1; }
-  }
+/* Toast */
+.toast { position: fixed; bottom: 20px; right: 20px; background: var(--card); border: 1px solid var(--border);
+  border-radius: 8px; padding: 14px 18px; font-size: 14px; color: var(--text); z-index: 1000;
+  animation: slideIn .3s ease-out; max-width: 300px; }
+@keyframes slideIn { from { transform: translateX(400px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 </style>
 </head>
 <body>
@@ -630,68 +237,44 @@
 <div class="bg-orb orb1"></div>
 <div class="bg-orb orb2"></div>
 
-<!-- ===== LOADING SCREEN ===== -->
-<div id="loading" style="position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:9999;">
+<!-- Initial loading -->
+<div id="loading-initial">
   <div style="text-align:center;">
     <div style="width:60px;height:60px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;margin:0 auto 20px;animation:spin 1.5s linear infinite;"></div>
     <div style="font-size:13px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;">Načítání...</div>
   </div>
 </div>
 
-<!-- ===== LOADING OVERLAY (pro místnosti) ===== -->
+<!-- Room loading overlay -->
 <div id="loading-overlay" class="loading-overlay">
-  <div class="spinner-container">
-    <div class="spinner-circle"></div>
-  </div>
-  <div class="countdown-label">Načítání konverzace</div>
+  <div class="spinner-big"></div>
+  <div class="loading-label">Načítání konverzace</div>
 </div>
 
-<!-- ===== LANDING ===== -->
+<!-- LANDING -->
 <div id="screen-landing" class="screen">
   <div class="logo-wrap">
     <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='45' fill='none' stroke='%23e63946' stroke-width='2'/%3E%3Cpolygon points='50,15 85,75 15,75' fill='%23e63946' opacity='0.8'/%3E%3C/svg%3E" class="beyblade-icon" />
     <h1 class="logo-main">PBX CHAT</h1>
     <p class="logo-sub">TEAM HUB</p>
   </div>
-
   <div class="landing-card">
-    <div class="warning-box">
-      <strong>⚠️ BETA</strong>
-      Aplikace je stále ve vývoji. Hlašte chyby!
-    </div>
-
+    <div class="warning-box"><strong>⚠️ BETA</strong>Aplikace je stále ve vývoji.</div>
     <div class="landing-title">Přihlášení</div>
-
     <div class="tabs">
       <button class="tab active" onclick="showTab('login')">Přihlášení</button>
       <button class="tab" onclick="showTab('register')">Registrace</button>
     </div>
-
-    <!-- ===== LOGIN ===== -->
     <div id="tab-login">
-      <div class="form-group">
-        <label>Nick</label>
-        <input type="text" id="login-nick" placeholder="Tvůj nick...">
-      </div>
-      <div class="form-group">
-        <label>PIN (4 číslice)</label>
-        <input type="password" id="login-pin" placeholder="0000">
-      </div>
+      <div class="form-group"><label>Nick</label><input type="text" id="login-nick" placeholder="Tvůj nick..."></div>
+      <div class="form-group"><label>PIN (4 číslice)</label><input type="password" id="login-pin" placeholder="0000" maxlength="4"></div>
       <div id="login-error" class="error-msg"></div>
       <button class="btn btn-primary" onclick="doLogin()">VSTOUPIT</button>
       <button class="btn btn-ghost" onclick="guestLogin()">GUEST (bez přihlášení)</button>
     </div>
-
-    <!-- ===== REGISTER ===== -->
     <div id="tab-register" style="display:none;">
-      <div class="form-group">
-        <label>Nový nick</label>
-        <input type="text" id="reg-nick" placeholder="Vymysli si nick...">
-      </div>
-      <div class="form-group">
-        <label>PIN (4 číslice)</label>
-        <input type="password" id="reg-pin" placeholder="0000">
-      </div>
+      <div class="form-group"><label>Nový nick</label><input type="text" id="reg-nick" placeholder="Vymysli si nick..."></div>
+      <div class="form-group"><label>PIN (4 číslice)</label><input type="password" id="reg-pin" placeholder="0000" maxlength="4"></div>
       <div id="reg-error" class="error-msg"></div>
       <div id="reg-success" class="success-msg"></div>
       <button class="btn btn-primary" onclick="doRegister()">REGISTROVAT</button>
@@ -699,61 +282,35 @@
   </div>
 </div>
 
-<!-- ===== LOBBY ===== -->
+<!-- LOBBY -->
 <div id="screen-lobby" class="screen">
   <div class="top-bar">
     <div class="top-logo">⚔️ PBX CHAT</div>
-    <div style="display:flex; align-items:center; gap:12px;">
+    <div style="display:flex;align-items:center;gap:12px;">
       <div class="user-badge">
         <div class="user-dot"></div>
         <span id="badge-name">-</span>
-        <span id="badge-ghost" class="ghost-icon" style="display:none;">👻</span>
+        <span id="badge-ghost" style="display:none;">👻</span>
       </div>
       <button class="logout-btn" onclick="logout()">LOGOUT</button>
     </div>
   </div>
-
   <div class="lobby-content">
     <div class="section-title">Místnosti</div>
-    <div class="rooms-grid">
-      <div class="room-card r1" onclick="openRoom('Tréninky')">
-        <div class="room-icon">⚙️</div>
-        <div class="room-name">Tréninky</div>
-        <div class="room-desc">Tréninkový program a tipy</div>
-      </div>
-      <div class="room-card r2" onclick="openRoom('Turnaje')">
-        <div class="room-icon">🏆</div>
-        <div class="room-name">Turnaje</div>
-        <div class="room-desc">Registrace a výsledky</div>
-      </div>
-      <div class="room-card r3" onclick="openRoom('Cestování')">
-        <div class="room-icon">🚗</div>
-        <div class="room-name">Cestování</div>
-        <div class="room-desc">Koordinace cest</div>
-      </div>
-      <div class="room-card r4" onclick="openRoom('Poptávky')">
-        <div class="room-icon">🔍</div>
-        <div class="room-name">Poptávky</div>
-        <div class="room-desc">Hledání a nákupy</div>
-      </div>
-      <div class="room-card r5" onclick="openRoom('Prodeje')">
-        <div class="room-icon">💎</div>
-        <div class="room-name">Prodeje</div>
-        <div class="room-desc">Nabídky a prodej</div>
-      </div>
-      <div class="room-card r6" onclick="openRoom('Volný talk')">
-        <div class="room-icon">💬</div>
-        <div class="room-name">Volný talk</div>
-        <div class="room-desc">Všechno ostatní</div>
-      </div>
+    <div class="rooms-grid" id="rooms-grid">
+      <div class="room-card r1" data-room="Tréninky"    onclick="openRoom('Tréninky')">  <div class="room-icon">⚙️</div><div class="room-name">Tréninky</div>  <div class="room-desc">Tréninkový program a tipy</div>  <div class="room-online"><div class="room-online-dot"></div><div class="room-online-count">načítání…</div></div></div>
+      <div class="room-card r2" data-room="Turnaje"     onclick="openRoom('Turnaje')">   <div class="room-icon">🏆</div><div class="room-name">Turnaje</div>   <div class="room-desc">Registrace a výsledky</div>     <div class="room-online"><div class="room-online-dot"></div><div class="room-online-count">načítání…</div></div></div>
+      <div class="room-card r3" data-room="Cestování"   onclick="openRoom('Cestování')"> <div class="room-icon">🚗</div><div class="room-name">Cestování</div> <div class="room-desc">Koordinace cest</div>           <div class="room-online"><div class="room-online-dot"></div><div class="room-online-count">načítání…</div></div></div>
+      <div class="room-card r4" data-room="Poptávky"    onclick="openRoom('Poptávky')">  <div class="room-icon">🔍</div><div class="room-name">Poptávky</div>  <div class="room-desc">Hledání a nákupy</div>          <div class="room-online"><div class="room-online-dot"></div><div class="room-online-count">načítání…</div></div></div>
+      <div class="room-card r5" data-room="Prodeje"     onclick="openRoom('Prodeje')">   <div class="room-icon">💎</div><div class="room-name">Prodeje</div>   <div class="room-desc">Nabídky a prodej</div>          <div class="room-online"><div class="room-online-dot"></div><div class="room-online-count">načítání…</div></div></div>
+      <div class="room-card r6" data-room="Volný talk"  onclick="openRoom('Volný talk')"><div class="room-icon">💬</div><div class="room-name">Volný talk</div><div class="room-desc">Všechno ostatní</div>          <div class="room-online"><div class="room-online-dot"></div><div class="room-online-count">načítání…</div></div></div>
     </div>
-
     <div class="section-title">Užitečné odkazy</div>
     <div id="links-grid" class="links-grid"></div>
   </div>
 </div>
 
-<!-- ===== CHAT ===== -->
+<!-- CHAT -->
 <div id="screen-chat" class="screen">
   <div class="chat-header">
     <div class="chat-header-left">
@@ -767,47 +324,129 @@
     </div>
   </div>
 
-  <div id="messages-wrap" class="messages-wrap"></div>
+  <!-- Online users bar -->
+  <div id="online-bar" class="online-bar"></div>
+
+  <!-- Messages + floating button -->
+  <div class="messages-area">
+    <div id="messages-wrap" class="messages-wrap"></div>
+    <button id="new-msgs-btn" onclick="scrollToBottom()">↓ <span id="new-msgs-count"></span></button>
+  </div>
 
   <div class="chat-input-wrap">
-    <textarea id="chat-input" placeholder="Napiš zprávu..." rows="1"></textarea>
-    <button class="send-btn" onclick="sendMsg()">POSLAT</button>
+    <textarea id="chat-input" placeholder="Napiš zprávu… (Enter = odeslat, Shift+Enter = nový řádek)" rows="1"></textarea>
+    <button class="send-btn" id="send-btn" onclick="sendMsg()">POSLAT</button>
   </div>
 </div>
 
 <script>
-// =============================================
-//  CONFIG — vlož svou Apps Script URL sem:
-// =============================================
-const API_URL = 'https://script.google.com/macros/s/AKfycbxXtEyvMvyrO7URDKW7H9rg1DR1eTx81SBWMcLNWBh6ilHmlwHN9-CB6cR2XAc_L8Jb/exec';
-// Příklad: "https://script.google.com/macros/s/AKfycb.../exec"
+// ===== CONFIG =====
+const API_URL = 'https://script.google.com/macros/s/AKfycbzsN3hyDXeS6dSXaUGlgRqZ_1WIJAOUbLdQfAgskfFDA22BAMh0k9MwPE24aZfuM5hN/exec';
+const ROOMS_ICONS = { 'Tréninky':'⚙️','Turnaje':'🏆','Cestování':'🚗','Poptávky':'🔍','Prodeje':'💎','Volný talk':'💬' };
+const REACTION_EMOJIS = ['👍','❤️','😂','😮','😢','🔥'];
+const REFRESH_INTERVAL  = 2000;   // ms – polling zpráv
+const PING_INTERVAL     = 90000;  // ms – ping každých 90 s
+const AWAY_MS           = 15 * 60 * 1000;  // 15 min → away
+const OFFLINE_MS        = 30 * 60 * 1000;  // 30 min → auto-logout
+const ONLINE_POLL_MS    = 30000;  // ms – refresh počtů na kartách
 
-const ROOMS_ICONS = {
-  'Tréninky': '⚙️',
-  'Turnaje': '🏆',
-  'Cestování': '🚗',
-  'Poptávky': '🔍',
-  'Prodeje': '💎',
-  'Volný talk': '💬'
-};
-
-let currentUser = null;
-let isGuest = false;
-let currentRoom = null;
-let pollInterval = null;
-let refreshInterval = null;
+// ===== STATE =====
+let currentUser      = null;
+let isGuest          = false;
+let currentRoom      = null;
+let pollInterval     = null;
+let refreshInterval  = null;
+let pingInterval     = null;
+let onlinePollInt    = null;
+let autoLogoutTimer  = null;
+let awayTimer        = null;
 let refreshCountdown = 0;
 let isLoadingMessages = false;
-let isSendingMessage = false;
-const REFRESH_INTERVAL = 2000; // 2 sekundy
+let isSendingMessage  = false;
+let newMsgCount       = 0;
+let notifPermission   = 'default';
+let lobbyUnreadFetched = false;
+let lastSeenCounts   = JSON.parse(localStorage.getItem('pbx_lastSeen') || '{}');
+let lastActivityTime = Date.now();
 
 // ===== INIT =====
 window.addEventListener('load', () => {
   setTimeout(() => {
-    document.getElementById('loading').style.display = 'none';
+    document.getElementById('loading-initial').style.display = 'none';
     showScreen('landing');
-  }, 1000);
+  }, 800);
+
+  document.getElementById('chat-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMsg(); }
+  });
+
+  document.getElementById('messages-wrap').addEventListener('scroll', () => {
+    if (isAtBottom()) { newMsgCount = 0; hideNewMsgsBtn(); }
+  });
+
+  document.addEventListener('click', e => {
+    if (!e.target.closest('.emoji-picker') && !e.target.closest('.react-trigger')) {
+      document.querySelectorAll('.emoji-picker').forEach(p => p.remove());
+    }
+  });
+
+  // Sledování aktivity uživatele (myš, klávesnice, touch)
+  ['mousemove','keydown','touchstart','click'].forEach(ev =>
+    document.addEventListener(ev, recordActivity, { passive: true })
+  );
 });
+
+// ===== ACTIVITY / PRESENCE =====
+function recordActivity() {
+  lastActivityTime = Date.now();
+  // Aktualizuj tečku stavu v top baru
+  setUserDotStatus('active');
+}
+
+function setUserDotStatus(status) {
+  const dot = document.querySelector('.user-dot');
+  if (!dot) return;
+  dot.className = 'user-dot ' + status;
+}
+
+/** Spustí timery pro away a auto-logout po přihlášení. */
+function startPresenceTimers() {
+  clearPresenceTimers();
+
+  // Kontroluje stav každých 30 s
+  awayTimer = setInterval(() => {
+    const idle = Date.now() - lastActivityTime;
+    if (idle >= OFFLINE_MS) {
+      doAutoLogout();
+    } else if (idle >= AWAY_MS) {
+      setUserDotStatus('away');
+    } else {
+      setUserDotStatus('active');
+    }
+  }, 30000);
+
+  // Ping na server každých 90 s (udržuje záznam v PRESENCE listu)
+  pingInterval = setInterval(() => {
+    if (currentUser && !isGuest) {
+      apiCall({ action: 'ping', nick: currentUser });
+    }
+  }, PING_INTERVAL);
+
+  // Hned pošli první ping
+  if (currentUser && !isGuest) apiCall({ action: 'ping', nick: currentUser });
+}
+
+function clearPresenceTimers() {
+  clearInterval(awayTimer);
+  clearInterval(pingInterval);
+  clearInterval(onlinePollInt);
+  awayTimer = pingInterval = onlinePollInt = null;
+}
+
+function doAutoLogout() {
+  showToast('⏰ Byl jsi odhlášen kvůli nečinnosti.', 5000);
+  doLogout(true);
+}
 
 // ===== SCREENS =====
 function showScreen(name) {
@@ -817,7 +456,7 @@ function showScreen(name) {
 
 // ===== TABS =====
 function showTab(tab) {
-  document.getElementById('tab-login').style.display = tab === 'login' ? '' : 'none';
+  document.getElementById('tab-login').style.display    = tab === 'login'    ? '' : 'none';
   document.getElementById('tab-register').style.display = tab === 'register' ? '' : 'none';
   document.querySelectorAll('.tab').forEach((t, i) => {
     t.classList.toggle('active', (tab === 'login' && i === 0) || (tab === 'register' && i === 1));
@@ -827,22 +466,19 @@ function showTab(tab) {
 // ===== AUTH =====
 async function doRegister() {
   const nick = document.getElementById('reg-nick').value.trim();
-  const pin = document.getElementById('reg-pin').value.trim();
-  const errEl = document.getElementById('reg-error');
-  const sucEl = document.getElementById('reg-success');
-  errEl.style.display = 'none';
-  sucEl.style.display = 'none';
-
+  const pin  = document.getElementById('reg-pin').value.trim();
+  document.getElementById('reg-error').style.display   = 'none';
+  document.getElementById('reg-success').style.display = 'none';
   if (!nick) return showError('reg-error', 'Zadej nick.');
   if (nick.length < 2) return showError('reg-error', 'Nick musí mít alespoň 2 znaky.');
   if (!/^\d{4}$/.test(pin)) return showError('reg-error', 'PIN musí být přesně 4 číslice.');
-
   const res = await apiCall({ action: 'register', nick, pin });
   if (res.success) {
-    sucEl.textContent = '✓ Registrace úspěšná! Přihlaš se.';
-    sucEl.style.display = 'block';
+    const s = document.getElementById('reg-success');
+    s.textContent = '✓ Registrace úspěšná! Přihlaš se.';
+    s.style.display = 'block';
     document.getElementById('reg-nick').value = '';
-    document.getElementById('reg-pin').value = '';
+    document.getElementById('reg-pin').value  = '';
     setTimeout(() => showTab('login'), 2000);
   } else {
     showError('reg-error', res.error || 'Chyba registrace.');
@@ -851,17 +487,16 @@ async function doRegister() {
 
 async function doLogin() {
   const nick = document.getElementById('login-nick').value.trim();
-  const pin = document.getElementById('login-pin').value.trim();
-  showError('login-error', '');
-
+  const pin  = document.getElementById('login-pin').value.trim();
   if (!nick) return showError('login-error', 'Zadej nick.');
-  if (!pin) return showError('login-error', 'Zadej PIN.');
-
+  if (!pin)  return showError('login-error', 'Zadej PIN.');
   const res = await apiCall({ action: 'login', nick, pin });
   if (res.success) {
-    currentUser = nick;
-    isGuest = false;
+    currentUser = nick; isGuest = false;
+    lastActivityTime = Date.now();
+    await requestNotifPermission();
     enterLobby();
+    startPresenceTimers();
   } else {
     showError('login-error', res.error || 'Přihlášení selhalo.');
   }
@@ -870,115 +505,228 @@ async function doLogin() {
 function guestLogin() {
   currentUser = 'Host_' + Math.floor(Math.random() * 9000 + 1000);
   isGuest = true;
+  lastActivityTime = Date.now();
   enterLobby();
+  // Guesté nemají presence na serveru, ale timery pro UI stav běží
+  awayTimer = setInterval(() => {
+    const idle = Date.now() - lastActivityTime;
+    if (idle >= OFFLINE_MS) doAutoLogout();
+    else if (idle >= AWAY_MS) setUserDotStatus('away');
+    else setUserDotStatus('active');
+  }, 30000);
 }
 
-function logout() {
-  currentUser = null;
-  isGuest = false;
-  clearInterval(pollInterval);
-  clearInterval(refreshInterval);
-  pollInterval = null;
-  refreshInterval = null;
+/** Manuální logout */
+function logout() { doLogout(false); }
+
+async function doLogout(auto = false) {
+  // Informuj server o odhlášení (neblokujeme)
+  if (currentUser && !isGuest) {
+    apiCall({ action: 'logout', nick: currentUser }).catch(() => {});
+  }
+  currentUser = null; isGuest = false;
+  clearInterval(pollInterval); clearInterval(refreshInterval);
+  pollInterval = null; refreshInterval = null;
+  clearPresenceTimers();
+  lobbyUnreadFetched = false;
+  clearInterval(onlinePollInt); onlinePollInt = null;
   showScreen('landing');
+}
+
+// ===== NOTIFICATIONS =====
+async function requestNotifPermission() {
+  if (!('Notification' in window)) return;
+  if (Notification.permission === 'default') {
+    notifPermission = await Notification.requestPermission();
+  } else {
+    notifPermission = Notification.permission;
+  }
+}
+
+function showNotification(nick, text) {
+  if (notifPermission !== 'granted' || !document.hidden) return;
+  new Notification(`PBX Chat – ${nick}`, {
+    body: text.length > 80 ? text.substring(0, 80) + '…' : text,
+    tag: 'pbx-chat'
+  });
 }
 
 // ===== LOBBY =====
 async function enterLobby() {
-  document.getElementById('badge-name').textContent = currentUser;
+  document.getElementById('badge-name').textContent    = currentUser;
   document.getElementById('badge-ghost').style.display = isGuest ? '' : 'none';
+  setUserDotStatus('active');
   showScreen('lobby');
   loadLinks();
+  if (!lobbyUnreadFetched) {
+    lobbyUnreadFetched = true;
+    loadUnreadCounts();
+  }
+  // Načti online počty a pak je pravidelně refreshuj
+  fetchAndShowOnlineCounts();
+  clearInterval(onlinePollInt);
+  onlinePollInt = setInterval(fetchAndShowOnlineCounts, ONLINE_POLL_MS);
 }
 
 async function loadLinks() {
   const grid = document.getElementById('links-grid');
-  const res = await apiCall({ action: 'getLinks' });
+  const res  = await apiCall({ action: 'getLinks' });
   if (res.success && res.links.length > 0) {
     grid.innerHTML = res.links.map(l => `
-      <div class="link-tile" onclick="openLink('${escHtml(l.url)}')">
-        <div class="link-tile-icon">🔗</div>
-        <span>${escHtml(l.name)}</span>
-      </div>
-    `).join('');
+      <div class="link-tile" onclick="window.open('${escHtml(l.url)}','_blank','noopener')">
+        <div class="link-tile-icon">🔗</div><span>${escHtml(l.name)}</span>
+      </div>`).join('');
   } else {
     grid.innerHTML = '<div style="color:var(--muted);font-size:14px;padding:10px;">Zatím žádné odkazy.</div>';
   }
 }
 
-function openLink(url) {
-  window.open(url, '_blank', 'noopener');
+// ===== ONLINE COUNTS =====
+async function fetchAndShowOnlineCounts() {
+  if (!API_URL || API_URL.includes('VLOZ_SEM')) {
+    updateAllRoomOnline({ active: 0, away: 0, total: 0 });
+    _onlineNicks = [];
+    updateOnlineBar();
+    return;
+  }
+  const res = await apiCall({ action: 'getOnlineCounts' });
+  if (res.success) {
+    updateAllRoomOnline(res);
+    _onlineNicks = res.nicks || [];
+    updateOnlineBar();
+  }
+}
+
+function updateAllRoomOnline(data) {
+  const { active = 0, away = 0 } = data;
+  // Všechny místnosti sdílí globální počet (presence není per-room)
+  document.querySelectorAll('.room-card').forEach(card => {
+    const dot   = card.querySelector('.room-online-dot');
+    const count = card.querySelector('.room-online-count');
+    if (!dot || !count) return;
+    if (active > 0) {
+      dot.className = 'room-online-dot active';
+    } else if (away > 0) {
+      dot.className = 'room-online-dot away';
+    } else {
+      dot.className = 'room-online-dot';
+    }
+    let txt = '';
+    if (active > 0 && away > 0)
+      txt = `<span class="cnt-active">${active} online</span>&nbsp;<span class="cnt-away">(+${away} away)</span>`;
+    else if (active > 0)
+      txt = `<span class="cnt-active">${active} online</span>`;
+    else if (away > 0)
+      txt = `<span class="cnt-away">${away} away</span>`;
+    else
+      txt = `<span class="cnt-away">nikdo online</span>`;
+    count.innerHTML = txt;
+  });
+}
+
+// ===== UNREAD COUNTS =====
+async function loadUnreadCounts() {
+  const rooms = Object.keys(ROOMS_ICONS);
+  const results = await Promise.all(rooms.map(r => apiCall({ action: 'getMessages', room: r })));
+  rooms.forEach((room, i) => {
+    if (results[i].success) {
+      const count  = results[i].messages.length;
+      const seen   = lastSeenCounts[room] || 0;
+      const unread = Math.max(0, count - seen);
+      setRoomBadge(room, unread);
+    }
+  });
+}
+
+function setRoomBadge(room, count) {
+  const card = document.querySelector(`.room-card[data-room="${room}"]`);
+  if (!card) return;
+  let badge = card.querySelector('.unread-badge');
+  if (count > 0) {
+    if (!badge) { badge = document.createElement('div'); badge.className = 'unread-badge'; card.appendChild(badge); }
+    badge.textContent = count > 99 ? '99+' : count;
+  } else {
+    if (badge) badge.remove();
+  }
 }
 
 // ===== CHAT =====
 async function openRoom(room) {
+  clearInterval(pollInterval); clearInterval(refreshInterval);
+  pollInterval = null; refreshInterval = null;
+  isLoadingMessages = false; isSendingMessage = false; newMsgCount = 0;
   currentRoom = room;
-  
-  // Nastavit header
+
+  setRoomBadge(room, 0);
+  lastSeenCounts[room] = lastSeenCounts[room] || 0;
+
+  const wrap    = document.getElementById('messages-wrap');
+  const overlay = document.getElementById('loading-overlay');
+  wrap.innerHTML = ''; wrap.style.display = 'none';
+  hideNewMsgsBtn();
+  overlay.classList.add('active');
+
   document.getElementById('chat-room-name').textContent = room;
   document.getElementById('chat-room-icon').textContent = ROOMS_ICONS[room] || '💬';
-  
-  // Skrýt messages a ukazit loading
-  const messagesWrap = document.getElementById('messages-wrap');
-  const overlay = document.getElementById('loading-overlay');
-  
-  messagesWrap.style.display = 'none';
-  messagesWrap.innerHTML = '';
-  overlay.classList.add('active');
-  
+  document.getElementById('online-bar').style.display   = 'none';
+
   showScreen('chat');
 
-  // Načíst zprávy v pozadí
-  await loadMessages(true);
+  await loadMessages(false); // scrollToBottom=false, uděláme to ručně níže
+
   overlay.classList.remove('active');
-  messagesWrap.style.display = 'flex';
-  
-  // Spustit refresh loop
-  clearInterval(pollInterval);
-  clearInterval(refreshInterval);
+  wrap.style.display = 'flex';
+
+  // Scroll až po tom co je wrap viditelný (jinak scrollHeight = 0)
+  requestAnimationFrame(() => { wrap.scrollTop = wrap.scrollHeight; });
+
   startRefreshTimer();
   pollInterval = setInterval(loadMessages, REFRESH_INTERVAL);
 }
 
 function backToLobby() {
-  clearInterval(pollInterval);
-  clearInterval(refreshInterval);
-  pollInterval = null;
-  refreshInterval = null;
-  currentRoom = null;
+  const count = document.getElementById('messages-wrap').querySelectorAll('.message:not([data-pending])').length;
+  if (currentRoom) {
+    lastSeenCounts[currentRoom] = count;
+    localStorage.setItem('pbx_lastSeen', JSON.stringify(lastSeenCounts));
+  }
+  clearInterval(pollInterval); clearInterval(refreshInterval);
+  pollInterval = null; refreshInterval = null; currentRoom = null;
   showScreen('lobby');
+  // Refresh online počtů hned po návratu
+  fetchAndShowOnlineCounts();
 }
 
 // ===== REFRESH TIMER =====
 function startRefreshTimer() {
   refreshCountdown = REFRESH_INTERVAL / 1000;
   updateTimerDisplay();
-  
   clearInterval(refreshInterval);
   refreshInterval = setInterval(() => {
-    refreshCountdown--;
+    refreshCountdown = Math.max(0, refreshCountdown - 1);
     updateTimerDisplay();
-    if (refreshCountdown <= 0) {
-      refreshCountdown = REFRESH_INTERVAL / 1000;
-    }
+    if (refreshCountdown <= 0) refreshCountdown = REFRESH_INTERVAL / 1000;
   }, 1000);
 }
-
 function updateTimerDisplay() {
   const el = document.getElementById('timer-text');
   if (el) el.textContent = Math.ceil(refreshCountdown);
 }
 
+// ===== LOAD MESSAGES =====
 async function loadMessages(scrollToBottom = false) {
   if (!currentRoom || isLoadingMessages) return;
   isLoadingMessages = true;
 
   try {
-    const res = await apiCall({ action: 'getMessages', room: currentRoom });
+    const res = await apiCall({ action: 'getMessages', room: currentRoom, nick: currentUser });
     if (!res.success) return;
 
-    const wrap = document.getElementById('messages-wrap');
+    const wrap     = document.getElementById('messages-wrap');
     const messages = res.messages || [];
+
+    lastSeenCounts[currentRoom] = messages.length;
+    localStorage.setItem('pbx_lastSeen', JSON.stringify(lastSeenCounts));
 
     if (messages.length === 0) {
       if (!isSendingMessage) {
@@ -995,100 +743,189 @@ async function loadMessages(scrollToBottom = false) {
     }
 
     const currentCount = wrap.querySelectorAll('.message:not([data-pending])').length;
+    const atBottom     = isAtBottom();
 
     if (currentCount === messages.length) {
+      updateAllReactions(messages, wrap);
       return;
     }
 
     if (currentCount < messages.length) {
       const newMessages = messages.slice(currentCount);
-      const pendingEl = wrap.querySelector('[data-pending]');
+      const pendingEl   = wrap.querySelector('[data-pending]');
+
       newMessages.forEach(m => {
-        const html = renderMessage(m);
-        if (pendingEl) {
-          pendingEl.insertAdjacentHTML('beforebegin', html);
-        } else {
-          wrap.insertAdjacentHTML('beforeend', html);
-        }
+        if (pendingEl) pendingEl.insertAdjacentHTML('beforebegin', renderMessage(m));
+        else wrap.insertAdjacentHTML('beforeend', renderMessage(m));
       });
+
       if (!isSendingMessage) {
         wrap.querySelectorAll('[data-pending]').forEach(el => el.remove());
       }
-      if (scrollToBottom) {
-        setTimeout(() => { wrap.scrollTop = wrap.scrollHeight; }, 0);
+
+      if (scrollToBottom || atBottom) {
+        wrap.scrollTop = wrap.scrollHeight;
+        newMsgCount = 0; hideNewMsgsBtn();
+      } else {
+        newMsgCount += newMessages.length;
+        showNewMsgsBtn(newMsgCount);
+        const last = newMessages[newMessages.length - 1];
+        if (last && !last.pending) showNotification(last.nick, last.text);
       }
     } else {
       if (!isSendingMessage) {
         wrap.innerHTML = messages.map(m => renderMessage(m)).join('');
-        if (scrollToBottom) {
-          setTimeout(() => { wrap.scrollTop = wrap.scrollHeight; }, 0);
-        }
+        if (scrollToBottom || atBottom) wrap.scrollTop = wrap.scrollHeight;
       }
     }
+
+    updateAllReactions(messages, wrap);
+
   } finally {
     isLoadingMessages = false;
     startRefreshTimer();
   }
 }
 
-function renderMessage(m) {
-  const isOwn = m.nick === currentUser;
-  const avatarContent = m.nick.startsWith('Host_')
-    ? `<span>👻</span>`
-    : `<span>${escHtml(m.nick.charAt(0).toUpperCase())}</span>`;
-  const avatarClass = m.nick.startsWith('Host_') ? 'avatar ghost' : 'avatar';
-  const msgClass = isOwn ? 'message own' : 'message';
-  const pendingAttr = m.pending ? 'data-pending="true" style="opacity:0.55;"' : '';
+// ===== ONLINE USERS (v chatu – skutečně online z PRESENCE) =====
+// onlineUsers se plní z fetchAndShowOnlineCounts → updateOnlineBarFromPresence
+let _onlineNicks = [];
 
-  return `
-    <div class="${msgClass}" ${pendingAttr}>
-      <div class="${avatarClass}">${avatarContent}</div>
-      <div class="msg-body">
-        <div class="msg-nick">${escHtml(m.nick)}</div>
-        <div class="msg-text">${escHtml(m.text)}${m.pending ? ' <span style="font-size:11px;opacity:0.6;">⏳</span>' : ''}</div>
-        ${m.time ? `<div class="msg-time">${escHtml(m.time)}</div>` : ''}
-      </div>
-    </div>
-  `;
+function updateOnlineBar() {
+  const bar = document.getElementById('online-bar');
+  if (!_onlineNicks.length) { bar.style.display = 'none'; return; }
+  bar.style.display = 'flex';
+  bar.innerHTML = `<span class="online-label">Online:</span>` +
+    _onlineNicks.map(u => `<div class="online-avatar" title="${escHtml(u)}">${u.startsWith('Host_') ? '👻' : escHtml(u.charAt(0).toUpperCase())}</div>`).join('');
 }
 
+// ===== NEW MESSAGES INDICATOR =====
+function showNewMsgsBtn(count) {
+  const btn = document.getElementById('new-msgs-btn');
+  document.getElementById('new-msgs-count').textContent = count + ' nová' + (count === 1 ? ' zpráva' : count < 5 ? ' zprávy' : ' zpráv');
+  btn.style.display = 'flex';
+}
+function hideNewMsgsBtn() {
+  document.getElementById('new-msgs-btn').style.display = 'none';
+}
+function scrollToBottom() {
+  const wrap = document.getElementById('messages-wrap');
+  wrap.scrollTop = wrap.scrollHeight;
+  newMsgCount = 0; hideNewMsgsBtn();
+}
+function isAtBottom() {
+  const wrap = document.getElementById('messages-wrap');
+  return wrap.scrollHeight - wrap.scrollTop <= wrap.clientHeight + 80;
+}
+
+// ===== RENDER MESSAGE =====
+function renderMessage(m) {
+  const isOwn   = m.nick === currentUser;
+  const isGuest = m.nick.startsWith('Host_');
+  const isMention = currentUser && m.text &&
+    m.text.toLowerCase().includes('@' + currentUser.toLowerCase());
+
+  const avatarHtml = isGuest
+    ? `<div class="avatar ghost">👻</div>`
+    : `<div class="avatar">${escHtml(m.nick.charAt(0).toUpperCase())}</div>`;
+
+  const msgClass = ['message', isOwn ? 'own' : '', isMention ? 'mention' : ''].filter(Boolean).join(' ');
+  const pendingAttr = m.pending ? 'data-pending="true" style="opacity:0.55;"' : '';
+  const msgIdAttr   = m.id !== undefined ? `data-msgid="${m.id}"` : '';
+
+  let displayText = escHtml(m.text || '');
+  if (currentUser) {
+    const re = new RegExp('@(' + escRegex(currentUser) + ')', 'gi');
+    displayText = displayText.replace(re, '<span class="mention-tag">@$1</span>');
+  }
+
+  const reactBtn   = !m.pending && m.id !== undefined
+    ? `<button class="react-trigger" onclick="toggleEmojiPicker(this, ${m.id})" title="Přidat reakci">😊</button>`
+    : '';
+  const reactionBar = `<div class="reaction-bar" data-msgid="${m.id}">${renderReactionBar(m.reactions || {}, m.id)}</div>`;
+
+  return `
+    <div class="${msgClass}" ${pendingAttr} ${msgIdAttr}>
+      ${avatarHtml}
+      <div class="msg-body">
+        <div class="msg-nick">${escHtml(m.nick)}</div>
+        <div class="msg-text-wrap">
+          <div class="msg-text">${displayText}${m.pending ? ' <span style="font-size:11px;opacity:0.6;">⏳</span>' : ''}</div>
+          ${reactBtn}
+        </div>
+        ${reactionBar}
+        <div class="msg-time">${m.time ? escHtml(m.time) : ''}</div>
+      </div>
+    </div>`;
+}
+
+// ===== REACTIONS =====
+function renderReactionBar(reactions, msgId) {
+  return Object.entries(reactions).map(([emoji, nicks]) => {
+    const mine = nicks.includes(currentUser);
+    return `<button class="reaction-btn${mine ? ' mine' : ''}" onclick="doReaction(${msgId}, '${emoji}')" title="${escHtml(nicks.join(', '))}">
+      ${emoji} <span>${nicks.length}</span>
+    </button>`;
+  }).join('');
+}
+
+function updateAllReactions(messages, wrap) {
+  messages.forEach(m => {
+    if (m.id === undefined) return;
+    const bar = wrap.querySelector(`.reaction-bar[data-msgid="${m.id}"]`);
+    if (bar) bar.innerHTML = renderReactionBar(m.reactions || {}, m.id);
+  });
+}
+
+function toggleEmojiPicker(btn, msgId) {
+  document.querySelectorAll('.emoji-picker').forEach(p => p.remove());
+  const picker = document.createElement('div');
+  picker.className = 'emoji-picker';
+  picker.innerHTML = REACTION_EMOJIS.map(e =>
+    `<button onclick="doReaction(${msgId},'${e}')">${e}</button>`).join('');
+  btn.closest('.msg-text-wrap').appendChild(picker);
+}
+
+async function doReaction(msgId, emoji) {
+  document.querySelectorAll('.emoji-picker').forEach(p => p.remove());
+  if (!currentRoom || !currentUser || isGuest) {
+    showToast('Reakce jsou dostupné jen pro přihlášené uživatele.', 3000);
+    return;
+  }
+  const res = await apiCall({ action: 'addReaction', room: currentRoom, msgId, nick: currentUser, emoji });
+  if (res.success) await loadMessages();
+}
+
+// ===== SEND MESSAGE =====
 async function sendMsg() {
   const input = document.getElementById('chat-input');
-  const btn = document.querySelector('.send-btn');
-  const text = input.value.trim();
+  const btn   = document.getElementById('send-btn');
+  const text  = input.value.trim();
   if (!text || !currentRoom) return;
 
   input.value = '';
-
   const wrap = document.getElementById('messages-wrap');
-  const now = new Date();
+  const now  = new Date();
   const time = now.toLocaleDateString('cs-CZ') + ' ' + now.toLocaleTimeString('cs-CZ', {hour:'2-digit',minute:'2-digit'});
 
-  // Smazat empty-chat pokud existuje
-  const emptyChat = wrap.querySelector('.empty-chat');
-  if (emptyChat) wrap.innerHTML = '';
+  const empty = wrap.querySelector('.empty-chat');
+  if (empty) wrap.innerHTML = '';
 
-  // Přidat pending zprávu HNED do DOM
-  wrap.insertAdjacentHTML('beforeend', renderMessage({ nick: currentUser, text, time, pending: true }));
+  wrap.insertAdjacentHTML('beforeend', renderMessage({ id: undefined, nick: currentUser, text, time, pending: true }));
   setTimeout(() => { wrap.scrollTop = wrap.scrollHeight; }, 0);
 
-  // Označ že posíláme – loadMessages() pending zprávu nesmaže
   isSendingMessage = true;
-  btn.disabled = true;
-  btn.textContent = '...';
+  btn.disabled = true; btn.textContent = '…';
 
   const res = await apiCall({ action: 'sendMessage', room: currentRoom, nick: currentUser, text });
 
   isSendingMessage = false;
-  btn.disabled = false;
-  btn.textContent = 'POSLAT';
+  btn.disabled = false; btn.textContent = 'POSLAT';
   input.focus();
 
   if (res.success) {
-    // Server potvrdil – teď loadMessages() smaže pending a přidá skutečnou
     await loadMessages(true);
   } else {
-    // Chyba – smaž pending zprávu
     wrap.querySelectorAll('[data-pending]').forEach(el => el.remove());
     showToast('❌ Chyba: ' + (res.error || 'Zkus znovu'), 4000);
   }
@@ -1096,24 +933,30 @@ async function sendMsg() {
 
 // ===== API =====
 async function apiCall(data) {
-  if (API_URL === "VLOZ_SEM_URL_TVEHO_APPS_SCRIPTU") {
-    return mockApi(data);
-  }
+  if (!API_URL || API_URL.includes('VLOZ_SEM')) return mockApi(data);
   try {
+    // GAS vyžaduje POST s text/plain (ne application/json) aby nevznikal CORS preflight
     const res = await fetch(API_URL, {
       method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
       body: JSON.stringify(data)
     });
     return await res.json();
   } catch (e) {
-    console.error(e);
-    return { success: false, error: 'Chyba sítě' };
+    console.error('apiCall error:', e);
+    return { success: false, error: 'Chyba sítě: ' + e.message };
   }
 }
 
-// DEMO mód (bez API) — odstraň po nastavení Apps Script
+// ===== MOCK API =====
 function mockApi(data) {
-  const store = JSON.parse(localStorage.getItem('pbx_mock') || '{"users":[],"rooms":{},"links":[{"name":"Beyblade X Official","url":"https://www.beyblade.com"},{"name":"WBO Forum","url":"https://worldbeyblade.org"}]}');
+  const store = JSON.parse(localStorage.getItem('pbx_mock') || JSON.stringify({
+    users: [], rooms: {}, links: [
+      { name: 'Beyblade X Official', url: 'https://www.beyblade.com' },
+      { name: 'WBO Forum', url: 'https://worldbeyblade.org' }
+    ], reactions: {}, presence: {}
+  }));
+
   if (data.action === 'register') {
     if (store.users.find(u => u.nick.toLowerCase() === data.nick.toLowerCase()))
       return { success: false, error: 'Nick je již obsazený' };
@@ -1125,47 +968,80 @@ function mockApi(data) {
     const u = store.users.find(u => u.nick.toLowerCase() === data.nick.toLowerCase());
     if (!u) return { success: false, error: 'Nick neexistuje' };
     if (u.pin !== data.pin) return { success: false, error: 'Špatný PIN' };
+    store.presence[data.nick] = new Date().toISOString();
+    localStorage.setItem('pbx_mock', JSON.stringify(store));
     return { success: true };
+  }
+  if (data.action === 'ping') {
+    if (data.nick) store.presence[data.nick] = new Date().toISOString();
+    localStorage.setItem('pbx_mock', JSON.stringify(store));
+    return { success: true };
+  }
+  if (data.action === 'logout') {
+    if (data.nick) store.presence[data.nick] = new Date(0).toISOString();
+    localStorage.setItem('pbx_mock', JSON.stringify(store));
+    return { success: true };
+  }
+  if (data.action === 'getOnlineCounts') {
+    const now = Date.now();
+    let active = 0, away = 0;
+    Object.values(store.presence).forEach(ts => {
+      const diff = now - new Date(ts).getTime();
+      if (diff < AWAY_MS) active++;
+      else if (diff < OFFLINE_MS) away++;
+    });
+    return { success: true, active, away, total: active + away };
   }
   if (data.action === 'sendMessage') {
     if (!store.rooms[data.room]) store.rooms[data.room] = [];
     const now = new Date();
-    const time = now.toLocaleDateString('cs-CZ') + ' ' + now.toLocaleTimeString('cs-CZ', {hour:'2-digit',minute:'2-digit'});
-    store.rooms[data.room].push({ nick: data.nick, text: data.text, time });
+    store.rooms[data.room].push({
+      id: store.rooms[data.room].length,
+      nick: data.nick, text: data.text,
+      time: now.toLocaleDateString('cs-CZ') + ' ' + now.toLocaleTimeString('cs-CZ', {hour:'2-digit',minute:'2-digit'})
+    });
     localStorage.setItem('pbx_mock', JSON.stringify(store));
     return { success: true };
   }
   if (data.action === 'getMessages') {
-    return { success: true, messages: store.rooms[data.room] || [] };
+    const msgs = (store.rooms[data.room] || []).map((m, i) => ({
+      ...m, id: i, reactions: store.reactions[data.room + ':' + i] || {}
+    }));
+    return { success: true, messages: msgs };
   }
-  if (data.action === 'getLinks') {
-    return { success: true, links: store.links || [] };
+  if (data.action === 'addReaction') {
+    const key = data.room + ':' + data.msgId;
+    if (!store.reactions[key]) store.reactions[key] = {};
+    if (!store.reactions[key][data.emoji]) store.reactions[key][data.emoji] = [];
+    const idx = store.reactions[key][data.emoji].indexOf(data.nick);
+    if (idx >= 0) store.reactions[key][data.emoji].splice(idx, 1);
+    else store.reactions[key][data.emoji].push(data.nick);
+    if (store.reactions[key][data.emoji].length === 0) delete store.reactions[key][data.emoji];
+    localStorage.setItem('pbx_mock', JSON.stringify(store));
+    return { success: true };
   }
+  if (data.action === 'getLinks') return { success: true, links: store.links || [] };
   return { success: false, error: 'Neznámá akce' };
 }
 
 // ===== HELPERS =====
 function showError(id, msg) {
   const el = document.getElementById(id);
-  el.textContent = msg;
-  el.style.display = msg ? 'block' : 'none';
+  el.textContent = msg; el.style.display = msg ? 'block' : 'none';
 }
-
 function escHtml(str) {
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
-
+function escRegex(str) {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
 function showToast(msg, duration = 3000) {
   const t = document.createElement('div');
-  t.className = 'toast';
-  t.textContent = msg;
+  t.className = 'toast'; t.textContent = msg;
   document.body.appendChild(t);
   setTimeout(() => t.remove(), duration);
 }
 </script>
+
 </body>
 </html>
