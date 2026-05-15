@@ -529,7 +529,7 @@ body { font-family: 'Rajdhani', sans-serif; background: var(--bg); color: var(--
 
 <script>
 // ===== CONFIG =====
-const API_URL = 'https://script.google.com/macros/s/AKfycbwUBjtdBFdms0MiH7oq_qSEpLTQcpmrjGBEO1HuU_H-EJJe9b-ZfygHCciJNSViLD4R/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbyWNIeGVw1NRxIfqZfgg5Ow6bO0dq8gBaYWVr3UT-Z5bQIvP3reYvrUkDTyhA2lIQpC/exec';
 const ROOMS_ICONS = { 'Tréninky':'⚙️','Turnaje':'🏆','Cestování':'🚗','Poptávky':'🔍','Prodeje':'💎','Volný talk':'💬' };
 const REACTION_EMOJIS = ['👍','❤️','😂','😮','😢','🔥'];
 const REFRESH_INTERVAL  = 2000;   // ms – polling zpráv
@@ -658,20 +658,89 @@ async function doRegister() {
   const pin  = document.getElementById('reg-pin').value.trim();
   document.getElementById('reg-error').style.display   = 'none';
   document.getElementById('reg-success').style.display = 'none';
-  if (!nick) return showError('reg-error', 'Zadej nick.');
-  if (nick.length < 2) return showError('reg-error', 'Nick musí mít alespoň 2 znaky.');
+
+  // Validace před odesláním
+  if (!nick)              return showError('reg-error', 'Zadej nick.');
+  if (nick.length < 2)    return showError('reg-error', 'Nick musí mít alespoň 2 znaky.');
   if (!/^\d{4}$/.test(pin)) return showError('reg-error', 'PIN musí být přesně 4 číslice.');
+
+  // Otevři progress overlay
+  openRegisterProgress();
+
+  // ── KROK 1: Kontrola nicku ──
+  rpStep('nick', 'active', '⟳', 'Odesílám dotaz na server…');
+  await delay(300);
+  rpStep('nick', 'active', '⟳', 'Kontroluji jestli nick "' + nick + '" je volný…');
+
   const res = await apiCall({ action: 'register', nick, pin });
-  if (res.success) {
-    const s = document.getElementById('reg-success');
-    s.textContent = '✓ Registrace úspěšná! Přihlaš se.';
-    s.style.display = 'block';
-    document.getElementById('reg-nick').value = '';
-    document.getElementById('reg-pin').value  = '';
-    setTimeout(() => showTab('login'), 2000);
-  } else {
+
+  if (!res.success) {
+    // Nick obsazený nebo jiná chyba
+    rpStep('nick', 'err', '✕', res.error || 'Chyba registrace.');
+    await delay(1800);
+    closeRegisterProgress();
     showError('reg-error', res.error || 'Chyba registrace.');
+    return;
   }
+
+  rpStep('nick', 'ok', '✓', 'Nick "' + nick + '" je volný ✓');
+  await delay(350);
+
+  // ── KROK 2: Ukládání ──
+  rpStep('save', 'active', '⟳', 'Zapisuji do databáze…');
+  await delay(400);
+  rpStep('save', 'active', '⟳', 'Ukládám nick a PIN…');
+  await delay(400);
+  rpStep('save', 'ok', '✓', 'Uloženo do databáze ✓');
+  await delay(350);
+
+  // ── KROK 3: Dokončení ──
+  rpStep('done', 'active', '⟳', 'Připravuji účet…');
+  await delay(400);
+  rpStep('done', 'ok', '✓', 'Účet je připraven ✓');
+  await delay(300);
+
+  // ── SUCCESS FLASH ──
+  document.getElementById('rp-success').classList.add('show');
+  await delay(1200);
+
+  closeRegisterProgress();
+
+  // Vyčisti formulář a přepni na login
+  document.getElementById('reg-nick').value = '';
+  document.getElementById('reg-pin').value  = '';
+  showTab('login');
+  // Prefill nick do login formuláře
+  document.getElementById('login-nick').value = nick;
+  document.getElementById('login-pin').focus();
+}
+
+// ── REGISTER PROGRESS HELPERS ──
+function openRegisterProgress() {
+  ['nick','save','done'].forEach(k => rpStep(k, '', getDefaultRegIcon(k), getDefaultRegDetail(k)));
+  document.getElementById('rp-success').classList.remove('show');
+  document.getElementById('register-progress-overlay').classList.add('open');
+}
+
+function closeRegisterProgress() {
+  document.getElementById('register-progress-overlay').classList.remove('open');
+}
+
+function getDefaultRegIcon(key) {
+  return { nick: '⟳', save: '💾', done: '🎉' }[key];
+}
+function getDefaultRegDetail(key) {
+  return { nick: 'Čekám na spuštění…', save: 'Čekám na ověření nicku…', done: 'Čekám na uložení…' }[key];
+}
+
+function rpStep(key, state, icon, detail) {
+  const step     = document.getElementById('rp-step-' + key);
+  const iconEl   = document.getElementById('rp-icon-' + key);
+  const detailEl = document.getElementById('rp-detail-' + key);
+  step.className    = 'lp-step ' + state;
+  iconEl.className  = 'lp-step-icon ' + state;
+  iconEl.innerHTML  = '<span>' + icon + '</span>';
+  if (detailEl) detailEl.textContent = detail;
 }
 
 async function doLogin() {
@@ -721,7 +790,8 @@ async function doLogin() {
 
   // ── KROK 3: Načítání profilu ──
   lpStep('avatar', 'active', '⟳', 'Stahuji avatar a nastavení…');
-  currentUser = nick; isGuest = false;
+  currentUser = res.nick || nick; // přesný nick z databáze (správná velikost písmen)
+  isGuest = false;
   lastActivityTime = Date.now();
   requestNotifPermission(); // bez await – nechceme čekat na dialog notifikací
   await loadAvatar();
@@ -1562,6 +1632,52 @@ async function doChangePin() {
     <div class="lp-success" id="lp-success">
       <div class="lp-success-icon">✅</div>
       <div class="lp-success-text">PŘIHLÁŠENÍ ÚSPĚŠNÉ</div>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- REGISTER PROGRESS OVERLAY -->
+<div class="login-progress-overlay" id="register-progress-overlay">
+  <div class="login-progress-panel">
+
+    <div class="lp-header">Registrace probíhá</div>
+
+    <div class="lp-steps">
+
+      <div class="lp-step" id="rp-step-nick">
+        <div class="lp-step-icon" id="rp-icon-nick"><span>⟳</span></div>
+        <div class="lp-step-body">
+          <div class="lp-step-title">Kontrola nicku</div>
+          <div class="lp-step-detail" id="rp-detail-nick">Čekám na spuštění…</div>
+          <div class="lp-step-flow"><div class="lp-step-flow-inner"></div></div>
+        </div>
+      </div>
+
+      <div class="lp-step" id="rp-step-save">
+        <div class="lp-step-icon" id="rp-icon-save"><span>💾</span></div>
+        <div class="lp-step-body">
+          <div class="lp-step-title">Ukládání do databáze</div>
+          <div class="lp-step-detail" id="rp-detail-save">Čekám na ověření nicku…</div>
+          <div class="lp-step-flow"><div class="lp-step-flow-inner"></div></div>
+        </div>
+      </div>
+
+      <div class="lp-step" id="rp-step-done">
+        <div class="lp-step-icon" id="rp-icon-done"><span>🎉</span></div>
+        <div class="lp-step-body">
+          <div class="lp-step-title">Dokončení</div>
+          <div class="lp-step-detail" id="rp-detail-done">Čekám na uložení…</div>
+          <div class="lp-step-flow"><div class="lp-step-flow-inner"></div></div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="lp-success" id="rp-success">
+      <div class="lp-success-icon">🎉</div>
+      <div class="lp-success-text">REGISTRACE ÚSPĚŠNÁ</div>
     </div>
 
   </div>
