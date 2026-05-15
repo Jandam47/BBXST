@@ -283,6 +283,140 @@ body { font-family: 'Rajdhani', sans-serif; background: var(--bg); color: var(--
   border-radius: 10px; padding: 10px 14px; margin-bottom: 12px; font-size: 14px; font-weight: 600; }
 .avatar-current-emoji { font-size: 26px; }
 
+
+/* ── LOGIN PROGRESS OVERLAY ─────────────────────────────────── */
+.login-progress-overlay {
+  position: fixed; inset: 0; z-index: 500;
+  background: rgba(5,5,15,0.92);
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; pointer-events: none; transition: opacity .3s;
+  backdrop-filter: blur(6px);
+}
+.login-progress-overlay.open { opacity: 1; pointer-events: all; }
+
+.login-progress-panel {
+  width: 100%; max-width: 400px; margin: 20px;
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 16px; padding: 32px 28px;
+  box-shadow: 0 0 60px rgba(67,97,238,0.15), 0 0 0 1px rgba(67,97,238,0.08);
+  position: relative; overflow: hidden;
+}
+
+/* animovaná mřížka na pozadí panelu */
+.login-progress-panel::before {
+  content: '';
+  position: absolute; inset: 0; z-index: 0;
+  background-image:
+    linear-gradient(rgba(67,97,238,0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(67,97,238,0.05) 1px, transparent 1px);
+  background-size: 24px 24px;
+  pointer-events: none;
+}
+
+.lp-header {
+  position: relative; z-index: 1;
+  font-family: 'Orbitron', sans-serif; font-size: 11px; font-weight: 700;
+  letter-spacing: 4px; color: var(--blue2); text-transform: uppercase;
+  margin-bottom: 28px; display: flex; align-items: center; gap: 10px;
+}
+.lp-header::before {
+  content: ''; width: 8px; height: 8px; border-radius: 50%;
+  background: var(--blue2); box-shadow: 0 0 8px var(--blue2);
+  animation: pulse 1.2s infinite;
+}
+
+/* KROKY */
+.lp-steps { position: relative; z-index: 1; display: flex; flex-direction: column; gap: 0; }
+
+.lp-step {
+  display: flex; align-items: flex-start; gap: 14px;
+  padding: 14px 0; border-bottom: 1px solid var(--border);
+  position: relative;
+}
+.lp-step:last-child { border-bottom: none; }
+
+.lp-step-icon {
+  width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; background: var(--bg3); border: 1px solid var(--border);
+  transition: all .4s; position: relative; overflow: hidden;
+}
+.lp-step-icon.active {
+  border-color: var(--blue); box-shadow: 0 0 12px rgba(67,97,238,0.4);
+}
+.lp-step-icon.ok {
+  background: rgba(38,182,100,0.15); border-color: var(--green);
+  box-shadow: 0 0 12px rgba(38,182,100,0.3);
+}
+.lp-step-icon.err {
+  background: rgba(230,57,70,0.15); border-color: var(--accent);
+  box-shadow: 0 0 12px rgba(230,57,70,0.3);
+}
+
+.lp-step-body { flex: 1; min-width: 0; }
+.lp-step-title {
+  font-family: 'Orbitron', sans-serif; font-size: 11px; font-weight: 700;
+  letter-spacing: 1.5px; color: var(--muted); text-transform: uppercase;
+  margin-bottom: 4px; transition: color .3s;
+}
+.lp-step.active .lp-step-title { color: var(--blue2); }
+.lp-step.ok .lp-step-title     { color: var(--green); }
+.lp-step.err .lp-step-title    { color: var(--accent2); }
+
+.lp-step-detail {
+  font-size: 13px; font-weight: 600; color: var(--muted);
+  min-height: 18px; transition: color .3s;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.lp-step.active .lp-step-detail { color: var(--text); }
+.lp-step.ok .lp-step-detail     { color: var(--green); }
+.lp-step.err .lp-step-detail    { color: var(--accent2); }
+
+/* DATA FLOW animace (pohybující se tečky) */
+.lp-step-flow {
+  height: 2px; border-radius: 2px; background: var(--bg3);
+  margin-top: 8px; overflow: hidden; opacity: 0; transition: opacity .3s;
+}
+.lp-step.active .lp-step-flow { opacity: 1; }
+.lp-step-flow-inner {
+  height: 100%; width: 40%;
+  background: linear-gradient(90deg, transparent, var(--blue2), transparent);
+  animation: dataFlow 1s linear infinite;
+}
+.lp-step.ok .lp-step-flow-inner {
+  background: linear-gradient(90deg, transparent, var(--green), transparent);
+}
+@keyframes dataFlow {
+  from { transform: translateX(-150%); }
+  to   { transform: translateX(350%); }
+}
+
+/* SUCCESS FLASH */
+.lp-success {
+  position: absolute; inset: 0; z-index: 10;
+  background: rgba(38,182,100,0.08);
+  border: 2px solid var(--green);
+  border-radius: 16px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
+  opacity: 0; pointer-events: none; transition: opacity .3s;
+}
+.lp-success.show { opacity: 1; }
+.lp-success-icon { font-size: 48px; animation: successPop .4s cubic-bezier(.17,.67,.35,1.3); }
+.lp-success-text {
+  font-family: 'Orbitron', sans-serif; font-size: 13px; font-weight: 700;
+  letter-spacing: 3px; color: var(--green);
+  text-shadow: 0 0 20px rgba(38,182,100,0.6);
+}
+@keyframes successPop {
+  from { transform: scale(0.3); opacity: 0; }
+  to   { transform: scale(1);   opacity: 1; }
+}
+
+/* spinner pro ikonu */
+@keyframes spinIcon { to { transform: rotate(360deg); } }
+.lp-step-icon.active span { display: inline-block; animation: spinIcon 1s linear infinite; }
+.lp-step-icon.ok span, .lp-step-icon.err span { animation: none; }
+
 </style>
 </head>
 <body>
@@ -545,18 +679,98 @@ async function doLogin() {
   const pin  = document.getElementById('login-pin').value.trim();
   if (!nick) return showError('login-error', 'Zadej nick.');
   if (!pin)  return showError('login-error', 'Zadej PIN.');
+
+  // Otevři progress overlay
+  openLoginProgress();
+
+  // ── KROK 1: Ověření nicku ──
+  lpStep('nick', 'active', '⟳', 'Odesílám dotaz na server…');
+  await delay(300);
+  lpStep('nick', 'active', '⟳', 'Prohledávám databázi uživatelů…');
+
   const res = await apiCall({ action: 'login', nick, pin });
-  if (res.success) {
-    currentUser = nick; isGuest = false;
-    lastActivityTime = Date.now();
-    await requestNotifPermission();
-    loadAvatar();
-    enterLobby();
-    startPresenceTimers();
-  } else {
-    showError('login-error', res.error || 'Přihlášení selhalo.');
+
+  // Interpret výsledku
+  if (res.error === 'Nick neexistuje') {
+    lpStep('nick', 'err', '✕', 'Nick "' + nick + '" nenalezen v databázi.');
+    await delay(1800);
+    closeLoginProgress();
+    showError('login-error', 'Nick neexistuje.');
+    return;
   }
+
+  lpStep('nick', 'ok', '✓', 'Nick "' + nick + '" nalezen ✓');
+  await delay(350);
+
+  // ── KROK 2: Ověření PINu ──
+  lpStep('pin', 'active', '⟳', 'Odesílám šifrovaný PIN na server…');
+  await delay(300);
+  lpStep('pin', 'active', '⟳', 'Porovnávám s databází…');
+  await delay(400);
+
+  if (!res.success) {
+    lpStep('pin', 'err', '✕', res.error || 'Chybný PIN.');
+    await delay(1800);
+    closeLoginProgress();
+    showError('login-error', res.error || 'Přihlášení selhalo.');
+    return;
+  }
+
+  lpStep('pin', 'ok', '✓', 'PIN ověřen ✓');
+  await delay(350);
+
+  // ── KROK 3: Načítání profilu ──
+  lpStep('avatar', 'active', '⟳', 'Stahuji avatar a nastavení…');
+  currentUser = nick; isGuest = false;
+  lastActivityTime = Date.now();
+  requestNotifPermission(); // bez await – nechceme čekat na dialog notifikací
+  await loadAvatar();
+  lpStep('avatar', 'ok', '✓', 'Profil načten ✓');
+  await delay(300);
+
+  // ── SUCCESS FLASH ──
+  document.getElementById('lp-success').classList.add('show');
+  await delay(900);
+
+  closeLoginProgress();
+  enterLobby();
+  startPresenceTimers();
 }
+
+// ── LOGIN PROGRESS HELPERS ──
+function openLoginProgress() {
+  // Reset všech kroků
+  ['nick','pin','avatar'].forEach(k => lpStep(k, '', getDefaultIcon(k), getDefaultDetail(k)));
+  document.getElementById('lp-success').classList.remove('show');
+  document.getElementById('login-progress-overlay').classList.add('open');
+}
+
+function closeLoginProgress() {
+  document.getElementById('login-progress-overlay').classList.remove('open');
+}
+
+function getDefaultIcon(key) {
+  return { nick: '⟳', pin: '🔒', avatar: '🎭' }[key];
+}
+function getDefaultDetail(key) {
+  return { nick: 'Čekám na spuštění…', pin: 'Čekám na ověření nicku…', avatar: 'Čekám na přihlášení…' }[key];
+}
+
+function lpStep(key, state, icon, detail) {
+  const step    = document.getElementById('lp-step-' + key);
+  const iconEl  = document.getElementById('lp-icon-' + key);
+  const detailEl = document.getElementById('lp-detail-' + key);
+
+  // Stav na step elementu
+  step.className = 'lp-step ' + state;
+  // Stav na ikoně
+  iconEl.className = 'lp-step-icon ' + state;
+  iconEl.innerHTML = '<span>' + icon + '</span>';
+  // Detail text
+  if (detailEl) detailEl.textContent = detail;
+}
+
+function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 function guestLogin() {
   currentUser = 'Host_' + Math.floor(Math.random() * 9000 + 1000);
@@ -1149,10 +1363,30 @@ const AVATARS = ['⚡','🔥','💎','👑','🌀','🎯','🦅','🐉','🌊','
 let currentAvatar = null;
 let selectedAvatarTemp = null;
 
-function loadAvatar() {
+async function loadAvatar() {
+  // Nejdřív zobraz lokálně uložený (rychlá odezva)
   const stored = localStorage.getItem('pbx_avatar_' + currentUser);
   currentAvatar = stored || '⚡';
   updateAvatarDisplay();
+
+  // Pak stáhni ze serveru — s timeoutem aby se nezaseklo
+  if (!isGuest) {
+    try {
+      const timeout = new Promise(r => setTimeout(r, 5000, { success: false, error: 'timeout' }));
+      const res = await Promise.race([apiCall({ action: 'getAvatars' }), timeout]);
+      if (res.success && res.avatars) {
+        avatarCache = res.avatars;
+        if (res.avatars[currentUser]) {
+          currentAvatar = res.avatars[currentUser];
+          localStorage.setItem('pbx_avatar_' + currentUser, currentAvatar);
+          updateAvatarDisplay();
+        }
+      }
+    } catch (e) {
+      // Selhal server — jedeme s lokálním avatarem, nevadí
+      console.warn('loadAvatar fallback:', e);
+    }
+  }
 }
 
 function updateAvatarDisplay() {
@@ -1283,6 +1517,53 @@ async function doChangePin() {
       <div class="avatar-grid" id="avatar-grid"></div>
       <div class="settings-msg" id="avatar-msg"></div>
     </div>
+  </div>
+</div>
+
+
+<!-- LOGIN PROGRESS OVERLAY -->
+<div class="login-progress-overlay" id="login-progress-overlay">
+  <div class="login-progress-panel">
+
+    <div class="lp-header">Autentizace probíhá</div>
+
+    <div class="lp-steps">
+
+      <div class="lp-step" id="lp-step-nick">
+        <div class="lp-step-icon" id="lp-icon-nick"><span>⟳</span></div>
+        <div class="lp-step-body">
+          <div class="lp-step-title">Ověření nicku</div>
+          <div class="lp-step-detail" id="lp-detail-nick">Čekám na spuštění…</div>
+          <div class="lp-step-flow"><div class="lp-step-flow-inner"></div></div>
+        </div>
+      </div>
+
+      <div class="lp-step" id="lp-step-pin">
+        <div class="lp-step-icon" id="lp-icon-pin"><span>🔒</span></div>
+        <div class="lp-step-body">
+          <div class="lp-step-title">Ověření PINu</div>
+          <div class="lp-step-detail" id="lp-detail-pin">Čekám na ověření nicku…</div>
+          <div class="lp-step-flow"><div class="lp-step-flow-inner"></div></div>
+        </div>
+      </div>
+
+      <div class="lp-step" id="lp-step-avatar">
+        <div class="lp-step-icon" id="lp-icon-avatar"><span>🎭</span></div>
+        <div class="lp-step-body">
+          <div class="lp-step-title">Načítání profilu</div>
+          <div class="lp-step-detail" id="lp-detail-avatar">Čekám na přihlášení…</div>
+          <div class="lp-step-flow"><div class="lp-step-flow-inner"></div></div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Success flash (přes celý panel) -->
+    <div class="lp-success" id="lp-success">
+      <div class="lp-success-icon">✅</div>
+      <div class="lp-success-text">PŘIHLÁŠENÍ ÚSPĚŠNÉ</div>
+    </div>
+
   </div>
 </div>
 
