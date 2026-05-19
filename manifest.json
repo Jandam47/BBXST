@@ -1,6 +1,12 @@
-{
+
+    {
   "name": "BBX Score Tracking",
   "short_name": "BBX47",
+  "start_url": "./BBXST.html",
+  "id": "/BBXST/BBXST.html",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#000000",
   "icons": [
     {
       "src": "icon-192.png",
@@ -14,8 +20,7 @@
       "type": "image/png",
       "purpose": "any maskable"
     }
-  ],
-  "display": "standalone",
-  "background_color": "#000000",
-  "theme_color": "#000000"
-}
+  ]
+    }
+    
+  
