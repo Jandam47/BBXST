@@ -1,8 +1,8 @@
 {
   "name": "BBXCF HUB",
-  "short_name": "BBXHUB47",
+  "short_name": "BBX47HUB",
   "start_url": "./bbxu.html",
-  "id": "/app/bbxu.html",
+  "id": "/BBXST/app/bbxu.html",
   "display": "standalone",
   "background_color": "#000000",
   "theme_color": "#000000",
