@@ -2,7 +2,8 @@
     {
   "name": "BBX Score Tracking",
   "short_name": "BBX47",
-  "start_url": "./BBXST.html",
+  "scope": "/BBXST/",
+"start_url": "/BBXST/BBXST.html",
   "id": "/BBXST/BBXST.html",
   "display": "standalone",
   "background_color": "#000000",
