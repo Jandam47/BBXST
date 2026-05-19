@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Pardubice Beyblade X – HUB</title>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Rajdhani:wght@400;500;600&family=Share+Tech+Mono&display=swap" rel="stylesheet">
-<link rel="manifest" href="data:application/json;charset=utf-8,%7B%22name%22%3A%22PBX+HUB%22%2C%22short_name%22%3A%22PBX%22%2C%22start_url%22%3A%22.%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%230a0a14%22%2C%22theme_color%22%3A%22%23e63946%22%2C%22icons%22%3A%5B%7B%22src%22%3A%22data%3Aimage%2Fsvg%2Bxml%2C%253Csvg+xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'+viewBox%3D'0+0+100+100'%253E%253Ccircle+cx%3D'50'+cy%3D'50'+r%3D'45'+fill%3D'%2523e63946'%2F%253E%253C%2Fsvg%253E%22%2C%22sizes%22%3A%22any%22%2C%22type%22%3A%22image%2Fsvg%2Bxml%22%7D%5D%7D">
+<link rel="manifest" href="./manifest.json">
 <meta name="theme-color" content="#e63946">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -4063,6 +4063,19 @@ function mockApi(data) {
   return _origMockApi(data);
 }
 
+</script>
+
+<script>
+/* ================================================================
+   SERVICE WORKER – PWA instalace
+================================================================ */
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js')
+      .then(reg => console.log('[PWA] SW registrován:', reg.scope))
+      .catch(err => console.warn('[PWA] SW chyba:', err));
+  });
+}
 </script>
 </body>
 </html>
