@@ -1122,5 +1122,9 @@ console.log(
   "background:#0a1520;color:#00ffff;border-radius:0 4px 4px 0;padding:2px 8px;"
 )
 </script>
+  <script>
+if ('serviceWorker' in navigator)
+  navigator.serviceWorker.register('./sw.js');
+  </script>
 </body>
 </html>
