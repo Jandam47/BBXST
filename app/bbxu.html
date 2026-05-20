@@ -1650,6 +1650,7 @@ body { font-family: 'Rajdhani', sans-serif; background: var(--bg); color: var(--
     <button class="admin-tab" onclick="adminShowTab('chat')">💬 Chat</button>
     <button class="admin-tab" onclick="adminShowTab('akce')">🏆 Akce</button>
     <button class="admin-tab" onclick="adminShowTab('links')">🔗 Odkazy</button>
+    <button class="admin-tab" onclick="adminShowTab('players')">✅ Hráči</button>
     <button class="admin-tab" onclick="adminShowTab('matches')">📺 Zápasy</button>
   </div>
 
@@ -1821,20 +1822,44 @@ body { font-family: 'Rajdhani', sans-serif; background: var(--bg); color: var(--
       </div>
     </div>
 
+    <!-- PLAYERS APPROVALS -->
+    <div class="admin-section" id="admin-section-players">
+      <div class="admin-panel" style="display:flex;align-items:center;justify-content:space-between;padding:14px 20px;">
+        <div class="admin-panel-title" style="margin:0;">✅ SCHVALOVÁNÍ REGISTRACÍ</div>
+        <button class="admin-action-btn" style="padding:6px 12px;font-size:11px;" onclick="adminLoadPlayers()">↻ OBNOVIT</button>
+      </div>
+      <div id="admin-players-wrap">
+        <div style="text-align:center;padding:20px;color:#4a7080;">Načítám hráče…</div>
+      </div>
+    </div>
+
     <!-- MATCHES -->
     <div class="admin-section" id="admin-section-matches">
       <div class="admin-panel">
+        <div class="admin-panel-title">🏆 VYBRAT TURNAJ</div>
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+          <select class="admin-input" id="admin-match-tournament" style="flex:1;min-width:200px;cursor:pointer;" onchange="adminMatchTournamentChange()">
+            <option value="">— Nejprve vyber turnaj —</option>
+          </select>
+          <button class="admin-action-btn" style="padding:8px 14px;font-size:12px;" onclick="adminRefreshMatchTournaments()">↻</button>
+        </div>
+      </div>
+      <div class="admin-panel" id="admin-match-form-panel" style="display:none;">
         <div class="admin-panel-title">➕ PŘIDAT ZÁPAS</div>
         <div class="admin-form-row">
-          <div style="flex:1;min-width:120px;">
+          <div style="flex:1;min-width:140px;">
             <label class="admin-field-label">Hráč 1</label>
-            <input class="admin-input" id="admin-match-p1" placeholder="Nick hráče 1">
+            <select class="admin-input" id="admin-match-p1" style="cursor:pointer;">
+              <option value="">— Vyber hráče —</option>
+            </select>
           </div>
-          <div style="flex:1;min-width:120px;">
+          <div style="flex:1;min-width:140px;">
             <label class="admin-field-label">Hráč 2</label>
-            <input class="admin-input" id="admin-match-p2" placeholder="Nick hráče 2">
+            <select class="admin-input" id="admin-match-p2" style="cursor:pointer;">
+              <option value="">— Vyber hráče —</option>
+            </select>
           </div>
-          <div style="flex:1;min-width:80px;">
+          <div style="flex:0 0 100px;">
             <label class="admin-field-label">Aréna</label>
             <input class="admin-input" id="admin-match-arena" placeholder="č. arény">
           </div>
@@ -3273,7 +3298,7 @@ document.addEventListener('click', e => {
 /* ================================================================
    AKTUÁLNÍ ZÁPASY – logika
 ================================================================ */
-const TV_API = "https://script.google.com/macros/s/AKfycby-qzxDd_WjlJtIj_jVGCjBog5Dtncnc_TqRtOWs5F_7_wstDg6016_jbv21p-HYfQ7/exec";
+const TV_API = "https://script.google.com/macros/s/AKfycbxFBuYqIV02MObawNCh21MxtRPukC9g9VCccGpbwsSIwiQ-5n6t5VPWtAaAXE0va1oN/exec";
 
 let tvMatches = [];
 let tvRefreshTimer = null;
@@ -3516,7 +3541,7 @@ function qrSendForReview() {
 
   const tournLabel = qrGetTournamentLabel();
 
-  const QR_API = "https://script.google.com/macros/s/AKfycby-qzxDd_WjlJtIj_jVGCjBog5Dtncnc_TqRtOWs5F_7_wstDg6016_jbv21p-HYfQ7/exec";
+  const QR_API = "https://script.google.com/macros/s/AKfycbxFBuYqIV02MObawNCh21MxtRPukC9g9VCccGpbwsSIwiQ-5n6t5VPWtAaAXE0va1oN/exec";
   const btn = document.getElementById('qrSendBtn');
   btn.disabled = true; btn.innerText = '⟳ ODESÍLÁM…';
   qrShowStatus('⟳ Odesílám registraci…', 'info', 0);
@@ -3741,7 +3766,7 @@ function adminDoLogin() {
 
 function adminShowTab(name) {
   document.querySelectorAll('.admin-tab').forEach((t, i) => {
-    const names = ['overview','users','chat','akce','links','matches'];
+    const names = ['overview','users','chat','akce','links','players','matches'];
     t.classList.toggle('active', names[i] === name);
   });
   document.querySelectorAll('.admin-section').forEach(s => s.classList.remove('active'));
@@ -3750,6 +3775,7 @@ function adminShowTab(name) {
   if (name === 'chat') adminLoadChatRoom(adminCurrentRoom);
   if (name === 'users') adminLoadUsers();
   if (name === 'links') adminLoadLinks();
+  if (name === 'players') adminLoadPlayers();
   if (name === 'matches') adminLoadMatches();
   if (name === 'akce') adminLoadAkce();
   if (name === 'overview') adminLoadOverview();
@@ -3957,7 +3983,151 @@ async function adminDeleteLink(idx) {
   });
 }
 
+/* ================================================================
+   ADMIN PLAYERS – SCHVALOVÁNÍ
+================================================================ */
+let adminPlayersData = [];
+
+async function adminLoadPlayers() {
+  const wrap = document.getElementById('admin-players-wrap');
+  wrap.innerHTML = '<div style="text-align:center;padding:20px;color:#4a7080;">⟳ Načítám…</div>';
+  try {
+    const res = await fetch(TV_API + '?action=getPlayers&includeAll=1&t=' + Date.now());
+    const data = await res.json();
+    adminPlayersData = Array.isArray(data) ? data : [];
+    adminRenderPlayers();
+  } catch(e) {
+    wrap.innerHTML = '<div style="text-align:center;padding:20px;color:#ff6b6b;">❌ Chyba načtení hráčů.<br><small>' + escHtml(e.message) + '</small></div>';
+  }
+}
+
+function adminRenderPlayers() {
+  const wrap = document.getElementById('admin-players-wrap');
+  if (!adminPlayersData.length) {
+    wrap.innerHTML = '<div style="text-align:center;padding:20px;color:#4a7080;">Žádní hráči k zobrazení.</div>';
+    return;
+  }
+
+  // Seskup hráče podle turnaje
+  const byTournament = {};
+  adminPlayersData.forEach(p => {
+    const t = (p.tournament || '(bez turnaje)').trim();
+    if (!byTournament[t]) byTournament[t] = [];
+    byTournament[t].push(p);
+  });
+
+  // Seřaď turnaje – nejdřív ty co odpovídají akci z akceActions (pokud jsou načteny)
+  const tournamentNames = Object.keys(byTournament).sort((a, b) => {
+    const aIsKnown = akceActions.some(ac => ac.druh === a);
+    const bIsKnown = akceActions.some(ac => ac.druh === b);
+    if (aIsKnown && !bIsKnown) return -1;
+    if (!aIsKnown && bIsKnown) return 1;
+    return a.localeCompare(b, 'cs');
+  });
+
+  wrap.innerHTML = tournamentNames.map(tName => {
+    const players = byTournament[tName];
+    const pending  = players.filter(p => p.status !== 'schváleno').length;
+    const approved = players.filter(p => p.status === 'schváleno').length;
+    return `
+      <div class="admin-panel" style="margin-bottom:0;border-radius:0;border-top:1px solid #1a2a40;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
+          <div style="font-family:'Orbitron',sans-serif;font-size:13px;font-weight:700;color:#ffd60a;letter-spacing:2px;">
+            🏆 ${escHtml(tName)}
+          </div>
+          <div style="display:flex;gap:8px;">
+            ${pending > 0 ? `<span style="background:rgba(230,57,70,0.15);border:1px solid rgba(230,57,70,0.3);border-radius:12px;padding:3px 10px;font-size:12px;color:#ff6b6b;font-weight:700;">${pending} čeká</span>` : ''}
+            <span style="background:rgba(38,182,100,0.12);border:1px solid rgba(38,182,100,0.25);border-radius:12px;padding:3px 10px;font-size:12px;color:#26b664;font-weight:700;">${approved} schváleno</span>
+          </div>
+        </div>
+        <table class="admin-table" style="width:100%;">
+          <thead>
+            <tr>
+              <th>Nick</th><th>Beyblade 1</th><th>Beyblade 2</th><th>Beyblade 3</th><th>Čas registrace</th><th>Stav</th><th style="text-align:right;">Akce</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${players.map(p => {
+              const isApproved = p.status === 'schváleno';
+              return `<tr style="${isApproved ? '' : 'background:rgba(230,57,70,0.04);'}">
+                <td><strong style="color:${isApproved ? '#c8e8f0' : '#ff9da5'};">${escHtml(p.nick || '')}</strong></td>
+                <td style="font-size:13px;">${escHtml(p.beyblade1 || '—')}</td>
+                <td style="font-size:13px;">${escHtml(p.beyblade2 || '—')}</td>
+                <td style="font-size:13px;">${escHtml(p.beyblade3 || '—')}</td>
+                <td style="font-size:12px;color:#4a7080;">${escHtml(p.time || '—')}</td>
+                <td>
+                  <span style="padding:3px 9px;border-radius:10px;font-size:12px;font-weight:700;
+                    background:${isApproved ? 'rgba(38,182,100,0.15)' : 'rgba(255,157,0,0.12)'};
+                    color:${isApproved ? '#26b664' : '#ffaa00'};
+                    border:1px solid ${isApproved ? 'rgba(38,182,100,0.3)' : 'rgba(255,157,0,0.25)'};">
+                    ${escHtml(p.status || 'čeká')}
+                  </span>
+                </td>
+                <td style="text-align:right;white-space:nowrap;">
+                  ${!isApproved
+                    ? `<button class="admin-action-btn primary" style="padding:4px 10px;font-size:11px;" onclick="adminApprovePlayer('${escHtml(p.nick)}', '${escHtml(tName)}')">✓ SCHVÁLIT</button>`
+                    : `<button class="admin-action-btn" style="padding:4px 10px;font-size:11px;background:#1a2a40;color:#7878a0;" onclick="adminUnapprovePlayer('${escHtml(p.nick)}', '${escHtml(tName)}')">↩ VRÁTIT</button>`
+                  }
+                  <button class="admin-action-btn danger" style="padding:4px 10px;font-size:11px;margin-left:4px;" onclick="adminDeletePlayer('${escHtml(p.nick)}', '${escHtml(tName)}')">🗑</button>
+                </td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>`;
+  }).join('');
+}
+
+async function adminApprovePlayer(nick, tournament) {
+  await adminSetPlayerStatus(nick, tournament, 'schváleno');
+}
+async function adminUnapprovePlayer(nick, tournament) {
+  await adminSetPlayerStatus(nick, tournament, 'čeká');
+}
+
+async function adminSetPlayerStatus(nick, tournament, status) {
+  try {
+    await fetch(TV_API, {
+      method: 'POST', mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'setPlayerStatus', nick, tournament, status })
+    });
+    // Optimistic update
+    const p = adminPlayersData.find(x => x.nick === nick && (x.tournament || '(bez turnaje)').trim() === tournament);
+    if (p) p.status = status;
+    adminRenderPlayers();
+    // Refresh match dropdowns if on matches tab
+    adminRefreshMatchPlayerDropdowns();
+    showToast(status === 'schváleno' ? '✓ Hráč schválen' : '↩ Vráceno na čeká', 2000);
+  } catch(e) {
+    showToast('❌ Chyba: ' + e.message, 3000);
+  }
+}
+
+async function adminDeletePlayer(nick, tournament) {
+  adminConfirm('Smazat hráče ' + nick + ' z turnaje ' + tournament + '?', async () => {
+    try {
+      await fetch(TV_API, {
+        method: 'POST', mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'deletePlayer', nick, tournament })
+      });
+      adminPlayersData = adminPlayersData.filter(p => !(p.nick === nick && (p.tournament || '(bez turnaje)').trim() === tournament));
+      adminRenderPlayers();
+      showToast('✓ Hráč smazán', 2000);
+    } catch(e) { showToast('❌ Chyba smazání', 3000); }
+  });
+}
+
+/* ================================================================
+   ADMIN MATCHES – s výběrem turnaje
+================================================================ */
+let adminMatchTournamentPlayers = []; // schválení hráči vybraného turnaje
+
 async function adminLoadMatches() {
+  // Načti turnaje do selectu (z akceActions nebo znovu z API)
+  await adminRefreshMatchTournaments();
+  // Načti aktuální zápasy
   const wrap = document.getElementById('admin-matches-wrap');
   try {
     const res = await fetch(TV_API + '?action=getMatches&t=' + Date.now());
@@ -3967,6 +4137,76 @@ async function adminLoadMatches() {
   } catch(e) {
     wrap.innerHTML = '<div style="text-align:center;padding:20px;color:#ff6b6b;">Chyba načtení zápasů.</div>';
   }
+}
+
+async function adminRefreshMatchTournaments() {
+  const sel = document.getElementById('admin-match-tournament');
+  if (!sel) return;
+  // Použij akceActions pokud jsou, jinak fetch
+  let tournaments = akceActions
+    .filter(a => a.stav === '1' && a.druh.toLowerCase().includes('turnaj'))
+    .map(a => ({ id: a.id, label: a.druh + ' — ' + a.datum }));
+
+  // Fallback: doplň z adminPlayersData pokud jsou nahrátí
+  if (!tournaments.length && adminPlayersData.length) {
+    const names = [...new Set(adminPlayersData.map(p => p.tournament).filter(Boolean))];
+    tournaments = names.map(n => ({ id: n, label: n }));
+  }
+
+  const prev = sel.value;
+  sel.innerHTML = '<option value="">— Nejprve vyber turnaj —</option>' +
+    tournaments.map(t => `<option value="${escHtml(t.id)}">${escHtml(t.label)}</option>`).join('');
+  if (prev) sel.value = prev;
+  if (sel.value) adminMatchTournamentChange();
+}
+
+async function adminMatchTournamentChange() {
+  const sel = document.getElementById('admin-match-tournament');
+  const tournId = sel.value;
+  const formPanel = document.getElementById('admin-match-form-panel');
+  if (!tournId) { formPanel.style.display = 'none'; return; }
+
+  formPanel.style.display = '';
+
+  // Najdi druh akce podle ID
+  const action = akceActions.find(a => a.id === tournId);
+  const tournName = action ? action.druh : tournId;
+
+  // Načti hráče pokud ještě nejsou
+  if (!adminPlayersData.length) {
+    try {
+      const res = await fetch(TV_API + '?action=getPlayers&includeAll=1&t=' + Date.now());
+      const data = await res.json();
+      adminPlayersData = Array.isArray(data) ? data : [];
+    } catch(e) { adminPlayersData = []; }
+  }
+
+  // Filtruj schválené hráče pro tento turnaj
+  adminMatchTournamentPlayers = adminPlayersData.filter(p =>
+    p.status === 'schváleno' &&
+    (p.tournament || '').trim().toLowerCase() === tournName.trim().toLowerCase()
+  );
+
+  adminRefreshMatchPlayerDropdowns();
+}
+
+function adminRefreshMatchPlayerDropdowns() {
+  const sel = document.getElementById('admin-match-tournament');
+  if (!sel || !sel.value) return;
+  const action = akceActions.find(a => a.id === sel.value);
+  const tournName = action ? action.druh : sel.value;
+  const players = adminPlayersData.filter(p =>
+    p.status === 'schváleno' &&
+    (p.tournament || '').trim().toLowerCase() === tournName.trim().toLowerCase()
+  );
+  adminMatchTournamentPlayers = players;
+
+  const opts = '<option value="">— Vyber hráče —</option>' +
+    players.map(p => `<option value="${escHtml(p.nick)}">${escHtml(p.nick)}</option>`).join('');
+  const p1 = document.getElementById('admin-match-p1');
+  const p2 = document.getElementById('admin-match-p2');
+  if (p1) { const v1 = p1.value; p1.innerHTML = opts; p1.value = v1; }
+  if (p2) { const v2 = p2.value; p2.innerHTML = opts; p2.value = v2; }
 }
 
 function adminRenderMatchesTable(matches) {
@@ -3990,14 +4230,16 @@ async function adminAddMatch() {
   const p2    = document.getElementById('admin-match-p2').value.trim();
   const arena = document.getElementById('admin-match-arena').value.trim();
   const msg   = document.getElementById('admin-match-msg');
-  if (!p1 || !p2 || !arena) { msg.className='admin-msg err'; msg.textContent='Vyplň všechna pole.'; return; }
+  if (!p1 || !p2) { msg.className='admin-msg err'; msg.textContent='Vyber oba hráče.'; return; }
+  if (p1 === p2)  { msg.className='admin-msg err'; msg.textContent='Hráči musí být různí.'; return; }
+  if (!arena)     { msg.className='admin-msg err'; msg.textContent='Zadej číslo arény.'; return; }
   try {
     await fetch(TV_API, {
       method: 'POST', mode: 'no-cors',
       headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ action: 'addMatch', player1: p1, player2: p2, arena, adminPass: ADMIN_PASSWORD })
+      body: JSON.stringify({ type: 'addMatch', player1: p1, player2: p2, arena })
     });
-    msg.className='admin-msg ok'; msg.textContent='✓ Zápas přidán! (Refresh za chvíli)';
+    msg.className='admin-msg ok'; msg.textContent='✓ Zápas přidán!';
     document.getElementById('admin-match-p1').value = '';
     document.getElementById('admin-match-p2').value = '';
     document.getElementById('admin-match-arena').value = '';
