@@ -1729,12 +1729,73 @@ body { font-family: 'Rajdhani', sans-serif; background: var(--bg); color: var(--
 
     <!-- AKCE -->
     <div class="admin-section" id="admin-section-akce">
+
+      <!-- PŘIDAT / EDITOVAT AKCI -->
+      <div class="admin-panel" id="admin-akce-form-panel">
+        <div class="admin-panel-title" id="admin-akce-form-title">➕ PŘIDAT NOVOU AKCI</div>
+        <div class="admin-form-row" style="flex-wrap:wrap;gap:10px;">
+          <input type="hidden" id="aform-id">
+          <div style="flex:1;min-width:130px;">
+            <label class="admin-field-label">ID akce</label>
+            <input class="admin-input" id="aform-idakce" placeholder="např. T2025-01">
+          </div>
+          <div style="flex:1;min-width:120px;">
+            <label class="admin-field-label">Datum (dd.MM.yyyy)</label>
+            <input class="admin-input" id="aform-datum" placeholder="15.06.2025">
+          </div>
+          <div style="flex:1;min-width:90px;">
+            <label class="admin-field-label">Čas od</label>
+            <input class="admin-input" id="aform-camod" placeholder="10:00">
+          </div>
+          <div style="flex:1;min-width:90px;">
+            <label class="admin-field-label">Čas do</label>
+            <input class="admin-input" id="aform-casdo" placeholder="14:00">
+          </div>
+        </div>
+        <div class="admin-form-row" style="flex-wrap:wrap;gap:10px;margin-top:10px;">
+          <div style="flex:2;min-width:160px;">
+            <label class="admin-field-label">Druh akce</label>
+            <input class="admin-input" id="aform-druh" placeholder="Trénink / Turnaj…">
+          </div>
+          <div style="flex:2;min-width:160px;">
+            <label class="admin-field-label">Místo konání</label>
+            <input class="admin-input" id="aform-misto" placeholder="Klub, adresa…">
+          </div>
+          <div style="flex:1;min-width:120px;">
+            <label class="admin-field-label">Stav</label>
+            <select class="admin-input" id="aform-stav" style="cursor:pointer;">
+              <option value="0">0 – Skryto</option>
+              <option value="1" selected>1 – Zobrazit</option>
+              <option value="2">2 – Zrušeno</option>
+            </select>
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;">
+          <button class="admin-action-btn primary" onclick="adminAkceSubmit()" id="aform-submit-btn">➕ PŘIDAT AKCI</button>
+          <button class="admin-action-btn" style="background:#1a2a40;color:#7878a0;" onclick="adminAkceFormReset()" id="aform-cancel-btn" style="display:none;">✕ ZRUŠIT EDITACI</button>
+        </div>
+        <div class="admin-msg" id="admin-akce-form-msg"></div>
+      </div>
+
+      <!-- SEZNAM AKCÍ -->
       <div class="admin-panel">
-        <div class="admin-panel-title">🏆 PŘEHLED AKCÍ A REGISTRACÍ</div>
-        <div id="admin-akce-wrap">
+        <div class="admin-panel-title" style="display:flex;align-items:center;justify-content:space-between;">
+          <span>🏆 SPRÁVA AKCÍ</span>
+          <button class="admin-action-btn" style="padding:6px 12px;font-size:11px;" onclick="adminLoadAkce()">↻ OBNOVIT</button>
+        </div>
+        <div id="admin-akce-list-wrap">
           <div style="text-align:center;padding:20px;color:#4a7080;">Načítám data z Akce API…</div>
         </div>
       </div>
+
+      <!-- REGISTRACE -->
+      <div class="admin-panel">
+        <div class="admin-panel-title">👥 REGISTRACE HRÁČŮ</div>
+        <div id="admin-akce-reg-wrap">
+          <div style="text-align:center;padding:20px;color:#4a7080;">Načítám…</div>
+        </div>
+      </div>
+
     </div>
 
     <!-- LINKS -->
@@ -1917,8 +1978,8 @@ body { font-family: 'Rajdhani', sans-serif; background: var(--bg); color: var(--
    ⚙️ KONFIGURACE – API URL
    Chat (bbxpchetap) a Akce (index) mají každý svoji URL
 ================================================================ */
-const API_URL        = 'https://script.google.com/macros/s/AKfycbyWNIeGVw1NRxIfqZfgg5Ow6bO0dq8gBaYWVr3UT-Z5bQIvP3reYvrUkDTyhA2lIQpC/exec';
-const AKCE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwC9xV0TZTSVgKFcCoRVfqesHTJbSrnzXbJ7NjzNgAPwMYYKLBOxULX_w5jVlCiTTax/exec';
+const API_URL        = 'https://script.google.com/macros/s/AKfycbxq7ykF10W5NdjqQqvoyiAWHWMIA7vd3IxG27B9wM6waiXjfcMmUidNlAxGq2St3V_g/exec';
+const AKCE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw8PtlGT8fam0KF49vsVvZsiH5RZHbO1x8g734Qz1gy9-VtRtLHdBTOlg3VXEW9zGRD/exec';
 
 /* ================================================================
    CHAT CONFIG
@@ -1936,6 +1997,7 @@ const ONLINE_POLL_MS   = 30000;
 ================================================================ */
 let currentUser      = null;
 let isGuest          = false;
+let currentIsAdmin   = false;
 let currentRoom      = null;
 let pollInterval     = null;
 let refreshInterval  = null;
@@ -2169,6 +2231,7 @@ async function doLogin() {
   lpStep('avatar', 'active', '⟳', 'Stahuji avatar a nastavení…');
   currentUser = res.nick || nick;
   isGuest = false;
+  currentIsAdmin = res.isAdmin || false;
   lastActivityTime = Date.now();
   requestNotifPermission();
   await loadAvatar();
@@ -2224,7 +2287,7 @@ async function doLogout(auto = false) {
   if (currentUser && !isGuest) {
     apiCall({ action: 'logout', nick: currentUser }).catch(() => {});
   }
-  currentUser = null; isGuest = false;
+  currentUser = null; isGuest = false; currentIsAdmin = false;
   clearInterval(pollInterval); clearInterval(refreshInterval);
   pollInterval = null; refreshInterval = null;
   clearPresenceTimers();
@@ -2270,9 +2333,9 @@ function enterMenu() {
   document.getElementById('badge-ghost').style.display      = isGuest ? '' : 'none';
   setUserDotStatus('active');
   if (!isGuest && currentAvatar) updateAvatarDisplay();
-  // Show admin tile for non-guest users
+  // Show admin tile only for admin users
   const adminTile = document.getElementById('menu-admin-tile');
-  if (adminTile) adminTile.style.display = (!isGuest) ? '' : 'none';
+  if (adminTile) adminTile.style.display = currentIsAdmin ? '' : 'none';
   showScreen('menu');
 }
 
@@ -3650,7 +3713,6 @@ function akceShowPlayers(actionId) {
 /* ================================================================
    ADMIN PANEL
 ================================================================ */
-const ADMIN_PASSWORD = 'pbxadmin2025'; // ← změň heslo!
 let adminAuthenticated = false;
 let adminCurrentRoom = 'Tréninky';
 let adminUsersData = [];
@@ -3659,25 +3721,18 @@ let adminMatchesData = [];
 let _confirmCallback = null;
 
 function goToAdmin() {
+  if (!currentIsAdmin) return; // pojistka
+  adminAuthenticated = true;
   showScreen('admin');
-  document.getElementById('admin-login-overlay').classList.toggle('hidden', adminAuthenticated);
-  if (adminAuthenticated) adminLoadAll();
+  document.getElementById('admin-login-overlay').classList.add('hidden');
+  document.getElementById('admin-logged-as').textContent = 'Přihlášen jako: ' + (currentUser || 'Admin');
+  document.getElementById('ainfo-admin').textContent = currentUser || 'Admin';
+  document.getElementById('ainfo-api').textContent = API_URL.substring(0, 60) + '…';
+  adminLoadAll();
 }
 
 function adminDoLogin() {
-  const pass = document.getElementById('admin-pass-input').value;
-  if (pass === ADMIN_PASSWORD) {
-    adminAuthenticated = true;
-    document.getElementById('admin-login-overlay').classList.add('hidden');
-    document.getElementById('admin-logged-as').textContent = 'Přihlášen jako: ' + (currentUser || 'Admin');
-    document.getElementById('ainfo-admin').textContent = currentUser || 'Admin';
-    document.getElementById('ainfo-api').textContent = API_URL.substring(0, 60) + '…';
-    adminLoadAll();
-  } else {
-    document.getElementById('admin-login-err').textContent = '✕ Špatné heslo';
-    setTimeout(() => document.getElementById('admin-login-err').textContent = '', 2000);
-  }
-  document.getElementById('admin-pass-input').value = '';
+  // Přihlášení přes heslo zrušeno – admin status se řídí Google Sheets
 }
 
 function adminShowTab(name) {
@@ -3963,15 +4018,88 @@ async function adminDeleteMatch(idx) {
   });
 }
 
+/* ================================================================
+   ADMIN AKCE – EDITOR
+================================================================ */
+
 function adminLoadAkce() {
-  const wrap = document.getElementById('admin-akce-wrap');
+  // Pokud nejsou data načtena, stáhneme je přes JSONP
   if (!akceActions.length) {
-    wrap.innerHTML = '<div style="text-align:center;padding:20px;color:#4a7080;">Data akcí nejsou načtena — přejdi do sekce Akce a vrať se.</div>';
+    adminAkceFetch(() => { adminRenderAkceList(); adminRenderAkceReg(); });
+  } else {
+    adminRenderAkceList();
+    adminRenderAkceReg();
+  }
+}
+
+function adminAkceFetch(cb) {
+  const listWrap = document.getElementById('admin-akce-list-wrap');
+  listWrap.innerHTML = '<div style="text-align:center;padding:20px;color:#4a7080;">⟳ Načítám z API…</div>';
+  const cbName = 'adminAkceCb_' + Date.now();
+  const script = document.createElement('script');
+  script.src = AKCE_SCRIPT_URL + '?callback=' + cbName;
+  window[cbName] = (data) => {
+    delete window[cbName];
+    script.remove();
+    if (data && data.success) {
+      akceActions    = data.actions    || [];
+      akceRegistered = data.registered || [];
+      akceDataLoaded = true;
+    }
+    if (cb) cb();
+  };
+  script.onerror = () => {
+    delete window[cbName];
+    script.remove();
+    listWrap.innerHTML = '<div style="text-align:center;padding:20px;color:#ff6b6b;">❌ Nepodařilo se načíst data.</div>';
+  };
+  document.head.appendChild(script);
+}
+
+function adminRenderAkceList() {
+  const wrap = document.getElementById('admin-akce-list-wrap');
+  if (!akceActions.length) {
+    wrap.innerHTML = '<div style="text-align:center;padding:20px;color:#4a7080;">Žádné akce v databázi.</div>';
     return;
   }
-  const visible = akceActions.filter(a => a.stav === '1' || a.stav === '2');
-  if (!visible.length) { wrap.innerHTML = '<div style="text-align:center;padding:20px;color:#4a7080;">Žádné akce.</div>'; return; }
-  wrap.innerHTML = visible.map(a => {
+  const stavLabel = { '0': '<span style="color:#7878a0;">Skryto</span>', '1': '<span style="color:#26b664;">Zobrazit</span>', '2': '<span style="color:#ff6b6b;">Zrušeno</span>' };
+  wrap.innerHTML = `
+    <table class="admin-table" style="width:100%;">
+      <thead>
+        <tr>
+          <th>ID</th><th>Datum</th><th>Od–Do</th><th>Druh</th><th>Místo</th><th>Stav</th><th>Reg.</th><th style="text-align:right;">Akce</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${akceActions.map(a => {
+          const regCount = akceRegistered.filter(r => r.idAkce === a.id).length;
+          return `
+            <tr>
+              <td style="font-family:monospace;font-size:12px;color:#4a7080;">${escHtml(a.id)}</td>
+              <td>${escHtml(a.datum)}</td>
+              <td style="white-space:nowrap;">${escHtml(a.casOd)}–${escHtml(a.casDo)}</td>
+              <td><strong>${escHtml(a.druh)}</strong></td>
+              <td style="color:#7878a0;font-size:13px;">${escHtml(a.misto)}</td>
+              <td>${stavLabel[a.stav] || a.stav}</td>
+              <td style="text-align:center;">${regCount > 0 ? `<span style="color:#ffd60a;font-weight:700;">${regCount}</span>` : '<span style="color:#4a7080;">0</span>'}</td>
+              <td style="text-align:right;white-space:nowrap;">
+                <button class="admin-action-btn" style="padding:4px 10px;font-size:11px;margin-right:4px;" onclick="adminAkceEdit('${escHtml(a.id)}')">✏️ EDIT</button>
+                <button class="admin-action-btn danger" style="padding:4px 10px;font-size:11px;" onclick="adminAkceDelete('${escHtml(a.id)}')">🗑</button>
+              </td>
+            </tr>`;
+        }).join('')}
+      </tbody>
+    </table>`;
+}
+
+function adminRenderAkceReg() {
+  const wrap = document.getElementById('admin-akce-reg-wrap');
+  const akceSNazvy = akceActions.filter(a => a.stav === '1' || a.stav === '2');
+  if (!akceSNazvy.length) {
+    wrap.innerHTML = '<div style="text-align:center;padding:20px;color:#4a7080;">Žádné akce.</div>';
+    return;
+  }
+  wrap.innerHTML = akceSNazvy.map(a => {
     const players = akceRegistered.filter(r => r.idAkce === a.id);
     return `
       <div style="margin-bottom:20px;">
@@ -3985,9 +4113,104 @@ function adminLoadAkce() {
             <tbody>${players.map((p,i)=>`<tr><td style="color:#4a7080;">${i+1}</td><td><strong>${escHtml(p.nick)}</strong></td><td>${escHtml(p.casPrichodu||'—')}</td></tr>`).join('')}</tbody>
           </table>
         ` : '<div style="color:#4a7080;font-size:13px;padding:8px 0;">Žádní registrovaní hráči.</div>'}
-      </div>
-    `;
+      </div>`;
   }).join('<hr style="border-color:#1a2a40;margin:10px 0;">');
+}
+
+function adminAkceFormReset() {
+  document.getElementById('aform-id').value      = '';
+  document.getElementById('aform-idakce').value  = '';
+  document.getElementById('aform-datum').value   = '';
+  document.getElementById('aform-camod').value   = '';
+  document.getElementById('aform-casdo').value   = '';
+  document.getElementById('aform-druh').value    = '';
+  document.getElementById('aform-misto').value   = '';
+  document.getElementById('aform-stav').value    = '1';
+  document.getElementById('aform-idakce').disabled = false;
+  document.getElementById('admin-akce-form-title').textContent = '➕ PŘIDAT NOVOU AKCI';
+  document.getElementById('aform-submit-btn').textContent = '➕ PŘIDAT AKCI';
+  document.getElementById('aform-cancel-btn').style.display = 'none';
+  document.getElementById('admin-akce-form-msg').textContent = '';
+}
+
+function adminAkceEdit(id) {
+  const a = akceActions.find(x => x.id === id);
+  if (!a) return;
+  document.getElementById('aform-id').value      = a.id;
+  document.getElementById('aform-idakce').value  = a.id;
+  document.getElementById('aform-datum').value   = a.datum;
+  document.getElementById('aform-camod').value   = a.casOd;
+  document.getElementById('aform-casdo').value   = a.casDo;
+  document.getElementById('aform-druh').value    = a.druh;
+  document.getElementById('aform-misto').value   = a.misto;
+  document.getElementById('aform-stav').value    = a.stav;
+  document.getElementById('aform-idakce').disabled = true;  // ID nelze měnit
+  document.getElementById('admin-akce-form-title').textContent = '✏️ EDITOVAT AKCI: ' + a.id;
+  document.getElementById('aform-submit-btn').textContent = '💾 ULOŽIT ZMĚNY';
+  document.getElementById('aform-cancel-btn').style.display = '';
+  document.getElementById('admin-akce-form-panel').scrollIntoView({ behavior: 'smooth' });
+}
+
+async function adminAkceSubmit() {
+  const editId  = document.getElementById('aform-id').value.trim();
+  const idAkce  = document.getElementById('aform-idakce').value.trim();
+  const datum   = document.getElementById('aform-datum').value.trim();
+  const casOd   = document.getElementById('aform-camod').value.trim();
+  const casDo   = document.getElementById('aform-casdo').value.trim();
+  const druh    = document.getElementById('aform-druh').value.trim();
+  const misto   = document.getElementById('aform-misto').value.trim();
+  const stav    = document.getElementById('aform-stav').value;
+  const msg     = document.getElementById('admin-akce-form-msg');
+  const btn     = document.getElementById('aform-submit-btn');
+
+  if (!idAkce || !datum) { msg.className='admin-msg err'; msg.textContent='ID a Datum jsou povinné.'; return; }
+
+  btn.disabled = true;
+  msg.className='admin-msg'; msg.textContent='⟳ Ukládám…';
+
+  const isEdit = !!editId;
+  const action = isEdit ? 'updateAction' : 'addAction';
+
+  const cbName = 'adminAkceWriteCb_' + Date.now();
+  const params = new URLSearchParams({ action, idAkce, datum, casOd, casDo, druh, misto, stav, callback: cbName });
+  const script = document.createElement('script');
+  script.src = AKCE_SCRIPT_URL + '?' + params.toString();
+  window[cbName] = (data) => {
+    delete window[cbName];
+    script.remove();
+    btn.disabled = false;
+    if (data && data.success) {
+      msg.className='admin-msg ok'; msg.textContent = isEdit ? '✓ Akce aktualizována!' : '✓ Akce přidána!';
+      adminAkceFormReset();
+      adminAkceFetch(() => { adminRenderAkceList(); adminRenderAkceReg(); });
+    } else {
+      msg.className='admin-msg err'; msg.textContent = '❌ ' + (data && data.error ? data.error : 'Chyba serveru.');
+    }
+  };
+  script.onerror = () => { delete window[cbName]; script.remove(); btn.disabled=false; msg.className='admin-msg err'; msg.textContent='❌ Chyba sítě.'; };
+  document.head.appendChild(script);
+}
+
+function adminAkceDelete(id) {
+  adminConfirm('Opravdu smazat akci ' + id + '?', () => {
+    const msg = document.getElementById('admin-akce-form-msg');
+    msg.className='admin-msg'; msg.textContent='⟳ Mažu…';
+    const cbName = 'adminAkceDelCb_' + Date.now();
+    const params = new URLSearchParams({ action: 'deleteAction', idAkce: id, callback: cbName });
+    const script = document.createElement('script');
+    script.src = AKCE_SCRIPT_URL + '?' + params.toString();
+    window[cbName] = (data) => {
+      delete window[cbName]; script.remove();
+      if (data && data.success) {
+        msg.className='admin-msg ok'; msg.textContent='✓ Akce smazána.';
+        adminAkceFetch(() => { adminRenderAkceList(); adminRenderAkceReg(); });
+      } else {
+        msg.className='admin-msg err'; msg.textContent='❌ ' + (data && data.error ? data.error : 'Chyba.');
+      }
+    };
+    script.onerror = () => { delete window[cbName]; script.remove(); msg.className='admin-msg err'; msg.textContent='❌ Chyba sítě.'; };
+    document.head.appendChild(script);
+  });
 }
 
 /* ================================================================
