@@ -2357,10 +2357,14 @@ function goToChat() {
 
 function goToAkce() {
   showScreen('akce');
-  // Načti data jen poprvé
   if (!akceDataLoaded) {
+    // První načtení – stáhni data ze serveru
     akceDataLoaded = true;
     akceLoadData();
+  } else {
+    // Data už jsou v paměti (načetl je třeba admin panel) – rovnou vykresli
+    document.getElementById('akce-loader').classList.add('hidden');
+    akceRenderCards();
   }
 }
 
