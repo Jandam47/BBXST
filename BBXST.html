@@ -57,39 +57,58 @@ body {
   50%       { opacity: 1; }
 }
 
-/* ===== TOP MENU ===== */
-.topbar {
+/* ===== WEAPON WHEEL ===== */
+/* Backdrop dismiss layer */
+.wheelBackdrop {
   position: fixed;
-  top: 0; left: 0;
-  width: 100%;
-  display: flex;
-  justify-content: center;
-  gap: 8px;
-  padding: 10px;
-  background: rgba(2,6,9,0.95);
-  border-bottom: 1px solid #0e2a3a;
-  backdrop-filter: blur(10px);
-  transition: transform .3s;
-  z-index: 20;
+  inset: 0;
+  z-index: 49;
+  display: none;
+}
+.wheelBackdrop.open { display: block; }
+
+/* The SVG quarter-wheel anchored to bottom-right corner */
+.wheelSvg {
+  position: fixed;
+  right: 0; bottom: 0;
+  width: 280px; height: 280px;
+  z-index: 50;
+  pointer-events: none;
+  opacity: 0;
+  transform: scale(0.7);
+  transform-origin: bottom right;
+  transition: opacity .22s ease, transform .22s ease;
+}
+.wheelSvg.open {
+  opacity: 1;
+  pointer-events: auto;
+  transform: scale(1);
 }
 
-.topbar.hidden { transform: translateY(-110%); }
-
-.topbar button {
-  font-family: 'Orbitron', monospace;
-  font-size: 11px;
-  letter-spacing: 2px;
-  padding: 10px 16px;
-  border: 1px solid #0e2a3a;
-  border-radius: 8px;
-  background: #0a1520;
-  color: var(--cyan);
-  box-shadow: 0 0 10px rgba(0,255,255,0.15);
+.wheelSector {
   cursor: pointer;
-  transition: box-shadow .2s;
 }
+.wheelSector .wFill {
+  transition: opacity .15s;
+  opacity: 0.82;
+}
+.wheelSector:active .wFill { opacity: 1; }
 
-.topbar button:hover { box-shadow: 0 0 18px rgba(0,255,255,0.3); }
+.wheelLabel {
+  font-family: 'Orbitron', monospace;
+  font-weight: 700;
+  fill: rgba(0,255,255,0.9);
+  pointer-events: none;
+  text-anchor: middle;
+}
+.wIcon {
+  font-size: 16px;
+}
+.wText {
+  font-size: 8px;
+  letter-spacing: 1.5px;
+  fill: rgba(200,240,255,0.75);
+}
 
 /* ===== MENU TOGGLE ===== */
 .menuToggle {
@@ -103,15 +122,16 @@ body {
   font-size: 22px;
   border: 1px solid #0e2a3a;
   box-shadow: 0 0 18px rgba(0,255,255,0.2);
-  z-index: 30;
+  z-index: 60;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: box-shadow .2s;
+  transition: box-shadow .2s, transform .2s;
 }
 
 .menuToggle:hover { box-shadow: 0 0 28px rgba(0,255,255,0.35); }
+.menuToggle.open  { transform: rotate(45deg); box-shadow: 0 0 28px rgba(0,255,255,0.5); }
 
 /* ===== PLAYER SIDES ===== */
 .player {
@@ -188,7 +208,7 @@ body {
   transform: translate(-50%, -50%);
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 32px;
   z-index: 10;
 }
 
@@ -224,29 +244,36 @@ body {
   justify-content: center;
 }
 
-.arrow {
+.arrowGroup {
   position: absolute;
-  font-size: 60px;
-  font-weight: 900;
-  color: rgba(0,255,255,0.25);
+  display: flex;
   pointer-events: none;
   line-height: 1;
 }
 
-.leftArrow  { left: -100px;  animation: arrowLeft  1.8s ease-in-out infinite; }
-.rightArrow { right: -100px; animation: arrowRight 1.8s ease-in-out infinite; }
+.leftArrow  { right: calc(100% + 8px); animation: arrowLeft  1.8s ease-in-out infinite; }
+.rightArrow { left:  calc(100% + 8px); animation: arrowRight 1.8s ease-in-out infinite; }
+
+.arrowGroup span {
+  font-size: 72px;
+  font-weight: 900;
+}
+.leftArrow  span:first-child { color: var(--cyan); text-shadow: 0 0 16px rgba(0,255,255,0.9); }
+.leftArrow  span:last-child  { color: var(--red);  text-shadow: 0 0 16px rgba(255,34,68,0.9); margin-left: -20px; }
+.rightArrow span:first-child { color: var(--cyan); text-shadow: 0 0 16px rgba(0,255,255,0.9); }
+.rightArrow span:last-child  { color: var(--red);  text-shadow: 0 0 16px rgba(255,34,68,0.9); margin-left: -20px; }
 
 @keyframes arrowLeft {
-  0%, 100% { transform: translateX(0);    opacity: .15; }
-  50%       { transform: translateX(-20px); opacity: .6; }
+  0%, 100% { transform: translateX(0);     opacity: .5; }
+  50%       { transform: translateX(-14px); opacity: 1; }
 }
 
 @keyframes arrowRight {
-  0%, 100% { transform: translateX(0);    opacity: .15; }
-  50%       { transform: translateX(20px); opacity: .6; }
+  0%, 100% { transform: translateX(0);     opacity: .5; }
+  50%       { transform: translateX(14px);  opacity: 1; }
 }
 
-.arrow.hidden { animation: none; opacity: 0; transition: opacity .4s; }
+.arrowGroup.hidden { animation: none; opacity: 0; transition: opacity .4s; }
 
 /* ===== RESET BUTTON ===== */
 .resetBtn {
@@ -579,13 +606,55 @@ body {
 <div class="bg-energy"></div>
 <div id="screenReset" class="screenReset"></div>
 
-<!-- TOP MENU -->
-<div id="topbar" class="topbar">
-  <button onclick="toggleFullscreen()">⛶ FULL</button>
-  <button onclick="rotateScreen()">⟳ ROTATE</button>
-  <button onclick="changeWin()">WIN: <span id="winScore">7</span></button>
-  <button onclick="revert()">↩ REVERT</button>
-</div>
+<!-- WEAPON WHEEL -->
+<div class="wheelBackdrop" id="wheelBackdrop" onclick="closeWheel()"></div>
+<svg class="wheelSvg" id="wheelSvg" viewBox="0 0 280 280" xmlns="http://www.w3.org/2000/svg">
+  <!-- Decorative rings from corner (280,280) -->
+  <circle cx="280" cy="280" r="265" fill="none" stroke="rgba(0,255,255,0.08)" stroke-width="1"/>
+  <circle cx="280" cy="280" r="170" fill="none" stroke="rgba(0,255,255,0.06)" stroke-width="1"/>
+  <circle cx="280" cy="280" r="75"  fill="none" stroke="rgba(0,255,255,0.12)" stroke-width="1.5"/>
+
+  <!-- FULL – slice 1 (0°–22.5°) -->
+  <g class="wheelSector" onclick="closeWheel();toggleFullscreen()">
+    <path class="wFill"
+      d="M 280.0,205.0 L 280.0,15.0 A 265,265 0 0,0 178.6,35.2 L 251.3,210.7 A 75,75 0 0,1 280.0,205.0 Z"
+      fill="rgba(0,50,80,0.9)" stroke="rgba(0,255,255,0.3)" stroke-width="1.5" stroke-linejoin="round"/>
+    <text class="wheelLabel wIcon" x="246" y="100">⛶</text>
+    <text class="wheelLabel wText" x="246" y="118">FULL</text>
+  </g>
+
+  <!-- ROTATE – slice 2 (22.5°–45°) -->
+  <g class="wheelSector" onclick="closeWheel();rotateScreen()">
+    <path class="wFill"
+      d="M 251.3,210.7 L 178.6,35.2 A 265,265 0 0,0 92.6,92.6 L 227.0,227.0 A 75,75 0 0,1 251.3,210.7 Z"
+      fill="rgba(0,35,65,0.9)" stroke="rgba(0,255,255,0.3)" stroke-width="1.5" stroke-linejoin="round"/>
+    <text class="wheelLabel wIcon" x="183" y="128">⟳</text>
+    <text class="wheelLabel wText" x="183" y="146">ROTATE</text>
+  </g>
+
+  <!-- WIN – slice 3 (45°–67.5°) -->
+  <g class="wheelSector" onclick="closeWheel();changeWin()">
+    <path class="wFill"
+      d="M 227.0,227.0 L 92.6,92.6 A 265,265 0 0,0 35.2,178.6 L 210.7,251.3 A 75,75 0 0,1 227.0,227.0 Z"
+      fill="rgba(0,22,52,0.9)" stroke="rgba(0,255,255,0.3)" stroke-width="1.5" stroke-linejoin="round"/>
+    <text class="wheelLabel wIcon" x="134" y="177">🏆</text>
+    <text class="wheelLabel wText" x="134" y="195">WIN: <tspan id="wheelWinScore">7</tspan></text>
+  </g>
+
+  <!-- REVERT – slice 4 (67.5°–90°) -->
+  <g class="wheelSector" onclick="closeWheel();revert()">
+    <path class="wFill"
+      d="M 210.7,251.3 L 35.2,178.6 A 265,265 0 0,0 15.0,280.0 L 205.0,280.0 A 75,75 0 0,1 210.7,251.3 Z"
+      fill="rgba(0,12,40,0.9)" stroke="rgba(0,255,255,0.3)" stroke-width="1.5" stroke-linejoin="round"/>
+    <text class="wheelLabel wIcon" x="100" y="240">↩</text>
+    <text class="wheelLabel wText" x="100" y="258">REVERT</text>
+  </g>
+
+  <!-- Center hub -->
+  <circle cx="280" cy="280" r="72" fill="#0a1520" stroke="rgba(0,255,255,0.3)" stroke-width="1.5"/>
+  <circle cx="280" cy="280" r="42" fill="#061018" stroke="rgba(0,255,255,0.12)" stroke-width="1"/>
+</svg>
+
 
 <!-- WAKE BUTTON -->
 <div id="wakeBtn" class="wakeBtn">
@@ -624,9 +693,9 @@ body {
 <div class="center">
   <div class="dragBtn" data-points="3">+3 XTREME</div>
   <div class="dragWrapper">
-    <div class="arrow leftArrow">‹</div>
+    <div class="arrowGroup leftArrow"><span>‹</span><span>‹</span></div>
     <div class="dragBtn" data-points="2" id="hintBtn">+2</div>
-    <div class="arrow rightArrow">›</div>
+    <div class="arrowGroup rightArrow"><span>›</span><span>›</span></div>
   </div>
   <div class="dragBtn" data-points="1">+1</div>
 </div>
@@ -701,7 +770,6 @@ const s1          = document.getElementById("score1")
 const s2          = document.getElementById("score2")
 const left        = document.getElementById("left")
 const right       = document.getElementById("right")
-const topbar      = document.getElementById("topbar")
 const resetScreen = document.getElementById("screenReset")
 const overlay     = document.getElementById("overlay")
 const overlayText = document.getElementById("overlayText")
@@ -713,15 +781,15 @@ const resetBtn    = document.getElementById("resetBtn")
    SCORE
 ══════════════════════════════════════════════ */
 function addScore(p, pts) {
-  history.push({ p, pts })
-
   if (!firstScoreUsed) {
     firstScoreUsed = true
-    document.querySelectorAll(".arrow").forEach(a => a.classList.add("hidden"))
+    document.querySelectorAll(".arrowGroup").forEach(a => a.classList.add("hidden"))
   }
 
-  if (p === 1) { score1 += pts; s1.innerText = score1 }
-  if (p === 2) { score2 += pts; s2.innerText = score2 }
+  let actual = pts
+  if (p === 1) { const prev = score1; score1 = Math.min(score1 + pts, winScore); actual = score1 - prev; s1.innerText = score1 }
+  if (p === 2) { const prev = score2; score2 = Math.min(score2 + pts, winScore); actual = score2 - prev; s2.innerText = score2 }
+  history.push({ p, pts: actual })
 
   if (pts === 3) showOverlay("XTREME FINISH", "xtreme")
   if (score1 >= winScore) showOverlay(player1Name ? player1Name + " WINS" : "LEVÝ VÍTĚZ", "win")
@@ -748,6 +816,8 @@ function changeWin() {
   if (val !== null && !isNaN(val) && val > 0) {
     winScore = parseInt(val)
     document.getElementById("winScore").innerText = winScore
+    const wws = document.getElementById("wheelWinScore")
+    if (wws) wws.textContent = winScore
   }
 }
 
@@ -772,7 +842,7 @@ function resetScore() {
   s1.innerText = "0"
   s2.innerText = "0"
 
-  document.querySelectorAll(".arrow").forEach(a => a.classList.remove("hidden"))
+  document.querySelectorAll(".arrowGroup").forEach(a => a.classList.remove("hidden"))
   resetPlayersInfo()
   startCooldown()
   updateSendResultButton()
@@ -933,18 +1003,31 @@ let cooldownStart = null
 const menuBtn = document.getElementById("menuToggle")
 let menuHoldTimer = null
 let scanVisible = false
+let wheelOpen = false
 
 menuBtn.addEventListener("pointerdown", () => {
   menuHoldTimer = setTimeout(() => toggleScanButtons(), 2500)
 })
 menuBtn.addEventListener("pointerup", () => {
   clearTimeout(menuHoldTimer)
-  toggleMenu()
+  toggleWheel()
 })
 menuBtn.addEventListener("pointerleave", () => clearTimeout(menuHoldTimer))
 
-function toggleMenu() {
-  topbar.classList.toggle("hidden")
+function toggleWheel() {
+  wheelOpen = !wheelOpen
+  document.getElementById("wheelSvg").classList.toggle("open", wheelOpen)
+  document.getElementById("wheelBackdrop").classList.toggle("open", wheelOpen)
+  menuBtn.classList.toggle("open", wheelOpen)
+  const wws = document.getElementById("wheelWinScore")
+  if (wws) wws.textContent = winScore
+}
+
+function closeWheel() {
+  wheelOpen = false
+  document.getElementById("wheelSvg").classList.remove("open")
+  document.getElementById("wheelBackdrop").classList.remove("open")
+  menuBtn.classList.remove("open")
 }
 
 function toggleScanButtons() {
@@ -957,7 +1040,6 @@ function toggleScanButtons() {
 async function toggleFullscreen() {
   if (!document.fullscreenElement) {
     await document.documentElement.requestFullscreen()
-    topbar.classList.add("hidden")
     updateWakeBtnPosition()
     try { await screen.orientation.lock("landscape"); isLandscape = true } catch(e) {}
   } else {
