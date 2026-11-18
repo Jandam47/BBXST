@@ -109,7 +109,7 @@ body {
   font-size: 16px;
 }
 .wText {
-  font-size: 8px;
+  font-size: 7px;
   letter-spacing: 1.5px;
   fill: rgba(200,240,255,0.75);
 }
@@ -702,40 +702,45 @@ body.judge.has-match.can-swap .swapBtn { display: flex; }
     <!-- FULL – slice 1 -->
     <g class="wheelSector" onclick="closeWheel();toggleFullscreen()">
       <path class="wFill"
-        d="M 280.0,205.0 L 280.0,15.0 A 265,265 0 0,0 178.6,35.2 L 251.3,210.7 A 75,75 0 0,1 280.0,205.0 Z"
+        d="M 280.0,205.0 L 280.0,15.0 A 265,265 0 0,0 198.1,28.0 L 256.8,208.7 A 75,75 0 0,1 280.0,205.0 Z"
         fill="rgba(0,50,80,0.9)" stroke="rgba(0,255,255,0.3)" stroke-width="1.5" stroke-linejoin="round"/>
-      <text class="wheelLabel wIcon" x="246" y="100">⛶</text>
-      <text class="wheelLabel wText" x="246" y="118">FULL</text>
+      <text class="wheelLabel wIcon" x="250" y="90">⛶</text>
+      <text class="wheelLabel wText" x="250" y="107">FULL</text>
     </g>
-
     <!-- ROTATE – slice 2 -->
     <g id="rotateSector" class="wheelSector" onclick="handleRotateClick()">
       <path class="wFill"
-        d="M 251.3,210.7 L 178.6,35.2 A 265,265 0 0,0 92.6,92.6 L 227.0,227.0 A 75,75 0 0,1 251.3,210.7 Z"
+        d="M 256.8,208.7 L 198.1,28.0 A 265,265 0 0,0 124.2,65.6 L 235.9,219.3 A 75,75 0 0,1 256.8,208.7 Z"
         fill="rgba(0,35,65,0.9)" stroke="rgba(0,255,255,0.3)" stroke-width="1.5" stroke-linejoin="round"/>
       <path id="rotateDisabledOverlay"
-        d="M 251.3,210.7 L 178.6,35.2 A 265,265 0 0,0 92.6,92.6 L 227.0,227.0 A 75,75 0 0,1 251.3,210.7 Z"
+        d="M 256.8,208.7 L 198.1,28.0 A 265,265 0 0,0 124.2,65.6 L 235.9,219.3 A 75,75 0 0,1 256.8,208.7 Z"
         fill="rgba(0,0,0,0.55)" stroke="none" opacity="0" style="transition:opacity .2s;pointer-events:none"/>
-      <text class="wheelLabel wIcon" x="183" y="128">⟳</text>
-      <text class="wheelLabel wText" x="183" y="146">ROTATE</text>
+      <text class="wheelLabel wIcon" x="193" y="109">⟳</text>
+      <text class="wheelLabel wText" x="193" y="126">ROTATE</text>
     </g>
-
     <!-- SETTINGS – slice 3 -->
     <g class="wheelSector" onclick="openSettings()">
       <path class="wFill"
-        d="M 227.0,227.0 L 92.6,92.6 A 265,265 0 0,0 35.2,178.6 L 210.7,251.3 A 75,75 0 0,1 227.0,227.0 Z"
+        d="M 235.9,219.3 L 124.2,65.6 A 265,265 0 0,0 65.6,124.2 L 219.3,235.9 A 75,75 0 0,1 235.9,219.3 Z"
         fill="rgba(0,22,52,0.9)" stroke="rgba(0,255,255,0.3)" stroke-width="1.5" stroke-linejoin="round"/>
-      <text class="wheelLabel wIcon" x="134" y="177">⚙</text>
-      <text class="wheelLabel wText" x="134" y="195">SETTINGS</text>
+      <text class="wheelLabel wIcon" x="144" y="144">⚙</text>
+      <text class="wheelLabel wText" x="144" y="161">SETTINGS</text>
     </g>
-
     <!-- REVERT – slice 4 -->
     <g class="wheelSector" onclick="closeWheel();revert()">
       <path class="wFill"
-        d="M 210.7,251.3 L 35.2,178.6 A 265,265 0 0,0 15.0,280.0 L 205.0,280.0 A 75,75 0 0,1 210.7,251.3 Z"
+        d="M 219.3,235.9 L 65.6,124.2 A 265,265 0 0,0 28.0,198.1 L 208.7,256.8 A 75,75 0 0,1 219.3,235.9 Z"
         fill="rgba(0,12,40,0.9)" stroke="rgba(0,255,255,0.3)" stroke-width="1.5" stroke-linejoin="round"/>
-      <text class="wheelLabel wIcon" x="100" y="240">↩</text>
-      <text class="wheelLabel wText" x="100" y="258">REVERT</text>
+      <text class="wheelLabel wIcon" x="109" y="193">↩</text>
+      <text class="wheelLabel wText" x="109" y="210">REVERT</text>
+    </g>
+    <!-- BBXU – slice 5 -->
+    <g class="wheelSector" onclick="closeWheel();goBBXU()">
+      <path class="wFill"
+        d="M 208.7,256.8 L 28.0,198.1 A 265,265 0 0,0 15.0,280.0 L 205.0,280.0 A 75,75 0 0,1 208.7,256.8 Z"
+        fill="rgba(0,6,30,0.92)" stroke="rgba(0,255,255,0.3)" stroke-width="1.5" stroke-linejoin="round"/>
+      <image href="icons/icon-192.png" x="79" y="233" width="22" height="22" style="pointer-events:none"/>
+      <text class="wheelLabel wText" x="90" y="267">BBXU</text>
     </g>
   </g>
 
@@ -1799,6 +1804,10 @@ function swapSides() {
 }
 
 /* ── zpět do turnaje v BBXU ── */
+async function goBBXU() {
+  if (!judgeMode && (score1 || score2) && !await jConfirm("Rozehrané skóre se ztratí. Odejít do BBXU?", "ODEJÍT")) return
+  backToBBXU()
+}
 let lastTournamentId = new URLSearchParams(location.search).get("t")
 async function backToBBXU() {
   if (judgeHasMatch() && (score1 || score2) && !resultSent && !await jConfirm("Rozehraný zápas se neuloží. Odejít do BBXU?", "ODEJÍT")) return
