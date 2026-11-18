@@ -5,7 +5,7 @@
 // ════════════════════════════════════════════════════════════════
 window.BBX_CONFIG = {
   supabaseUrl: 'https://SEM-VLOZ-PROJEKT.supabase.co',
-  supabaseAnonKey: 'SEM-VLOZ-ANON-KEY',
+  supabaseAnonKey: 'sb_publishable_xkVDyRc2KR7C6WJ0m-Qlyg_OK6mgg21',
   appName: 'BBXU',
   appSub: 'Beyblade X Pardubice',
   // cesta k BBXST (stejná doména → judge je v BBXST přihlášený automaticky)
