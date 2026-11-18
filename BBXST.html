@@ -7,6 +7,7 @@
 
 <link rel="manifest" href="bbxst.webmanifest">
 <meta name="theme-color" content="#000000">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 
@@ -655,6 +656,16 @@ body.judge.has-match .judgeBar .drawBtn { display: block; }
 .beyPick.win  { background: rgba(0,255,157,0.18); border-color: var(--green); color: var(--green); box-shadow: 0 0 18px rgba(0,255,157,0.3); }
 .beyPick.lose { background: rgba(255,34,68,0.16); border-color: var(--red); color: #ffb3c0; }
 
+/* prohození stran (jen při 0:0) */
+.swapBtn { position: fixed; top: 10px; left: 50%; transform: translateX(-50%); z-index: 30; display: none;
+  width: 64px; height: 44px; border-radius: 12px; cursor: pointer; align-items: center; justify-content: center;
+  background: #0a1520; border: 1px solid rgba(255,215,0,0.4); box-shadow: 0 0 16px rgba(255,215,0,0.15); }
+.swapBtn svg { width: 40px; height: 24px; }
+body.judge.has-match.can-swap .swapBtn { display: flex; }
+.swapBtn:active { transform: translateX(-50%) scale(.92); }
+.judgeTag { cursor: pointer; }
+.rotate .overlay-text { color: var(--gold); text-shadow: 0 0 60px var(--gold); }
+
 /* judge dialogy (ruční zápas, chyby) */
 .jOverlay { position: fixed; inset: 0; z-index: 220; background: rgba(2,6,9,0.96); backdrop-filter: blur(8px);
   display: flex; align-items: center; justify-content: center; padding: 16px; }
@@ -862,8 +873,14 @@ body.judge.has-match .judgeBar .drawBtn { display: block; }
 <div id="screenMode" class="screenMode"></div>
 
 <!-- JUDGE BAR -->
+<button class="swapBtn" id="swapBtn" onclick="swapSides()" aria-label="Prohodit strany hráčů">
+  <svg viewBox="0 0 40 24"><path d="M14 4 L4 12 L14 20" fill="none" stroke="#00ffff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M5 12 H19" stroke="#00ffff" stroke-width="3" stroke-linecap="round"/>
+  <path d="M26 4 L36 12 L26 20" fill="none" stroke="#ff2244" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M21 12 H35" stroke="#ff2244" stroke-width="3" stroke-linecap="round"/></svg>
+</button>
 <div class="judgeBar" id="judgeBar">
-  <div class="judgeTag" id="judgeTag">JUDGE</div>
+  <button class="judgeTag" id="judgeTag" onclick="backToBBXU()">◂ BBXU</button>
   <div class="judgeInfo" id="judgeInfo">Naskenuj QR obou hráčů</div>
   <button class="judgeBtn drawBtn" id="drawBtn" onclick="openPicker(0, 0)">= REMÍZA</button>
   <button class="judgeBtn" id="judgeMatchBtn" onclick="openManualMatch()">VYBRAT ZÁPAS</button>
@@ -987,6 +1004,7 @@ function addScore(p, pts, battle) {
     const queue = []
     if (pts === 3) queue.push(["XTREME FINISH", "xtreme"])
     if (won)       queue.push([winText, "win"])
+    else if (battle && judge.battles.length % 3 === 0) { queue.push(["OTOČ ARÉNU", "rotate"]); if (vibrateEnabled) navigator.vibrate?.([120, 80, 120]) }
     if (queue.length) showOverlaySequence(queue)
 
     startCooldown()
@@ -1672,8 +1690,8 @@ async function exitJudge() {
 function renderJudgeBar() {
   if (!judgeMode) return
   const tag = document.getElementById("judgeTag"), info = document.getElementById("judgeInfo"), btn = document.getElementById("judgeMatchBtn")
-  tag.textContent = "JUDGE"
-  tag.title = judge.me?.nick || ""
+  tag.textContent = "◂ BBXU"
+  tag.title = "Zpět do BBXU" + (judge.me?.nick ? " · judge " + judge.me.nick : "")
   const m = judge.match
   if (m) {
     const lw = judge.leftSlot === 1 ? m.p1_wins : m.p2_wins, rw = judge.leftSlot === 1 ? m.p2_wins : m.p1_wins
@@ -1749,6 +1767,8 @@ function loadMatch(m, leftReg) {
   judge.startedAt = new Date().toISOString()
   setModeUI(); renderJudgePlayers()
   rpc("start_match", { p_match: m.id }).catch(() => {})
+  lastTournamentId = m.tournament_id
+  updateSendResultButton()
   showOverlay(`${L.nick} VS ${R.nick}`, "win")
 }
 
@@ -1765,6 +1785,43 @@ function unloadJudge() {
 async function cancelMatch() {
   if ((score1 || score2) && !resultSent && !await jConfirm("Zrušit rozehraný zápas? Body se neuloží.", "ZRUŠIT")) return
   clearBoard(); unloadJudge()
+}
+
+/* ── prohození stran před začátkem hry ── */
+function swapSides() {
+  if (!canSwap()) return
+  judge.leftSlot = 3 - judge.leftSlot
+  ;[judge.sides[1], judge.sides[2]] = [judge.sides[2], judge.sides[1]]
+  ;[player1Name, player2Name] = [player2Name, player1Name]
+  if (vibrateEnabled) navigator.vibrate?.(30)
+  renderJudgePlayers(); renderJudgeBar()
+  showOverlay(`${player1Name} ⇄ ${player2Name}`, "win")
+}
+
+/* ── zpět do turnaje v BBXU ── */
+let lastTournamentId = new URLSearchParams(location.search).get("t")
+async function backToBBXU() {
+  if (judgeHasMatch() && (score1 || score2) && !resultSent && !await jConfirm("Rozehraný zápas se neuloží. Odejít do BBXU?", "ODEJÍT")) return
+  const t = judge.match?.tournament_id || lastTournamentId
+  location.href = BBXU_URL + (t ? `#/t/${t}/judge` : "#/")
+}
+
+/* ── po dohraném zápase: další na stejné aréně ── */
+async function afterMatchNext(next) {
+  let queue = []
+  try { queue = await rpc("judge_arena_queue", { p_tournament: next.tournament_id, p_arena: next.arena }) } catch (e) {}
+  const m = queue[0]
+  if (!m) {
+    jShow(`<h3>ARÉNA ${next.arena}</h3><p>Teď tu nic dalšího nečeká. Další kolo se objeví, až ho organizátor vylosuje.</p>
+      <div class="jRow"><button class="qr-btn cancel" onclick="backToBBXU()">◂ BBXU</button>
+      <button class="qr-btn confirm" onclick="jHide()">OK</button></div>`)
+    return
+  }
+  jShow(`<h3>DALŠÍ NA ARÉNĚ ${next.arena}</h3>
+    <p><b style="color:var(--cyan)">${esc(m.p1.nick)}</b> vs <b style="color:var(--red)">${esc(m.p2.nick)}</b></p>
+    <div class="jRow"><button class="qr-btn cancel" onclick="backToBBXU()">◂ BBXU</button>
+    <button class="qr-btn confirm" id="jNext">NAČÍST ZÁPAS</button></div>`)
+  document.getElementById("jNext").onclick = () => { jHide(); loadMatch(m, m.p1.reg) }
 }
 
 /* ── ruční výběr zápasu (bez QR) ── */
@@ -1870,7 +1927,10 @@ function commitPick() {
   if (side === 0) {
     judge.battles.push(battle)
     history.push({ p: 0, pts: 0, battle: true })
-    showOverlay("REMÍZA", "win")
+    const q = [["REMÍZA", "win"]]
+    if (judge.battles.length % 3 === 0) { q.push(["OTOČ ARÉNU", "rotate"]); if (vibrateEnabled) navigator.vibrate?.([120, 80, 120]) }
+    showOverlaySequence(q)
+    updateSendResultButton()
   } else {
     addScore(side, pts, battle)
   }
@@ -1879,7 +1939,9 @@ function commitPick() {
 function closePicker() { pick = null; document.getElementById("pickOverlay").classList.add("hidden") }
 
 /* ── odeslání výsledku ── */
+function canSwap() { return judgeHasMatch() && !score1 && !score2 && !judge.battles.length && !resultSent }
 function updateSendResultButton() {
+  document.body.classList.toggle("can-swap", canSwap())
   const btn = document.getElementById("sendResultBtn")
   const canSend = judgeHasMatch() && (score1 >= winScore || score2 >= winScore) && !resultSent
   btn.style.display = canSend ? "block" : "none"
@@ -1929,7 +1991,7 @@ async function sendResult() {
   if (res.match_done) {
     showOverlaySequence([[offline ? "BEZ SÍTĚ – ODEŠLE SE POZDĚJI" : "ZÁPAS ULOŽEN ✓", offline ? "xtreme" : "win"]])
     const next = { tournament_id: m.tournament_id, arena: m.arena }
-    setTimeout(() => { clearBoard(); unloadJudge(); if (!offline) openManualMatch(next) }, 1600)
+    setTimeout(() => { clearBoard(); unloadJudge(); if (!offline) afterMatchNext(next) }, 1600)
   } else {
     const lw = judge.leftSlot === 1 ? m.p1_wins : m.p2_wins, rw = judge.leftSlot === 1 ? m.p2_wins : m.p1_wins
     showOverlaySequence([[offline ? "BEZ SÍTĚ – ODEŠLE SE POZDĚJI" : `HRA ULOŽENA · ${lw}:${rw}`, offline ? "xtreme" : "win"], ["DALŠÍ HRA", "win"]])
@@ -1962,12 +2024,13 @@ window.addEventListener("online", flushJudgePending)
 ;(async function openFromLink() {
   const id = new URLSearchParams(location.search).get("match")
   if (!id) return
-  window.history.replaceState(null, "", location.pathname)
+  window.history.replaceState(null, "", location.pathname + (lastTournamentId ? `?t=${lastTournamentId}` : ""))
   if (!(await enterJudge(true))) return
   try {
     const m = await rpc("judge_get_match", { p_match: id })
-    if (m.status === "done") return jAlert("Tenhle zápas už je dohraný.")
-    if (await jConfirm(`Načíst zápas <b style="color:var(--cyan)">${esc(m.p1.nick)}</b> vs <b style="color:var(--red)">${esc(m.p2.nick)}</b>${m.arena ? ` na aréně ${m.arena}` : ""}?<br><span style="opacity:.6">${esc(m.tournament_name)}</span>`, "NAČÍST")) loadMatch(m, m.p1.reg)
+    lastTournamentId = m.tournament_id
+    if (m.status === "done") return afterMatchNext({ tournament_id: m.tournament_id, arena: m.arena })
+    loadMatch(m, m.p1.reg)
   } catch (e) { jAlert(esc(e.message)) }
 })()
 
