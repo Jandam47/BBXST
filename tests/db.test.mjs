@@ -175,10 +175,16 @@ for (let round = 1; round <= 3; round++) {
     const [{ j: q }] = await as(judge, 'select judge_arena_queue($1, 1) as j', [t.id])
     assert.ok(q.length >= 1 && q.every(m => m.arena === 1))
     await as(judge, 'select start_match($1)', [sm.id])
+    // živé skóre: judge ano, hráč ne; po uložení hry zmizí
+    await as(judge, 'select live_score($1, 3, 2)', [sm.id])
+    assert.deepEqual((await as(null, 'select live_p1, live_p2, status from matches where id = $1', [sm.id]))[0], { live_p1: 3, live_p2: 2, status: 'live' })
+    await fails(players[0], 'select live_score($1, 7, 0)', [sm.id], /judge/)
+    await fails(judge, 'select live_score($1, 9, 0)', [sm.id], /Neplatné/)
   }
   for (const m of (await allMatches()).filter(m => m.stage === 'swiss' && m.round === round && m.status !== 'done')) await playMatch(m.id)
 }
 await fails(org, 'select create_swiss_round($1, $2, $3)', [t.id, 4, '[]'], /Všechna swiss/)
+assert.ok((await allMatches()).every(m => m.live_p1 === null), 'po dohrání žádné živé skóre')
 const swissMs = (await allMatches()).filter(m => m.stage === 'swiss')
 const byes = swissMs.filter(m => m.is_bye).map(m => m.p1_reg)
 assert.equal(byes.length, 3); assert.equal(new Set(byes).size, 3)

@@ -17,7 +17,9 @@ Komunikuj **česky**, celé UI je česky.
 - `js/ui.js` – šablony `html\`\`` (vše escapuje, `raw()` jen pro důvěryhodné HTML), `modal`, `toast`, QR.
 - `js/parts.js` – katalog dílů (`bey_parts`), našeptávač, editor decku.
 - `js/config.js` – **obsahuje Adamovy živé klíče Supabase. Nikdy ho neměň ani nepřepisuj.**
-- `supabase/schema.sql`, `supabase/02-parts.sql` – databáze (už spuštěné v produkci).
+- `supabase/schema.sql`, `02-parts.sql`, `03-live-score.sql` – databáze (spuštěné v produkci, nové soubory
+  spouští Adam). Živé skóre: BBXST v judge módu posílá po každém bodu `live_score` → `matches.live_p1/p2`
+  (TV rozpis, vstupenka, seznamy); trigger `bbx_clear_live` ho maže po uložení hry.
 - `vendor/` – supabase-js, qrcode-generator, html5-qrcode (lokálně, kvůli slabé síti v hale).
 - `sw.js` – service worker (síť první, cache jako záloha).
 

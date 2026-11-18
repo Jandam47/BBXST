@@ -1949,8 +1949,27 @@ function closePicker() { pick = null; document.getElementById("pickOverlay").cla
 
 /* ── odeslání výsledku ── */
 function canSwap() { return judgeHasMatch() && !score1 && !score2 && !judge.battles.length && !resultSent }
+
+/* ── živé skóre pro TV rozpis a hráče ── */
+let liveTimer = null, liveSent = ""
+function scheduleLive() {
+  if (!judgeHasMatch() || resultSent) return
+  clearTimeout(liveTimer)
+  liveTimer = setTimeout(pushLive, 250)
+}
+async function pushLive() {
+  const m = judge.match
+  if (!m || resultSent) return
+  const p1Left = judge.leftSlot === 1
+  const a = p1Left ? score1 : score2, b = p1Left ? score2 : score1
+  const key = `${m.id}:${m.p1_wins + m.p2_wins}:${a}:${b}`
+  if (key === liveSent) return
+  try { await rpc("live_score", { p_match: m.id, p_p1: a, p_p2: b }); liveSent = key } catch (e) {}   // bez sítě se pošle s dalším bodem
+}
+
 function updateSendResultButton() {
   document.body.classList.toggle("can-swap", canSwap())
+  scheduleLive()
   const btn = document.getElementById("sendResultBtn")
   const canSend = judgeHasMatch() && (score1 >= winScore || score2 >= winScore) && !resultSent
   btn.style.display = canSend ? "block" : "none"

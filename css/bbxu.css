@@ -339,6 +339,11 @@ body.tv main { max-width: none; padding: 3vh 4vw; }
 .tv-card .n { font-family: var(--display); font-weight: 700; font-size: clamp(20px, 2.4vw, 38px); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tv-card .n.l { color: #b9d4ff; } .tv-card .n.r { color: #ffc2cd; text-align: right; }
 .tv-card .vs { color: var(--faint); font-family: var(--display); }
+.tv-card .sc { text-align: center; font-family: var(--display); line-height: 1; }
+.tv-card .sc b { display: block; font-weight: 700; font-size: clamp(30px, 3.6vw, 60px); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.tv-card .sc i { font-style: normal; color: var(--faint); margin: 0 .12em; }
+.tv-card .sc small { display: block; margin-top: 4px; font-size: clamp(11px, 1vw, 16px); color: var(--muted); }
+.pass-live { margin-top: 6px; font-family: var(--display); font-weight: 700; font-size: 20px; color: var(--text); }
 .tv-card.live { border-color: var(--bolt); }
 .tv-card.next { opacity: .6; }
 .tv-exit { position: fixed; right: 16px; bottom: 16px; opacity: .3; }

@@ -71,6 +71,14 @@ with sync_playwright() as p:
     page.locator('#pickRight .beyPick:not([disabled])').first.click(); page.wait_for_timeout(500)
     assert page.inner_text('#score1') == '2'
     assert not page.is_visible('#swapBtn'), 'po prvním bodu nejde prohodit'
+    # živé skóre dorazí do DB (p1/p2 podle databáze) a ukáže se v TV rozpisu
+    page.wait_for_timeout(900)
+    live = sql(f"select live_p1 || ':' || live_p2 from matches where id = '{m_id}'")
+    exp = '2:0' if page.evaluate('judge.leftSlot') == 1 else '0:2'
+    assert live == exp, (live, exp)
+    tv = page.context.new_page(); tv.goto(BASE + f'#/t/{t_id}/tv'); tv.wait_for_selector('.tv-card .sc')
+    assert exp.replace(':', '') in tv.inner_text('.tv-card.live .sc b').replace(':', '').replace(' ', ''), tv.inner_text('.tv-card.live .sc b')
+    tv.set_viewport_size({'width': 1280, 'height': 720}); tv.wait_for_timeout(400); tv.screenshot(path=OUT + '39_tv_live.png'); tv.close()
     # remíza a revert
     page.click('#drawBtn'); page.wait_for_selector('#pickOverlay:not(.hidden)')
     page.locator('#pickLeft .beyPick:not([disabled])').first.click(); page.locator('#pickRight .beyPick:not([disabled])').first.click()

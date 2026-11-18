@@ -137,6 +137,7 @@ function tabMe(box, { d, reload }) {
     arenaBlock = html`<div class="lbl">${current.status === 'live' ? 'Hraješ teď na aréně' : 'Tvoje aréna'}</div>
       <div class="big">${current.arena}</div>
       <div class="vs">proti ${opp}</div>
+      ${current.live_p1 != null ? html`<div class="pass-live">Stav ${current.p1_reg === myReg.id ? current.live_p1 : current.live_p2} : ${current.p1_reg === myReg.id ? current.live_p2 : current.live_p1}</div>` : ''}
       <div class="faint small">${matchLabel(current, t.top_cut)}${current.best_of > 1 ? ` · BO${current.best_of} (${current.p1_reg === myReg.id ? current.p1_wins : current.p2_wins}:${current.p1_reg === myReg.id ? current.p2_wins : current.p1_wins})` : ''}${current.wave > 1 ? ` · ${current.wave}. na řadě` : ''}</div>`
   } else if (myReg.status === 'dropped') {
     arenaBlock = html`<div class="lbl">Z turnaje jsi odstoupil.</div>`
@@ -270,7 +271,8 @@ export function matchRow(d, m, meReg) {
   const done = m.status === 'done'
   const w1 = done && m.winner_reg && m.winner_reg === m.p1_reg, w2 = done && m.winner_reg && m.winner_reg === m.p2_reg
   const started = m.p1_wins + m.p2_wins + m.p1_score + m.p2_score > 0
-  const score = m.is_bye ? 'bye' : !done && !started ? 'vs'
+  const liveNow = !done && m.live_p1 != null
+  const score = m.is_bye ? 'bye' : liveNow ? `${m.live_p1} : ${m.live_p2}` : !done && !started ? 'vs'
     : m.best_of > 1 ? `${m.p1_wins} : ${m.p2_wins}` : `${m.p1_score} : ${m.p2_score}`
   const mine = meReg && (m.p1_reg === meReg || m.p2_reg === meReg)
   return html`
@@ -278,7 +280,7 @@ export function matchRow(d, m, meReg) {
       <div class="side l ${w1 ? 'win' : done && !m.is_bye ? 'lose' : ''}"><div class="nick">${p1}</div></div>
       <div class="score">${score}</div>
       <div class="side r ${w2 ? 'win' : done && !m.is_bye ? 'lose' : ''}"><div class="nick">${p2}</div></div>
-      <div class="info"><span>${matchLabel(m, d.t.top_cut)}${m.best_of > 1 ? ` · BO${m.best_of}` : ''}</span>
+      <div class="info"><span>${matchLabel(m, d.t.top_cut)}${m.best_of > 1 ? ` · BO${m.best_of}${!done && started ? ` (hry ${m.p1_wins}:${m.p2_wins})` : ''}` : ''}</span>
         <span>${m.status === 'live' ? html`<span class="pill live" style="font-size:11px;padding:1px 8px">hraje se</span>` : ''}
         ${m.arena && !done ? `aréna ${m.arena}${m.wave > 1 ? ` (${m.wave}. na řadě)` : ''}` : ''}</span></div>
     </div>`
@@ -388,7 +390,7 @@ function tabBracket(box, { d }) {
   const slot = (m, n) => {
     const reg = m[`p${n}_reg`], bye = m[`p${n}_bye`]
     const win = m.status === 'done' && reg && m.winner_reg === reg
-    const score = m.best_of > 1 ? m[`p${n}_wins`] : m[`p${n}_score`]
+    const score = m.best_of > 1 ? m[`p${n}_wins`] : m.status === 'live' && m.live_p1 != null ? m[`live_p${n}`] : m[`p${n}_score`]
     return html`<div class="b-p ${win ? 'win' : ''} ${bye && !reg ? 'bye' : ''}">
       <span class="ellipsis">${reg ? html`${seedOf(reg) ? html`<span class="faint">${seedOf(reg)} </span>` : ''}${nickOf(d, reg)}` : bye ? 'bye' : '—'}</span>
       <span class="s num">${m.status !== 'pending' && reg && !m.is_bye ? score : ''}</span></div>`
@@ -508,7 +510,9 @@ export async function renderTV(main, [id]) {
         return html`<div class="tv-card ${m.status === 'live' ? 'live' : ''} ${next ? 'next' : ''}">
           <div class="ar"><small>aréna</small>${m.arena}</div>
           <div class="n l">${nickOf(d, m.p1_reg)}</div>
-          <div class="vs">${m.status === 'live' && m.best_of > 1 ? `${m.p1_wins}:${m.p2_wins}` : 'vs'}</div>
+          ${m.live_p1 != null
+            ? html`<div class="sc"><b>${m.live_p1}<i>:</i>${m.live_p2}</b>${m.best_of > 1 ? html`<small>hra ${m.p1_wins + m.p2_wins + 1} · ${m.p1_wins}:${m.p2_wins}</small>` : ''}</div>`
+            : html`<div class="vs">${m.status === 'live' && m.best_of > 1 ? `${m.p1_wins}:${m.p2_wins}` : 'vs'}</div>`}
           <div class="n r">${nickOf(d, m.p2_reg)}</div>
         </div>`
       })}</div>`
