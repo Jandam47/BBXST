@@ -2,7 +2,7 @@
 //  Řízení turnaje (organizátor / admin)
 //  registrace → start → swiss kola → top cut → ukončení
 // ════════════════════════════════════════════════════════════════
-import { sb, rpc, q, errMsg } from '../supa.js'
+import { sb, rpc, q, errMsg, state } from '../supa.js'
 import { html, mount, on, formData, toast, modal, busy, confirmBox, plural } from '../ui.js'
 import { pairSwissRound, makeRng, buildDoubleElim, computePlacements, DEFAULT_BO, matchLabel } from '../core.js'
 import { standingsFor, nickOf } from './tournament.js'
@@ -95,6 +95,22 @@ export function renderManage(box, { d, reload }) {
       <p class="hint">Vrácený zápas se odehraje znovu. V top cutu to jde jen, dokud navazující zápas nezačal.</p></details>`)
   }
 
+  // ── testovací nástroje (jen admin) ─────────────
+  if (state.level >= 3 && t.kind === 'tournament' && ['registration', 'swiss', 'topcut'].includes(t.status)) {
+    sections.push(html`<details class="card" style="margin-top:24px"><summary style="cursor:pointer;font-weight:600">🧪 Testovací nástroje</summary>
+      <div class="stack" style="margin-top:12px">
+        ${t.status === 'registration' ? html`
+          <p class="muted small">Přidá hráče bez účtu s náhodným nickem (začíná „T-“) a náhodným deckem z katalogu dílů.</p>
+          <div class="row">
+            <input class="input" type="number" id="test-n" min="1" max="64" value="16" style="width:90px" aria-label="Počet hráčů">
+            <button class="btn" data-act="test-players">Přidat testovací hráče</button>
+          </div>` : html`
+          <p class="muted small">Všem zápasům, které mají oba hráče a nejsou dohrané, vyplní náhodný výsledek (u BO3 všechny hry). Další kolo pak vylosuješ normálně.</p>
+          <button class="btn" data-act="test-play" ${open.length ? '' : 'disabled'}>Náhodně dohrát otevřené zápasy (${open.length})</button>`}
+        <p class="hint">Zkušební turnaj po vyzkoušení zruš a smaž. Testovací hráči nemají účty, takže se nikomu nepropíšou do profilu.</p>
+      </div></details>`)
+  }
+
   // ── ostatní ────────────────────────────────────
   if (!['finished', 'canceled'].includes(t.status)) {
     sections.push(html`<details class="card" style="margin-top:24px"><summary style="cursor:pointer;font-weight:600">Zrušení</summary>
@@ -134,6 +150,11 @@ export function renderManage(box, { d, reload }) {
   on(box, 'click', '[data-reset]', async (e, b) => {
     if (!await confirmBox('Vrátit zápas? Výsledek se smaže a hraje se znovu.', { ok: 'Vrátit', danger: true })) return
     act(() => rpc('reset_match', { p_match: b.dataset.reset }), 'Zápas vrácen.')
+  })
+  on(box, 'click', '[data-act=test-players]', (e, b) => busy(b, () => addTestPlayers(d, Number(box.querySelector('#test-n').value), reload)))
+  on(box, 'click', '[data-act=test-play]', async (e, b) => {
+    if (!await confirmBox(`Vyplnit náhodný výsledek u ${open.length} zápasů?`, { ok: 'Vyplnit' })) return
+    busy(b, () => autoPlay(d, reload))
   })
   on(box, 'change', '#tc-size', (e, s) => { box.querySelector('#tc-custom').hidden = s.value !== 'custom'; previewSeeds() })
   on(box, 'input', '#tc-custom input', () => previewSeeds())
@@ -314,4 +335,55 @@ async function walkinModal(d, reload) {
       })
     },
   })
+}
+
+// ── testovací nástroje ──────────────────────────────
+const TEST_NAMES = ['Kuba', 'Ondra', 'Tom', 'Matěj', 'Vojta', 'Adam', 'Filip', 'Lukáš', 'Dan', 'Honza', 'Šimon', 'Petr',
+  'Kryštof', 'Marek', 'David', 'Eliška', 'Tereza', 'Anna', 'Nela', 'Bára', 'Max', 'Radek', 'Jirka', 'Michal', 'Patrik',
+  'Viktor', 'Sam', 'Leo', 'Oliver', 'Ema', 'Klára', 'Zuzka']
+const pickRand = (arr) => arr[Math.floor(Math.random() * arr.length)]
+
+async function addTestPlayers(d, n, reload) {
+  n = Math.max(1, Math.min(64, n || 16))
+  let cat
+  try { cat = await loadParts() } catch (e) { return toast(errMsg(e), 'err') }
+  const blades = (cat.byCat.blade || []).filter(b => !b.integrated)
+  const ratchets = cat.byCat.ratchet || [], bits = (cat.byCat.bit || []).filter(b => !b.integrated)
+  if (blades.length < 3 || !ratchets.length || !bits.length) return toast('V katalogu dílů je málo dílů.', 'err')
+  const taken = new Set(d.players.map(p => p.nick.toLowerCase()))
+  let added = 0
+  for (let i = 0; i < n; i++) {
+    let nick, k = 0
+    do { nick = `T-${pickRand(TEST_NAMES)}${k++ > 3 ? Math.floor(Math.random() * 90 + 10) : ''}` } while (taken.has(nick.toLowerCase()))
+    taken.add(nick.toLowerCase())
+    const used = new Set()
+    const deck = [0, 1, 2].map(() => {
+      let b; do { b = pickRand(blades) } while (used.has(b.name)); used.add(b.name)
+      return { type: 'bx', blade: b.name, ratchet: pickRand(ratchets).name, bit: pickRand(bits).name }
+    })
+    try { await rpc('add_walkin', { p_tournament: d.t.id, p_nick: nick, p_deck: deck }); added++ }
+    catch (e) { toast(errMsg(e), 'err'); break }
+  }
+  toast(`Přidáno ${added} testovacích hráčů.`, 'ok')
+  reload()
+}
+
+async function autoPlay(d, reload) {
+  const win = d.t.win_score
+  const todo = d.matches.filter(m => m.status !== 'done' && m.p1_reg && m.p2_reg)
+  let done = 0
+  for (const m of todo) {
+    let finished = false, guard = 0
+    while (!finished && guard++ < 5) {
+      const p1 = Math.random() < 0.5, lo = Math.floor(Math.random() * win)
+      try {
+        const r = await rpc('submit_game', { p_match: m.id, p_p1_score: p1 ? win : lo, p_p2_score: p1 ? lo : win,
+                                             p_points: [], p_client_id: crypto.randomUUID() })
+        finished = r.match_done
+      } catch (e) { toast(errMsg(e), 'err'); finished = true }
+    }
+    done++
+  }
+  toast(`Dohráno ${done} zápasů.`, 'ok')
+  reload()
 }

@@ -85,11 +85,14 @@ export async function render(main, [id, tabArg]) {
     ;({ me: tabMe, players: tabPlayers, swiss: tabSwiss, bracket: tabBracket, judge: tabJudge, manage: renderManage }[tab] || tabMe)(box, ctx)
   }
 
+  // po odchodu z pohledu (jiná záložka / stránka) už nic nepřekreslovat
+  let alive = true
   let busyReload = false, again = false
   async function reload() {
+    if (!alive) return
     if (busyReload) { again = true; return }
     busyReload = true
-    try { d = await load(id); draw() } catch (e) { console.error(e) }
+    try { const nd = await load(id); if (alive) { d = nd; draw() } } catch (e) { console.error(e) }
     busyReload = false
     if (again) { again = false; reload() }
   }
@@ -102,7 +105,7 @@ export async function render(main, [id, tabArg]) {
   })
   const onMine = () => reload()
   window.addEventListener('bbx:my-match', onMine)
-  return () => { off(); window.removeEventListener('bbx:my-match', onMine) }
+  return () => { alive = false; off(); window.removeEventListener('bbx:my-match', onMine) }
 }
 
 // ────────────────────────────────────────────────────────────────

@@ -58,8 +58,13 @@ Komunikuj **česky**, celé UI je česky.
 Potřebují lokální PostgreSQL 16, Node a pro UI Python Playwright + Chrome a PostgREST (`/tmp/postgrest`).
 - `node tests/core.test.mjs` – logika (párování 4–64 hráčů, pavouk 2–32 s byes, umístění).
 - `tests/reset_db.sh && node tests/db.test.mjs` – celý turnaj proti DB se stubem Supabase (role, RLS, RPC).
-- `tests/ui-up.sh && python3 tests/ui_smoke.py && python3 tests/bbxst_judge.py` – proklik v Chrome.
+- `tests/ui-up.sh && python3 tests/ui_smoke.py && python3 tests/bbxst_judge.py && python3 tests/test_tools.py` – proklik v Chrome
+  (poslední: zkušební turnaj 16 hráčů přes testovací nástroje až po ukončení).
 Když měníš SQL, přidej nový soubor i do `tests/reset_db.sh`. Po změně logiky nebo DB pusť testy.
+
+## Testovací nástroje
+V Řízení turnaje (jen admin): přidání N testovacích hráčů bez účtu (nick „T-…“, náhodný deck) a náhodné
+dohrání otevřených zápasů. Jen přes existující RPC (`add_walkin`, `submit_game`), bez změn DB.
 
 ## Zatím chybí / nápady
 - Push notifikace při zavřené aplikaci (Edge Function + Web Push) – teď jen když je BBXU otevřené.
