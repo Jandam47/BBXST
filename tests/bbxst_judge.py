@@ -133,8 +133,13 @@ with sync_playwright() as p:
 
     # ruční výběr zápasu
     page.evaluate('cancelMatch()'); page.wait_for_timeout(200)
-    page.click('#judgeMatchBtn'); page.wait_for_selector('#mT'); page.wait_for_timeout(500)
-    page.screenshot(path=OUT + '37_bbxst_manual.png')
+    page.click('#judgeMatchBtn'); page.wait_for_selector('#mTiles .aTile'); page.wait_for_timeout(500)
+    tiles = page.locator('.aTile').count()
+    assert tiles >= 1, 'chybí dlaždice arén'
+    page.screenshot(path=OUT + '37_bbxst_arenas.png')
+    page.locator('.aTile:not(.empty)').first.click(); page.wait_for_selector('#mQ .jMatch')
+    page.screenshot(path=OUT + '37b_bbxst_arena_queue.png')
+    page.click('#mBack'); page.wait_for_selector('#mTiles')
     b.close()
 
 print('CONSOLE ERRORS:', len(errors))
