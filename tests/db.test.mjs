@@ -35,10 +35,11 @@ async function newUser(nick, anon = false) {
 // ── uživatelé a role ───────────────────────────────────────────────
 const adam = await newUser('Adam')
 await as(null, "update profiles set role = 'superadmin' where id = $1", [adam.id])
-const org = await newUser('Org'), judge = await newUser('Judge'), admin2 = await newUser('Admin2')
+const org = await newUser('Org'), judge = await newUser('Judge'), judge2 = await newUser('Judge2'), admin2 = await newUser('Admin2')
 await as(adam, 'select set_user_role($1, $2)', [admin2.id, 'admin'])
 await as(admin2, 'select set_user_role($1, $2)', [org.id, 'organizer'])
 await as(admin2, 'select set_user_role($1, $2)', [judge.id, 'judge'])
+await as(admin2, 'select set_user_role($1, $2)', [judge2.id, 'judge'])
 await fails(admin2, 'select set_user_role($1, $2)', [org.id, 'admin'], /nemůžeš/)
 await fails(org, 'select set_user_role($1, $2)', [judge.id, 'organizer'], /jen admin/)
 await fails(judge, "update profiles set role = 'admin' where id = auth.uid()", [], /admin/)
@@ -180,6 +181,33 @@ for (let round = 1; round <= 3; round++) {
     assert.deepEqual((await as(null, 'select live_p1, live_p2, status from matches where id = $1', [sm.id]))[0], { live_p1: 3, live_p2: 2, status: 'live' })
     await fails(players[0], 'select live_score($1, 7, 0)', [sm.id], /judge/)
     await fails(judge, 'select live_score($1, 9, 0)', [sm.id], /Neplatné/)
+    // rozehraná hra se pamatuje; předání a převzetí judge
+    const st = { game: 0, left: 1, battles: [{ slot: 1, pts: 2, p1_bey: 'A', p2_bey: 'B' }] }
+    await as(judge, 'select live_score($1, 4, 3, $2)', [sm.id, JSON.stringify(st)])
+    const [{ j: lm }] = await as(judge2, 'select judge_get_match($1) as j', [sm.id])
+    assert.equal(lm.judge_nick, 'Judge'); assert.deepEqual(lm.live_state, st); assert.equal(lm.live_p1, 4)
+    await fails(judge2, 'select live_score($1, 5, 3)', [sm.id], /převzal judge Judge/)
+    await fails(judge2, 'select submit_game($1, 7, 3)', [sm.id], /převzal/)
+    await fails(judge2, 'select pass_match($1)', [sm.id], /převzal/)
+    await as(judge, 'select pass_match($1)', [sm.id])
+    let [row] = await as(null, 'select judge_id, status, live_p1, live_state from matches where id = $1', [sm.id])
+    assert.deepEqual(row, { judge_id: null, status: 'live', live_p1: 4, live_state: st })
+    assert.equal((await as(null, 'select count(*)::int c from arena_judges where tournament_id = $1 and arena = 2', [t.id]))[0].c, 0)
+    // druhý judge naváže, zabere arénu; první už nic nepošle
+    await as(judge, 'insert into arena_judges (tournament_id, arena) values ($1, 2)', [t.id])
+    await as(judge2, 'select start_match($1)', [sm.id])
+    assert.deepEqual((await as(null, 'select judge_id from arena_judges where tournament_id = $1 and arena = 2', [t.id])).map(r => r.judge_id), [judge2.id])
+    await as(judge2, 'select live_score($1, 5, 3)', [sm.id])
+    assert.deepEqual((await as(null, 'select live_state from matches where id = $1', [sm.id]))[0].live_state, st)   // bez stavu zůstane poslední
+    await fails(judge, 'select live_score($1, 5, 4)', [sm.id], /převzal judge Judge2/)
+    await as(org, 'select live_score($1, 5, 4)', [sm.id])                      // organizátor turnaje smí vždy
+    // ZRUŠIT zahodí rozehranou hru
+    await as(judge2, 'select pass_match($1, true)', [sm.id])
+    ;[row] = await as(null, 'select judge_id, status, live_p1, live_state from matches where id = $1', [sm.id])
+    assert.deepEqual(row, { judge_id: null, status: 'pending', live_p1: null, live_state: null })
+    await fails(players[0], 'select pass_match($1)', [sm.id], /judge/)
+    await fails(players[0], 'select bbx_judge_nick($1)', [judge.id], /permission/)
+    await as(judge2, 'delete from arena_judges where tournament_id = $1 and arena = 2', [t.id])
   }
   for (const m of (await allMatches()).filter(m => m.stage === 'swiss' && m.round === round && m.status !== 'done')) await playMatch(m.id)
 }
@@ -188,7 +216,7 @@ assert.ok((await allMatches()).every(m => m.live_p1 === null), 'po dohrání ž�
 const swissMs = (await allMatches()).filter(m => m.stage === 'swiss')
 const byes = swissMs.filter(m => m.is_bye).map(m => m.p1_reg)
 assert.equal(byes.length, 3); assert.equal(new Set(byes).size, 3)
-step('swiss 3 kola × 11 hráčů: párování, volné losy, QR vyhledání, validace skóre, ochrana zápasů')
+step('swiss 3 kola × 11 hráčů: párování, volné losy, QR vyhledání, validace skóre, ochrana zápasů, předání judge')
 
 // ── top cut ────────────────────────────────────────────────────────
 const ps = await regs()

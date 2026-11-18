@@ -697,6 +697,8 @@ body.judge.has-match.can-swap .swapBtn { display: flex; }
 .tSc { font-family: 'Orbitron', monospace; font-size: 18px; color: white; }
 .tMeta { font-size: 13px; color: rgba(200,240,255,0.6); }
 .tLive { color: var(--green); }
+.tFreeSpot { color: var(--gold); }
+.aTile.free { border-color: rgba(255,215,0,0.6); border-style: dashed; }
 .tFree { font-size: 15px; color: rgba(200,240,255,0.6); margin-top: auto; }
 .jMatch .n1 { color: var(--cyan); font-weight: 700; } .jMatch .n2 { color: var(--red); font-weight: 700; }
 .jMatch .meta { font-size: 13px; color: rgba(200,240,255,0.55); }
@@ -1596,6 +1598,8 @@ const sb = SB_OK ? window.supabase.createClient(CFG.supabaseUrl, CFG.supabaseAno
 const JUDGE_ROLES = ["judge", "organizer", "admin", "superadmin"]
 const ME_KEY = "bbxst_judge_me"
 const PENDING_KEY = "bbxst_judge_pending"
+const LIVE_KEY = "bbxst_judge_live"         // rozehraná hra – pro obnovení po zavření BBXST
+const OPENED_WITH_MATCH = new URLSearchParams(location.search).has("match")
 
 let judgeMode = false
 const judge = {
@@ -1617,6 +1621,46 @@ async function rpc(name, args) {
 }
 
 /* ── dialogy ── */
+/* ── uložený stav rozehrané hry (lokálně + na serveru v matches.live_state) ── */
+const gameNo = (m) => (m?.p1_wins || 0) + (m?.p2_wins || 0)
+function stateNow() {   // orientace podle databáze (p1/p2), ne podle stran stolu
+  const p1Left = judge.leftSlot === 1
+  return {
+    game: gameNo(judge.match), left: judge.leftSlot, started_at: judge.startedAt,
+    battles: judge.battles.map(b => ({
+      slot: b.slot === 0 ? 0 : (p1Left ? b.slot : 3 - b.slot), pts: b.pts,
+      p1_bey: p1Left ? b.beys[1] : b.beys[2], p2_bey: p1Left ? b.beys[2] : b.beys[1],
+    })),
+  }
+}
+function readLocal() { try { return JSON.parse(localStorage.getItem(LIVE_KEY)) } catch (e) { return null } }
+function clearLocal() { try { localStorage.removeItem(LIVE_KEY) } catch (e) {} }
+function saveLocal() {
+  if (!judgeHasMatch() || resultSent) return
+  try { localStorage.setItem(LIVE_KEY, JSON.stringify({ match_id: judge.match.id, match: judge.match, ...stateNow() })) } catch (e) {}
+}
+function applyState(st) {   // judge.leftSlot už musí být nastavený
+  const p1Left = judge.leftSlot === 1
+  judge.battles = (st.battles || []).map(b => ({
+    slot: b.slot === 0 ? 0 : (p1Left ? b.slot : 3 - b.slot), pts: b.pts,
+    beys: { 1: p1Left ? b.p1_bey : b.p2_bey, 2: p1Left ? b.p2_bey : b.p1_bey },
+  }))
+  history = judge.battles.map(b => ({ p: b.slot, pts: b.slot ? b.pts : 0, battle: true }))
+  const sum = (side) => judge.battles.filter(b => b.slot === side).reduce((a, b) => a + b.pts, 0)
+  score1 = Math.min(winScore, sum(1)); score2 = Math.min(winScore, sum(2))
+  s1.innerText = score1; s2.innerText = score2
+  if (judge.battles.length) {
+    firstScoreUsed = true
+    document.querySelectorAll(".arrowGroup").forEach(a => a.classList.add("hidden"))
+  }
+  if (st.started_at) judge.startedAt = st.started_at
+  updateMatchState()
+}
+function takenOver(msg) {
+  clearLocal(); unloadJudge(); clearBoard()
+  jAlert(`${esc(msg)}<br>Rozehraná hra pokračuje u něj.`)
+}
+
 function jShow(html, cls = "") { const b = document.getElementById("jBox"); b.className = "jBox " + cls; b.innerHTML = html; document.getElementById("jOverlay").classList.remove("hidden") }
 function jHide() { document.getElementById("jOverlay").classList.add("hidden") }
 function jAlert(html) {
@@ -1702,8 +1746,9 @@ async function enterJudge(silent) {
 
 async function exitJudge() {
   if (judgeHasMatch() && (score1 || score2) && !resultSent) {
-    if (!await jConfirm("Rozehraný zápas se neuloží. Přepnout do casual?", "PŘEPNOUT")) return
+    if (!await jConfirm("Přepnout do casual? Rozehraná hra zůstane uložená – dokončíš ji z BBXU (Rozhodovat).", "PŘEPNOUT")) return
   }
+  clearLocal()
   unloadJudge()
   judgeMode = false
   clearBoard(); resetPlayersInfo()
@@ -1715,9 +1760,10 @@ async function exitJudge() {
 function renderJudgeBar() {
   if (!judgeMode) return
   const tag = document.getElementById("judgeTag"), info = document.getElementById("judgeInfo"), btn = document.getElementById("judgeMatchBtn")
-  tag.textContent = "◂ BBXU"
-  tag.title = "Zpět do BBXU" + (judge.me?.nick ? " · judge " + judge.me.nick : "")
   const m = judge.match
+  tag.textContent = m ? "PASS JUDGE" : "◂ BBXU"
+  tag.title = m ? "Předat zápas jinému judge – skóre zůstane uložené" : "Zpět do BBXU" + (judge.me?.nick ? " · judge " + judge.me.nick : "")
+  tag.onclick = m ? passJudge : backToBBXU
   if (m) {
     const lw = judge.leftSlot === 1 ? m.p1_wins : m.p2_wins, rw = judge.leftSlot === 1 ? m.p2_wins : m.p1_wins
     const label = m.stage === "swiss" ? `Swiss · kolo ${m.round}` : m.stage === "gf" ? "Grand finále" : m.stage === "wb" ? `Winners · kolo ${m.round}` : `Losers · kolo ${m.round}`
@@ -1780,21 +1826,37 @@ async function judgeScan(side, text) {
   }
 }
 
-function loadMatch(m, leftReg) {
+async function loadMatch(m, leftReg = null) {
+  const me = judge.me?.id
+  if (m.judge_id && m.judge_id !== me && m.status === "live") {
+    const sc = m.live_p1 != null ? ` za stavu <b>${m.live_p1}:${m.live_p2}</b>` : ""
+    if (!await jConfirm(`Zápas <b>${esc(m.p1.nick)} vs ${esc(m.p2.nick)}</b> teď řídí <b>${esc(m.judge_nick || "jiný judge")}</b>.<br>
+      Převzít ho${sc}? Hra pokračuje tam, kde skončila.`, "PŘEVZÍT")) return
+  }
+  judge.match = null
   clearBoard()
+  // rozehraná hra: novější z místního a serverového stavu
+  const g = gameNo(m), local = readLocal()
+  let st = m.live_state?.game === g ? m.live_state : null
+  const loc = local?.match_id === m.id && local.game === g && (!m.judge_id || m.judge_id === me) ? local : null
+  if (loc && (!st || (loc.battles?.length || 0) >= (st.battles?.length || 0))) st = loc
+  if (!st?.battles?.length) st = null
+
   judge.match = m
-  judge.leftSlot = m.p1.reg === leftReg ? 1 : 2
+  judge.leftSlot = leftReg ? (m.p1.reg === leftReg ? 1 : 2) : (st?.left === 2 ? 2 : 1)
   const L = judge.leftSlot === 1 ? m.p1 : m.p2, R = judge.leftSlot === 1 ? m.p2 : m.p1
   judge.sides = { 1: { ...L, tournament_id: m.tournament_id }, 2: { ...R, tournament_id: m.tournament_id } }
   player1Name = L.nick; player2Name = R.nick
   winScore = m.win_score || 7
   document.getElementById("settingsWinVal").textContent = winScore
   judge.startedAt = new Date().toISOString()
+  if (st) applyState(st)
   setModeUI(); renderJudgePlayers()
-  rpc("start_match", { p_match: m.id }).catch(() => {})
   lastTournamentId = m.tournament_id
+  await rpc("start_match", { p_match: m.id }).catch(() => {})   // teprve pak posílat body (převzetí)
+  if (judge.match !== m) return
   updateSendResultButton()
-  showOverlay(`${L.nick} VS ${R.nick}`, "win")
+  showOverlay(st ? `POKRAČUJE ${score1}:${score2}` : `${L.nick} VS ${R.nick}`, "win")
 }
 
 function unloadJudge() {
@@ -1808,8 +1870,29 @@ function unloadJudge() {
 }
 
 async function cancelMatch() {
-  if ((score1 || score2) && !resultSent && !await jConfirm("Zrušit rozehraný zápas? Body se neuloží.", "ZRUŠIT")) return
-  clearBoard(); unloadJudge()
+  if ((score1 || score2 || judge.battles.length) && !resultSent && !await jConfirm("Zrušit rozehraný zápas? Body se smažou.", "ZRUŠIT")) return
+  const m = judge.match
+  clearLocal(); unloadJudge(); clearBoard()
+  if (m) rpc("pass_match", { p_match: m.id, p_discard: true }).catch(() => {})
+}
+
+/* ── PASS JUDGE: předání zápasu, skóre zůstane na serveru ── */
+async function passJudge() {
+  const m = judge.match
+  if (!m) return
+  if (!await jConfirm(`Předat zápas <b>${esc(player1Name)} vs ${esc(player2Name)}</b> jinému judge?<br>
+    Skóre <b>${score1}:${score2}</b> zůstane uložené a aréna ${m.arena || ""} se uvolní.`, "PŘEDAT")) return
+  const p1Left = judge.leftSlot === 1
+  clearTimeout(liveTimer)
+  try {
+    await rpc("live_score", { p_match: m.id, p_p1: p1Left ? score1 : score2, p_p2: p1Left ? score2 : score1, p_state: stateNow() })
+    await rpc("pass_match", { p_match: m.id })
+  } catch (e) {
+    if (/převzal/.test(e.message)) return takenOver(e.message)
+    return jAlert(isNetErr(e) ? "Bez připojení nejde zápas předat – další judge by neviděl skóre." : esc(e.message))
+  }
+  clearLocal(); unloadJudge(); clearBoard()
+  showOverlay("ZÁPAS PŘEDÁN", "win")
 }
 
 /* ── prohození stran před začátkem hry ── */
@@ -1830,7 +1913,7 @@ async function goBBXU() {
 }
 let lastTournamentId = new URLSearchParams(location.search).get("t")
 async function backToBBXU() {
-  if (judgeHasMatch() && (score1 || score2) && !resultSent && !await jConfirm("Rozehraný zápas se neuloží. Odejít do BBXU?", "ODEJÍT")) return
+  if (judgeHasMatch() && !resultSent) { clearTimeout(liveTimer); await pushLive() }   // rozehraná hra zůstane uložená
   const t = judge.match?.tournament_id || lastTournamentId
   location.href = BBXU_URL + (t ? `#/t/${t}/judge` : "#/")
 }
@@ -1850,7 +1933,7 @@ async function afterMatchNext(next) {
     <p><b style="color:var(--cyan)">${esc(m.p1.nick)}</b> vs <b style="color:var(--red)">${esc(m.p2.nick)}</b></p>
     <div class="jRow"><button class="qr-btn cancel" onclick="backToBBXU()">◂ BBXU</button>
     <button class="qr-btn confirm" id="jNext">NAČÍST ZÁPAS</button></div>`)
-  document.getElementById("jNext").onclick = () => { jHide(); loadMatch(m, m.p1.reg) }
+  document.getElementById("jNext").onclick = () => { jHide(); loadMatch(m) }
 }
 
 /* ── ruční výběr zápasu (bez QR): dlaždice arén → fronta arény ── */
@@ -1884,12 +1967,13 @@ async function openManualMatch(pre = {}) {
     // přehled všech arén
     const tileHTML = (a) => {
       const m = a.queue[0], mine = a.no === myArena()
-      const live = m?.status === "live"
+      const live = m?.status === "live", free = live && !m.judge_id
       const sc = live && m.live_p1 != null ? `<b class="tSc">${m.live_p1}:${m.live_p2}</b>` : ""
-      return `<button class="aTile ${mine ? "mine" : ""} ${m ? "" : "empty"}" data-a="${a.no}">
-        <span class="tHead"><span class="tNo">ARÉNA ${a.no}</span><span class="tJudge">${a.judge ? esc(a.judge) : "bez judge"}</span></span>
+      const who = live && m.judge_nick ? m.judge_nick : a.judge
+      return `<button class="aTile ${mine ? "mine" : ""} ${free ? "free" : ""} ${m ? "" : "empty"}" data-a="${a.no}">
+        <span class="tHead"><span class="tNo">ARÉNA ${a.no}</span><span class="tJudge">${who ? esc(who) : "bez judge"}</span></span>
         ${m ? `<span class="tVs"><span class="n1">${esc(m.p1.nick)}</span><span class="tMid">${sc || "vs"}</span><span class="n2">${esc(m.p2.nick)}</span></span>
-          <span class="tMeta"><span class="${live ? "tLive" : ""}">${live ? "● hraje se" : "na řadě"}</span>${m.best_of > 1 ? ` · BO${m.best_of} ${m.p1_wins}:${m.p2_wins}` : ""}${a.queue.length > 1 ? ` · +${a.queue.length - 1} ${a.queue.length === 2 ? "další" : "dalších"}` : ""}</span>`
+          <span class="tMeta"><span class="${free ? "tFreeSpot" : live ? "tLive" : ""}">${free ? "◆ volné místo" : live ? "● hraje se" : "na řadě"}</span>${m.best_of > 1 ? ` · BO${m.best_of} ${m.p1_wins}:${m.p2_wins}` : ""}${a.queue.length > 1 ? ` · +${a.queue.length - 1} ${a.queue.length === 2 ? "další" : "dalších"}` : ""}</span>`
           : `<span class="tFree">nic nečeká</span>`}
       </button>`
     }
@@ -1911,7 +1995,7 @@ async function openManualMatch(pre = {}) {
         <div id="mQ">${queue.length ? queue.map((m, i) => `
           <div class="jMatch ${i === sel ? "sel" : ""}" data-i="${i}">
             <span class="n1">${esc(m.p1.nick)}</span> vs <span class="n2">${esc(m.p2.nick)}</span>
-            <div class="meta">${m.stage === "swiss" ? "Swiss · kolo " + m.round : esc(m.key)}${m.best_of > 1 ? ` · BO${m.best_of} (${m.p1_wins}:${m.p2_wins})` : ""}${m.status === "live" ? " · hraje se" + (m.live_p1 != null ? ` ${m.live_p1}:${m.live_p2}` : "") : i === 0 ? " · na řadě" : ""}</div>
+            <div class="meta">${m.stage === "swiss" ? "Swiss · kolo " + m.round : esc(m.key)}${m.best_of > 1 ? ` · BO${m.best_of} (${m.p1_wins}:${m.p2_wins})` : ""}${m.status === "live" ? (m.judge_id ? " · hraje se" : " · volné místo") + (m.live_p1 != null ? ` ${m.live_p1}:${m.live_p2}` : "") + (m.judge_nick ? ` · řídí ${esc(m.judge_nick)}` : "") : i === 0 ? " · na řadě" : ""}</div>
           </div>`).join("") : `<p>Na téhle aréně teď nic nečeká.</p>`}</div>
         <div class="jRow"><button class="qr-btn cancel" id="mBack">◂ ARÉNY</button>
           <button class="qr-btn confirm" id="mOk" ${queue.length ? "" : "disabled"}>POTVRDIT ZÁPAS</button></div>`)
@@ -1919,22 +2003,20 @@ async function openManualMatch(pre = {}) {
       document.getElementById("mBack").onclick = () => { arena = null; drawTiles(); startPoll() }
       document.querySelectorAll(".jMatch").forEach(el => el.onclick = () => { sel = Number(el.dataset.i); drawArena() })
       const ok = document.getElementById("mOk")
-      if (ok) ok.onclick = () => { const m = queue[sel]; jHide(); loadMatch(m, m.p1.reg) }
+      if (ok) ok.onclick = () => { const m = queue[sel]; jHide(); loadMatch(m) }
     }
 
     const fetchAll = async () => {
       const t = ts.find(x => x.id === tId), nos = Array.from({ length: t.arena_count }, (_, i) => i + 1)
-      const [queues, { data: live }, { data: aj }] = await Promise.all([
+      const [queues, { data: aj }] = await Promise.all([
         Promise.all(nos.map(no => rpc("judge_arena_queue", { p_tournament: tId, p_arena: no }))),
-        sb.from("matches").select("id,live_p1,live_p2").eq("tournament_id", tId).eq("status", "live"),
         sb.from("arena_judges").select("arena,judge_id").eq("tournament_id", tId),
       ])
       const ids = [...new Set((aj || []).map(x => x.judge_id))]
       const { data: profs } = ids.length ? await sb.from("profiles").select("id,nick").in("id", ids) : { data: [] }
-      const liveBy = Object.fromEntries((live || []).map(x => [x.id, x]))
       return nos.map((no, i) => ({
         no,
-        queue: queues[i].map(m => ({ ...m, live_p1: liveBy[m.id]?.live_p1 ?? null, live_p2: liveBy[m.id]?.live_p2 ?? null })),
+        queue: queues[i].slice().sort((x, y) => (y.status === "live") - (x.status === "live")),   // rozehraný první
         judge: profs?.find(p => p.id === aj?.find(x => x.arena === no)?.judge_id)?.nick || "",
       }))
     }
@@ -2043,13 +2125,16 @@ async function pushLive() {
   if (!m || resultSent) return
   const p1Left = judge.leftSlot === 1
   const a = p1Left ? score1 : score2, b = p1Left ? score2 : score1
-  const key = `${m.id}:${m.p1_wins + m.p2_wins}:${a}:${b}`
+  const state = stateNow()
+  const key = `${m.id}:${a}:${b}:${JSON.stringify(state)}`
   if (key === liveSent) return
-  try { await rpc("live_score", { p_match: m.id, p_p1: a, p_p2: b }); liveSent = key } catch (e) {}   // bez sítě se pošle s dalším bodem
+  try { await rpc("live_score", { p_match: m.id, p_p1: a, p_p2: b, p_state: state }); liveSent = key }
+  catch (e) { if (/převzal/.test(e.message) && judge.match?.id === m.id) takenOver(e.message) }   // bez sítě se pošle s dalším bodem
 }
 
 function updateSendResultButton() {
   document.body.classList.toggle("can-swap", canSwap())
+  saveLocal()
   scheduleLive()
   const btn = document.getElementById("sendResultBtn")
   const canSend = judgeHasMatch() && (score1 >= winScore || score2 >= winScore) && !resultSent
@@ -2084,6 +2169,7 @@ async function sendResult() {
   try { res = await rpc("submit_game", payload) }
   catch (e) {
     if (isNetErr(e)) offline = true
+    else if (/převzal/.test(e.message)) return takenOver(e.message)
     else { btn.disabled = false; btn.innerText = "✓ ODESLAT VÝSLEDEK"; return jAlert("Výsledek nešel uložit: " + esc(e.message)) }
   }
   if (offline) {
@@ -2100,7 +2186,8 @@ async function sendResult() {
   if (res.match_done) {
     showOverlaySequence([[offline ? "BEZ SÍTĚ – ODEŠLE SE POZDĚJI" : "ZÁPAS ULOŽEN ✓", offline ? "xtreme" : "win"]])
     const next = { tournament_id: m.tournament_id, arena: m.arena }
-    setTimeout(() => { clearBoard(); unloadJudge(); if (!offline) afterMatchNext(next) }, 1600)
+    clearLocal()
+    setTimeout(() => { unloadJudge(); clearBoard(); if (!offline) afterMatchNext(next) }, 1600)
   } else {
     const lw = judge.leftSlot === 1 ? m.p1_wins : m.p2_wins, rw = judge.leftSlot === 1 ? m.p2_wins : m.p1_wins
     showOverlaySequence([[offline ? "BEZ SÍTĚ – ODEŠLE SE POZDĚJI" : `HRA ULOŽENA · ${lw}:${rw}`, offline ? "xtreme" : "win"], ["DALŠÍ HRA", "win"]])
@@ -2138,11 +2225,31 @@ window.addEventListener("online", flushJudgePending)
   try {
     const m = await rpc("judge_get_match", { p_match: id })
     lastTournamentId = m.tournament_id
-    if (m.status === "done") return afterMatchNext({ tournament_id: m.tournament_id, arena: m.arena })
-    loadMatch(m, m.p1.reg)
+    if (m.status === "done") { clearLocal(); return afterMatchNext({ tournament_id: m.tournament_id, arena: m.arena }) }
+    loadMatch(m)
   } catch (e) { jAlert(esc(e.message)) }
 })()
 
+
+/* ── znovuotevření BBXST: pokračuj v rozehrané hře ── */
+;(async function resumeOnOpen() {
+  if (OPENED_WITH_MATCH) return
+  const local = readLocal()
+  if (!local?.match_id || !sb) return
+  if (!(await enterJudge(true))) return
+  let m
+  try { m = await rpc("judge_get_match", { p_match: local.match_id }) }
+  catch (e) {
+    if (isNetErr(e) && local.match) return loadMatch(local.match)   // bez sítě z místní kopie
+    clearLocal(); return
+  }
+  if (m.status === "done") return clearLocal()
+  if (m.judge_id && m.judge_id !== judge.me.id) {
+    clearLocal()
+    return jAlert(`Zápas <b>${esc(m.p1.nick)} vs ${esc(m.p2.nick)}</b> mezitím převzal <b>${esc(m.judge_nick || "jiný judge")}</b>.`)
+  }
+  loadMatch(m)
+})()
 
 /* ── DEV INFO ── */
 console.log(

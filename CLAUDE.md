@@ -17,9 +17,16 @@ Komunikuj **česky**, celé UI je česky.
 - `js/ui.js` – šablony `html\`\`` (vše escapuje, `raw()` jen pro důvěryhodné HTML), `modal`, `toast`, QR.
 - `js/parts.js` – katalog dílů (`bey_parts`), našeptávač, editor decku.
 - `js/config.js` – **obsahuje Adamovy živé klíče Supabase. Nikdy ho neměň ani nepřepisuj.**
-- `supabase/schema.sql`, `02-parts.sql`, `03-live-score.sql`, `04-security-hardening.sql` – databáze (spuštěné v produkci, nové soubory
+- `supabase/schema.sql`, `02-parts.sql`, `03-live-score.sql`, `04-security-hardening.sql`, `05-judge-handover.sql` – databáze (spuštěné v produkci, nové soubory
   spouští Adam). Živé skóre: BBXST v judge módu posílá po každém bodu `live_score` → `matches.live_p1/p2`
   (TV rozpis, vstupenka, seznamy); trigger `bbx_clear_live` ho maže po uložení hry.
+  Rozehraná hra: BBXST posílá s `live_score` i `p_state` → `matches.live_state` (souboje v orientaci p1/p2,
+  `game` = p1_wins+p2_wins, `left`) a zároveň ji drží v localStorage (`bbxst_judge_live`). Po znovuotevření
+  BBXST nebo u jiného judge hra pokračuje (novější z obou stavů).
+  Judge zápasu = `matches.judge_id`: `start_match` ho převezme (i arénu), PASS JUDGE (zlaté tlačítko vlevo dole
+  při načteném zápasu) volá `pass_match` (uvolní zápas i arénu, skóre zůstane), ZRUŠIT volá
+  `pass_match(…, true)` (zahodí hru). Body ani výsledek nepošle judge, kterému zápas někdo převzal
+  (`bbx_check_match_judge`, trigger na `games`); organizátor turnaje smí vždy.
 - `vendor/` – supabase-js, qrcode-generator, html5-qrcode (lokálně, kvůli slabé síti v hale).
 - `sw.js` – service worker (síť první, cache jako záloha).
 
@@ -61,6 +68,7 @@ Potřebují lokální PostgreSQL 16, Node a pro UI Python Playwright + Chrome a 
 - `node tests/core.test.mjs` – logika (párování 4–64 hráčů, pavouk 2–32 s byes, umístění).
 - `tests/reset_db.sh && node tests/db.test.mjs` – celý turnaj proti DB se stubem Supabase (role, RLS, RPC).
 - `tests/ui-up.sh && python3 tests/ui_smoke.py && python3 tests/bbxst_judge.py && python3 tests/test_tools.py` – proklik v Chrome
+  (`tests/judge_handover.py` zvlášť po čerstvém `ui-up.sh`: obnova skóre, převzetí, PASS JUDGE, ZRUŠIT)
   (poslední: zkušební turnaj 16 hráčů přes testovací nástroje až po ukončení).
 Když měníš SQL, přidej nový soubor i do `tests/reset_db.sh`. Po změně logiky nebo DB pusť testy.
 
@@ -70,6 +78,5 @@ dohrání otevřených zápasů. Jen přes existující RPC (`add_walkin`, `subm
 
 ## Zatím chybí / nápady
 - Push notifikace při zavřené aplikaci (Edge Function + Web Push) – teď jen když je BBXU otevřené.
-- Přebrání arény jiným judgem (teď uvolní jen vlastník nebo organizátor).
 - Volitelné pravidlo „žádný díl se v decku neopakuje“.
 - Převod starých dat z Google Sheets.

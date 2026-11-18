@@ -429,7 +429,7 @@ function tabBracket(box, { d }) {
 async function tabJudge(box, { d, reload }) {
   const { t } = d
   const me = state.user?.id
-  const ids = [...new Set(d.judges.map(j => j.judge_id))]
+  const ids = [...new Set([...d.judges.map(j => j.judge_id), ...d.matches.filter(m => m.judge_id && m.status === 'live').map(m => m.judge_id)])]
   const nicks = ids.length ? await q(sb.from('profiles').select('id,nick').in('id', ids)) : []
   const nickMap = new Map(nicks.map(n => [n.id, n.nick]))
   const arenas = Array.from({ length: t.arena_count }, (_, i) => i + 1)
@@ -447,17 +447,21 @@ async function tabJudge(box, { d, reload }) {
         const j = d.judges.find(x => x.arena === a)
         const mineA = j && j.judge_id === me
         const qa = queue(a), cur = qa[0]
-        return html`<div class="card arena-card ${mineA ? 'mine' : ''} ${cur?.status === 'live' ? 'live' : ''}">
+        const live = cur?.status === 'live', free = live && !cur.judge_id
+        const other = live && cur.judge_id && cur.judge_id !== me
+        return html`<div class="card arena-card ${mineA ? 'mine' : ''} ${live ? 'live' : ''} ${free ? 'free' : ''}">
           <div class="arena-no num">${a}</div>
           <div class="grow" style="min-width:0">
             <div class="small muted">${j ? (mineA ? 'Tvoje aréna' : `Judge: ${nickMap.get(j.judge_id) || '?'}`) : 'Volná aréna'}${qa.length > 1 ? ` · další ${qa.length - 1}` : ''}</div>
             ${cur ? html`
               <div class="ellipsis" style="font-weight:600;font-size:17px"><span style="color:#b9d4ff">${nickOf(d, cur.p1_reg)}</span> <span class="faint">vs</span> <span style="color:#ffc2cd">${nickOf(d, cur.p2_reg)}</span></div>
-              <div class="small faint ellipsis">${matchLabel(cur, t.top_cut)}${cur.best_of > 1 ? ` · BO${cur.best_of} (${cur.p1_wins}:${cur.p2_wins})` : ''}${cur.status === 'live' ? ' · hraje se' : ' · na řadě'}</div>`
+              <div class="small faint ellipsis">${matchLabel(cur, t.top_cut)}${cur.best_of > 1 ? ` · BO${cur.best_of} (${cur.p1_wins}:${cur.p2_wins})` : ''}${free ? '' : live ? ` · hraje se${cur.judge_id && cur.judge_id !== j?.judge_id ? ` · řídí ${nickMap.get(cur.judge_id) || '?'}` : ''}` : ' · na řadě'}</div>
+              ${free ? html`<div class="small arena-free">Předáno – čeká na judge</div>` : ''}`
               : html`<div class="faint">Teď tu nic nečeká</div>`}
           </div>
+          ${live && cur.live_p1 != null ? html`<div class="arena-sc num">${cur.live_p1}<i>:</i>${cur.live_p2}</div>` : ''}
           <div class="arena-actions">
-            ${cur ? html`<button class="btn primary sm" data-go="${a}">Rozhodovat</button>` : !j ? html`<button class="btn sm" data-claim="${a}">Zabrat</button>` : ''}
+            ${cur ? html`<button class="btn primary sm" data-go="${a}">${other ? 'Převzít' : free ? 'Navázat' : 'Rozhodovat'}</button>` : !j ? html`<button class="btn sm" data-claim="${a}">Zabrat</button>` : ''}
             ${mineA ? html`<button class="btn ghost sm" data-release="${a}">Uvolnit</button>` : ''}
           </div>
         </div>`

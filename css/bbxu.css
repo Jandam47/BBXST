@@ -429,3 +429,7 @@ body.tv main { max-width: none; padding: 3vh 4vw; }
 .arena-card .arena-actions { display: flex; flex-direction: column; gap: 6px; flex: none; }
 .arena-card.mine { border-color: rgba(255,210,31,.45); }
 .arena-card.live .arena-no { animation: blink 1.6s infinite; }
+.arena-card .arena-sc { font-family: var(--display); font-weight: 700; font-size: 30px; line-height: 1; flex: none; white-space: nowrap; }
+.arena-card .arena-sc i { font-style: normal; opacity: .45; margin: 0 2px; }
+.arena-card.free { border-color: rgba(255,210,31,.6); border-style: dashed; }
+.arena-card .arena-free { color: var(--bolt); font-weight: 600; }
