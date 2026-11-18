@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>BBXU</title>
+<meta name="description" content="Turnaje, registrace a výsledky Beyblade X.">
+<meta name="theme-color" content="#0a1030">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Chakra+Petch:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/bbxu.css">
+<script src="js/config.js"></script>
+<script src="vendor/supabase.js"></script>
+<script src="vendor/qrcode.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#/"><span class="brand-mark">BBX<b>U</b></span><span class="brand-sub">Beyblade X</span></a>
+    <span class="spacer"></span>
+    <span id="me-slot"></span>
+  </header>
+
+  <main id="main"><div class="spinner" aria-label="Načítám"></div></main>
+
+  <nav class="tabbar" aria-label="Hlavní menu">
+    <a href="#/" data-tab="home"><span class="ico">🏆</span>Turnaje</a>
+    <a href="#/players" data-tab="players"><span class="ico">👥</span>Hráči</a>
+    <a href="#/chat" data-tab="chat"><span class="ico">💬</span>Chat</a>
+    <a href="#/me" data-tab="me"><span class="ico">👤</span>Profil</a>
+  </nav>
+
+  <noscript><p style="padding:20px">BBXU potřebuje zapnutý JavaScript.</p></noscript>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
