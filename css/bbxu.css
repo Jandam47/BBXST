@@ -387,3 +387,39 @@ body.tv main { max-width: none; padding: 3vh 4vw; }
 .seg { display: flex; background: var(--ink-2); border: 1px solid var(--line-soft); border-radius: 12px; padding: 4px; }
 .seg button { flex: 1; min-height: 38px; border: 0; border-radius: 9px; background: none; font-weight: 600; color: var(--muted); cursor: pointer; }
 .seg button.on { background: var(--panel-2); color: var(--text); }
+
+/* ── editor decku + našeptávač ─────────────────────────── */
+.deck { display: grid; gap: 12px; }
+.bey-card { border: 1px solid var(--line-soft); border-radius: 12px; padding: 12px; background: var(--ink-2); display: grid; gap: 10px; min-width: 0; }
+.bey-card.complete { border-color: rgba(46,230,160,.35); }
+.bey-card legend { font-family: var(--display); font-weight: 600; font-size: 16px; float: left; padding: 0; }
+.bey-card[data-type="cx"] .bx-only, .bey-card[data-type="bx"] .cx-only { display: none; }
+.bey-preview { font-size: 15px; color: var(--muted); min-height: 22px; }
+.bey-preview b { color: var(--ok); font-family: var(--display); font-weight: 600; }
+.seg.sm { padding: 3px; border-radius: 10px; }
+.seg.sm button { min-height: 30px; padding: 0 12px; font-size: 13px; white-space: nowrap; }
+.combo { position: relative; }
+.combo.ok .input { border-color: rgba(46,230,160,.55); }
+.combo.bad .input { border-color: var(--red); background: rgba(255,59,92,.06); }
+.combo .input:disabled { opacity: .5; }
+.combo-list {
+  position: absolute; left: 0; right: 0; top: calc(100% + 4px); z-index: 60;
+  list-style: none; max-height: 264px; overflow-y: auto; overscroll-behavior: contain;
+  background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px;
+  box-shadow: 0 16px 40px -12px rgba(0,0,0,.7);
+}
+.combo-list li { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 11px 12px; cursor: pointer; font-weight: 500; }
+.combo-list li + li { border-top: 1px solid var(--line-soft); }
+.combo-list li.on, .combo-list li:hover { background: rgba(255,210,31,.12); }
+.combo-list li small { color: var(--faint); font-weight: 400; }
+.combo-list li.none { color: var(--muted); cursor: default; font-weight: 400; }
+.combo-list .tags { display: flex; gap: 6px; flex: none; }
+.combo-list .tags b { font-family: var(--display); color: var(--bolt); font-size: 13px; }
+.combo-list .tags em { font-style: normal; font-size: 12px; color: var(--faint); }
+
+/* judge – arény */
+.arena-card { display: flex; align-items: center; gap: 14px; }
+.arena-card .arena-no { font-family: var(--display); font-weight: 700; font-size: 40px; line-height: 1; color: var(--bolt); width: 44px; text-align: center; flex: none; }
+.arena-card .arena-actions { display: flex; flex-direction: column; gap: 6px; flex: none; }
+.arena-card.mine { border-color: rgba(255,210,31,.45); }
+.arena-card.live .arena-no { animation: blink 1.6s infinite; }

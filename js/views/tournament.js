@@ -5,6 +5,7 @@ import { sb, state, rpc, q, errMsg, canManage, ensureSession, refreshMe, askNoti
 import { html, mount, on, formData, toast, modal, busy, confirmBox, qrSvg, qrPng, statusPill, fmtDate, fmtTime } from '../ui.js'
 import { computeStandings, matchLabel, qrPayload, nextPow2 } from '../core.js'
 import { renderManage } from './manage.js'
+import { loadParts, deckEditor, bindDeckEditor } from '../parts.js'
 
 const cfg = window.BBX_CONFIG
 
@@ -183,12 +184,17 @@ function tabMe(box, { d, reload }) {
   })
 }
 
-function regForm(box, d, reload, existing) {
+async function regForm(box, d, reload, existing) {
   const { t } = d
   const isEv = t.kind === 'event'
   const account = state.user && !state.isAnon
   const nickLocked = account && state.profile?.nick
   const v = existing || {}
+  let cat = null
+  if (!isEv) {
+    mount(box, html`<div class="spinner" aria-label="Načítám seznam dílů"></div>`)
+    try { cat = await loadParts() } catch (e) { mount(box, html`<div class="notice err">Seznam dílů se nepodařilo načíst: ${errMsg(e)}</div>`); return }
+  }
 
   mount(box, html`
     <form class="card stack" id="f-reg" data-keep>
@@ -197,22 +203,23 @@ function regForm(box, d, reload, existing) {
         <input class="input" name="nick" minlength="2" maxlength="24" required value="${v.nick || state.profile?.nick || ''}" ${nickLocked ? 'readonly' : ''}>
         ${nickLocked ? html`<div class="hint">Nick z tvého účtu.</div>` : ''}</label>
       ${isEv ? '' : html`
-        ${[1, 2, 3].map(i => html`<label class="f"><span>Beyblade ${i}</span>
-          <input class="input" name="bey${i}" required maxlength="60" value="${v['bey' + i] || ''}" placeholder="${['např. Dran Sword 3-60F', 'např. Hells Scythe 4-60T', 'např. Wizard Arrow 4-80B'][i - 1]}" autocomplete="off"></label>`)}
-        <p class="hint">Každý beyblade musí být jiný. Do startu turnaje můžeš registraci kdykoliv upravit.</p>`}
+        ${deckEditor(v.deck)}
+        <p class="hint">Piš a vyber díl z nabídky – jde to i zkratkou (GF, HN…). Každý beyblade musí být jiný. Do startu turnaje můžeš registraci kdykoliv upravit.</p>`}
       <div class="row">
         ${existing ? html`<button type="button" class="btn grow" data-act="cancel">Zpět</button>` : ''}
         <button class="btn primary grow">${existing ? 'Uložit' : isEv ? 'Přihlásit se' : 'Zaregistrovat se'}</button>
       </div>
     </form>`)
 
+  const getDeck = isEv ? null : bindDeckEditor(box.querySelector('[data-deck]'), cat)
   on(box, 'click', '[data-act=cancel]', () => reload())
   on(box, 'submit', '#f-reg', async (e, f) => {
     e.preventDefault()
     const data = formData(f)
     const row = { nick: data.nick.trim() }
-    if (!isEv) Object.assign(row, { bey1: data.bey1.trim(), bey2: data.bey2.trim(), bey3: data.bey3.trim() })
-    if (!isEv && new Set([row.bey1, row.bey2, row.bey3].map(s => s.toLowerCase())).size < 3) return toast('Každý beyblade musí být jiný.', 'err')
+    if (!isEv) {
+      try { row.deck = getDeck() } catch (err) { return toast(err.message, 'err') }
+    }
 
     if (!existing && !state.user) {
       // bez účtu → nabídni registraci, jinak pokračuj jako host
@@ -416,43 +423,59 @@ function tabBracket(box, { d }) {
 // ────────────────────────────────────────────────────────────────
 async function tabJudge(box, { d, reload }) {
   const { t } = d
+  const me = state.user?.id
   const ids = [...new Set(d.judges.map(j => j.judge_id))]
   const nicks = ids.length ? await q(sb.from('profiles').select('id,nick').in('id', ids)) : []
   const nickMap = new Map(nicks.map(n => [n.id, n.nick]))
-  const mine = d.judges.filter(j => j.judge_id === state.user?.id).map(j => j.arena)
   const arenas = Array.from({ length: t.arena_count }, (_, i) => i + 1)
   const queue = (a) => d.matches.filter(m => m.arena === a && m.status !== 'done' && m.p1_reg && m.p2_reg)
     .sort((x, y) => (y.status === 'live') - (x.status === 'live') || (x.wave || 0) - (y.wave || 0))
-  const bbxst = (m) => `${cfg.bbxstUrl}?match=${m.id}`
+  const bbxst = (m) => `${cfg.bbxstUrl}?match=${m.id}&t=${t.id}`
+  // moje arény první
+  const order = arenas.slice().sort((a, b) =>
+    (d.judges.some(j => j.arena === b && j.judge_id === me)) - (d.judges.some(j => j.arena === a && j.judge_id === me)) || a - b)
 
   mount(box, html`
-    <p class="muted">Zaber si arénu, u které budeš rozhodovat. Zápas otevřeš v BBXST přímo odsud, nebo tam naskenuješ QR kódy hráčů.</p>
-    <div class="grid2" style="margin-top:12px;grid-template-columns:repeat(auto-fill,minmax(150px,1fr))">
-      ${arenas.map(a => {
+    <p class="muted">Klepni na arénu, u které rozhoduješ. BBXST se otevře v judge módu s načtenými hráči.</p>
+    <div class="stack" style="margin-top:12px">
+      ${order.map(a => {
         const j = d.judges.find(x => x.arena === a)
-        const n = queue(a).length
-        return html`<div class="card" style="padding:12px">
-          <b class="num" style="font-size:22px;white-space:nowrap">Aréna ${a}</b>
-          <div class="small muted" style="margin:2px 0 10px">${j ? `Judge: ${nickMap.get(j.judge_id) || '?'}` : 'Volná'}${n ? html`<br><span class="faint">${n} ve frontě</span>` : ''}</div>
-          ${!j ? html`<button class="btn sm block" data-claim="${a}">Zabrat</button>`
-            : j.judge_id === state.user?.id ? html`<button class="btn sm ghost block" data-release="${a}">Uvolnit</button>` : ''}
+        const mineA = j && j.judge_id === me
+        const qa = queue(a), cur = qa[0]
+        return html`<div class="card arena-card ${mineA ? 'mine' : ''} ${cur?.status === 'live' ? 'live' : ''}">
+          <div class="arena-no num">${a}</div>
+          <div class="grow" style="min-width:0">
+            <div class="small muted">${j ? (mineA ? 'Tvoje aréna' : `Judge: ${nickMap.get(j.judge_id) || '?'}`) : 'Volná aréna'}${qa.length > 1 ? ` · další ${qa.length - 1}` : ''}</div>
+            ${cur ? html`
+              <div class="ellipsis" style="font-weight:600;font-size:17px"><span style="color:#b9d4ff">${nickOf(d, cur.p1_reg)}</span> <span class="faint">vs</span> <span style="color:#ffc2cd">${nickOf(d, cur.p2_reg)}</span></div>
+              <div class="small faint ellipsis">${matchLabel(cur, t.top_cut)}${cur.best_of > 1 ? ` · BO${cur.best_of} (${cur.p1_wins}:${cur.p2_wins})` : ''}${cur.status === 'live' ? ' · hraje se' : ' · na řadě'}</div>`
+              : html`<div class="faint">Teď tu nic nečeká</div>`}
+          </div>
+          <div class="arena-actions">
+            ${cur ? html`<button class="btn primary sm" data-go="${a}">Rozhodovat</button>` : !j ? html`<button class="btn sm" data-claim="${a}">Zabrat</button>` : ''}
+            ${mineA ? html`<button class="btn ghost sm" data-release="${a}">Uvolnit</button>` : ''}
+          </div>
         </div>`
       })}
-    </div>
-    ${mine.map(a => html`
-      <h2>Aréna ${a} – fronta</h2>
-      ${queue(a).length ? html`<div class="list">${queue(a).map((m, i) => html`
-        <div class="li">
-          <div class="grow">
-            <div style="font-weight:600"><span style="color:#b9d4ff">${nickOf(d, m.p1_reg)}</span> <span class="faint">vs</span> <span style="color:#ffc2cd">${nickOf(d, m.p2_reg)}</span></div>
-            <div class="small faint">${matchLabel(m, t.top_cut)}${m.best_of > 1 ? ` · BO${m.best_of} (${m.p1_wins}:${m.p2_wins})` : ''}${m.status === 'live' ? ' · hraje se' : i === 0 ? ' · na řadě' : ''}</div>
-          </div>
-          <a class="btn sm ${i === 0 || m.status === 'live' ? 'primary' : ''}" href="${bbxst(m)}">Otevřít v BBXST</a>
-        </div>`)}</div>` : html`<div class="empty">Na aréně ${a} teď nic nečeká.</div>`}`)}`)
+    </div>`)
 
+  const claim = async (a) => {
+    if (d.judges.some(j => j.arena === a)) return
+    try { await q(sb.from('arena_judges').insert({ tournament_id: t.id, arena: a })) }
+    catch (err) { if (!/duplicate|arena_judges_pkey/.test(err.message)) throw err }
+  }
+  on(box, 'click', '[data-go]', async (e, b) => {
+    const a = Number(b.dataset.go)
+    const cur = queue(a)[0]
+    if (!cur) return
+    await busy(b, async () => {
+      try { await claim(a) } catch (err) { toast(errMsg(err), 'err') }
+      location.href = bbxst(cur)
+    })
+  })
   on(box, 'click', '[data-claim]', async (e, b) => {
-    try { await q(sb.from('arena_judges').insert({ tournament_id: t.id, arena: Number(b.dataset.claim) })); reload() }
-    catch (err) { toast(/duplicate|arena_judges_pkey/.test(err.message) ? 'Arénu už mezitím zabral někdo jiný.' : errMsg(err), 'err'); reload() }
+    try { await claim(Number(b.dataset.claim)); reload() }
+    catch (err) { toast(errMsg(err), 'err'); reload() }
   })
   on(box, 'click', '[data-release]', async (e, b) => {
     try { await q(sb.from('arena_judges').delete().eq('tournament_id', t.id).eq('arena', Number(b.dataset.release))); reload() }

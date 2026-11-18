@@ -14,6 +14,8 @@ js/config.js          ← sem patří adresa a klíč Supabase
 js/core.js            turnajová logika (párování, pořadí, pavouk)
 js/views/*.js         obrazovky BBXU
 supabase/schema.sql   databáze – spustit jednou v Supabase
+supabase/02-parts.sql katalog dílů Beyblade X + kontrola registrací
+js/parts.js           našeptávač dílů a editor decku
 vendor/               knihovny (Supabase, QR) – běží i bez CDN
 tests/                testy (na web nenahrávat)
 ```
@@ -24,6 +26,8 @@ tests/                testy (na web nenahrávat)
 
 1. Na [supabase.com](https://supabase.com) založ projekt (Free). Region **Central EU (Frankfurt)**.
 2. **SQL Editor → New query** → vlož celý `supabase/schema.sql` → **Run**.
+   Pak stejně spusť `supabase/02-parts.sql` (katalog dílů). Pokud už máš `schema.sql`
+   spuštěné, pusť jen `02-parts.sql`. Nic se nesmaže.
 3. **Authentication → Sign In / Providers**
    - Email: zapnutý.
    - **Allow anonymous sign-ins: zapnout** (registrace hostů bez účtu).
@@ -65,9 +69,28 @@ Od té chvíle přidělíš role v BBXU: **Hráči → profil → Funkce**.
 
 ---
 
+## Katalog dílů
+Hráči si beyblady skládají z dílů, které jsou v tabulce **bey_parts**. Při psaní se nabízejí
+jen existující díly a databáze jiné nepustí. Název beye se složí sám: např. *Dran Sword 3-60F*,
+*Dran Brave S6-60V*, *Knight Fortress GV8-70UN*.
+
+Nový díl přidáš v **Table Editor → bey_parts → Insert row**:
+
+| sloupec | co vyplnit |
+|---|---|
+| `category` | `blade` (celý BX/UX blade), `lock_chip`, `main_blade`, `metal_blade`, `over_blade`, `assist_blade`, `ratchet`, `bit` |
+| `name` | oficiální název, např. `Dran Strike`, `4-50`, `Free Flat` |
+| `abbr` | zkratka do názvu beye – u bitů (`F`, `GF`), assist bladů (`S`) a over bladů (`G`). Bez zkratky se píše celé jméno. |
+| `aliases` | jiná jména, podle kterých se má díl najít, např. `{"Scythe Incendio"}` (Hasbro) |
+| `integrated` | `true`, když má blade nebo bit pevně spojený ratchet (Hells Nether, Turbo…) – ratchet se pak nevyplňuje |
+| `active` | `false` díl skryje z nabídky (stávající registrace zůstanou) |
+
+Ostatní sloupce nech prázdné. U pár nových bitů (Narrow, Zap, Jolt…) jsem zkratku nenašel,
+tak ji případně doplň. Telefony si seznam pamatují, nový díl uvidí po znovunačtení BBXU.
+
 ## Jak probíhá turnaj
 
-**Hráč** otevře turnaj a zaregistruje se: nick + 3 beyblady. Bez účtu se ho aplikace nejdřív zeptá,
+**Hráč** otevře turnaj a zaregistruje se: nick + 3 beyblady poskládané z dílů. Bez účtu se ho aplikace nejdřív zeptá,
 jestli si nechce založit účet. Dostane vstupenku s QR, registraci může měnit až do startu.
 Host si účet může založit i později a turnaje se mu převedou.
 
@@ -93,13 +116,19 @@ zápas → los.
 Výchozí BO3: grand finále, finále losers, semifinále losers. Ostatní zápasy jsou BO1.
 
 ## Judge v BBXST
-1. V BBXU se přihlas účtem s funkcí Judge a v turnaji (záložka *Judge*) si zaber arénu.
-2. *Otevřít v BBXST*, nebo v BBXST táhni tlačítko **DRAG TO JUDGE** (nad resetem).
-3. Zápas načteš naskenováním QR obou hráčů (📷 na obou stranách) nebo přes *VYBRAT ZÁPAS*
-   (zvolíš arénu a potvrdíš). QR ze dvou různých turnajů BBXST odmítne.
-4. Po každém tažení bodu vybereš, který bey skóroval a který prohrál. Poslední bey v kole se
-   doplní sám. *= REMÍZA* zapíše souboj bez bodů. *REVERT* vrací i zápis beyů.
+1. V BBXU se přihlas účtem s funkcí Judge a otevři běžící turnaj → záložka **Judge**.
+   Vidíš všechny arény a na každé aktuální zápas.
+2. Klepni na **Rozhodovat** u své arény. Aréna se ti zabere a BBXST se otevře rovnou
+   v judge módu s načtenými hráči.
+   Bez BBXU: v BBXST táhni **DRAG TO JUDGE** (nad resetem) a naskenuj QR obou hráčů (📷),
+   nebo použij *VYBRAT ZÁPAS*. QR ze dvou různých turnajů BBXST odmítne.
+3. Při stavu 0:0 je nahoře uprostřed tlačítko **⇄**, které prohodí hráče na stranách
+   (podle toho, kdo kde u stolu stojí). Po prvním souboji zmizí.
+4. Po každém tažení bodu vybereš, který bey skóroval a který prohrál. Poslední bey v sadě se
+   doplní sám. Po dohrání sady tří beyů vyskočí **OTOČ ARÉNU**.
+   *= REMÍZA* zapíše souboj bez bodů. *REVERT* vrací i zápis beyů.
 5. Na 7 bodech *ODESLAT VÝSLEDEK*. U BO3 se plocha vynuluje na další hru.
+   Po zápase BBXST nabídne další zápas na stejné aréně. **◂ BBXU** vrací do turnaje.
    Bez signálu se výsledek uloží v telefonu a odešle sám, jakmile je síť zpátky.
 
 Casual mód (výchozí) je původní počítadlo bez odesílání.

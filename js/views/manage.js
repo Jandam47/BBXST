@@ -6,6 +6,7 @@ import { sb, rpc, q, errMsg } from '../supa.js'
 import { html, mount, on, formData, toast, modal, busy, confirmBox, plural } from '../ui.js'
 import { pairSwissRound, makeRng, buildDoubleElim, computePlacements, DEFAULT_BO, matchLabel } from '../core.js'
 import { standingsFor, nickOf } from './tournament.js'
+import { loadParts, deckEditor, bindDeckEditor } from '../parts.js'
 
 export function renderManage(box, { d, reload }) {
   const { t } = d
@@ -35,15 +36,11 @@ export function renderManage(box, { d, reload }) {
           <button class="btn primary" data-act="start" ${active.length < 2 ? 'disabled' : ''}>Spustit turnaj</button></div>
         <p class="hint">Po startu se uzavře registrace a hráči už nemůžou měnit beyblady.</p>
       </div>
-      <form class="card stack" id="f-walkin" data-keep>
+      <div class="card stack">
         <h3>Přidat hráče bez telefonu</h3>
-        <label class="f"><span>Nick</span><input class="input" name="nick" required minlength="2" maxlength="24"></label>
-        <div class="grid2" style="grid-template-columns:1fr 1fr 1fr">
-          ${[1, 2, 3].map(i => html`<input class="input" name="bey${i}" required placeholder="Beyblade ${i}" maxlength="60">`)}
-        </div>
-        <button class="btn">Přidat</button>
-        <p class="hint">QR kód takového hráče najdeš v záložce Hráči → ⋯.</p>
-      </form>`)
+        <p class="hint">Zapíšeš ho sám, jeho QR kód pak najdeš v záložce Hráči → ⋯.</p>
+        <button class="btn" data-act="walkin">Přidat hráče</button>
+      </div>`)
     }
   }
 
@@ -131,14 +128,7 @@ export function renderManage(box, { d, reload }) {
     if (!await confirmBox('Smazat včetně všech registrací? Nejde to vrátit.', { ok: 'Smazat', danger: true })) return
     try { await q(sb.from('tournaments').delete().eq('id', t.id)); toast('Smazáno.', 'ok'); location.hash = '#/' } catch (e) { toast(errMsg(e), 'err') }
   })
-  on(box, 'submit', '#f-walkin', async (e, f) => {
-    e.preventDefault()
-    const v = formData(f)
-    await busy(f.querySelector('button'), () => act(async () => {
-      await rpc('add_walkin', { p_tournament: t.id, p_nick: v.nick.trim(), p_bey1: v.bey1.trim(), p_bey2: v.bey2.trim(), p_bey3: v.bey3.trim() })
-      f.reset()
-    }, `${v.nick} přidán.`))
-  })
+  on(box, 'click', '[data-act=walkin]', (e, b) => busy(b, () => walkinModal(d, reload)))
   on(box, 'change', '[data-arena]', (e, s) => act(() => q(sb.from('matches').update({ arena: Number(s.value) }).eq('id', s.dataset.arena)), 'Aréna změněna.'))
   on(box, 'click', '[data-result]', (e, b) => resultModal(d, d.matches.find(m => m.id === b.dataset.result), reload))
   on(box, 'click', '[data-reset]', async (e, b) => {
@@ -296,5 +286,32 @@ function finishModal(d, reload) {
         catch (err) { toast(errMsg(err), 'err') }
       })
     }),
+  })
+}
+
+// ── hráč bez telefonu ───────────────────────────────
+async function walkinModal(d, reload) {
+  let cat
+  try { cat = await loadParts() } catch (e) { return toast(errMsg(e), 'err') }
+  modal(html`
+    <h2>Hráč bez telefonu</h2>
+    <form class="stack" id="f-walkin">
+      <label class="f"><span>Nick</span><input class="input" name="nick" required minlength="2" maxlength="24"></label>
+      ${deckEditor()}
+      <button class="btn primary block">Přidat do turnaje</button>
+    </form>`, {
+    onMount: (box, close) => {
+      const getDeck = bindDeckEditor(box.querySelector('[data-deck]'), cat)
+      on(box, 'submit', '#f-walkin', async (e, f) => {
+        e.preventDefault()
+        const nick = formData(f).nick.trim()
+        let deck
+        try { deck = getDeck() } catch (err) { return toast(err.message, 'err') }
+        await busy(f.querySelector('button.primary'), async () => {
+          try { await rpc('add_walkin', { p_tournament: d.t.id, p_nick: nick, p_deck: deck }); close(); toast(`${nick} přidán.`, 'ok'); reload() }
+          catch (err) { toast(errMsg(err), 'err') }
+        })
+      })
+    },
   })
 }
