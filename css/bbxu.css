@@ -82,6 +82,7 @@ main { max-width: 760px; margin: 0 auto; padding: 18px 16px calc(var(--nav-h) + 
 .tabbar a .ico { font-size: 20px; line-height: 1; filter: grayscale(.6); }
 .tabbar a.on { color: var(--text); }
 .tabbar a.on .ico { filter: none; }
+.tabbar .ico-img { width: 24px; height: 24px; display: block; }
 .tabbar a.on::after { content: ''; width: 22px; height: 3px; border-radius: 3px; background: var(--bolt); margin-top: 2px; }
 
 @media (min-width: 980px) {
