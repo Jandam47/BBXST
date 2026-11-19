@@ -5,6 +5,7 @@ import { sb, state, rpc, q, errMsg, refreshMe, isLoggedIn } from '../supa.js'
 import { html, mount, on, formData, toast, modal, busy, confirmBox, fmtDate, raw, plural, kindLabel, finishTiles } from '../ui.js'
 import { ROLES, REGIONS, roleLevel } from '../core.js'
 import { avatarPicker } from './auth.js'
+import { communityBadges, adminRequests } from './communities.js'
 
 export async function renderMe(main) {
   if (isLoggedIn()) return render(main, [state.user.id])
@@ -66,11 +67,12 @@ function beyList(rows = []) {
 }
 
 export async function render(main, [id], ctx) {
-  const [p, stats, bs, ach] = await Promise.all([
+  const [p, stats, bs, ach, comms] = await Promise.all([
     q(sb.from('profiles').select('*').eq('id', id).maybeSingle()),
     rpc('player_stats', { p_user: id }),
     rpc('player_bey_stats', { p_user: id }).catch(() => ({})),
     rpc('player_achievements', { p_user: id }).catch(() => []),
+    rpc('player_communities', { p_user: id }).catch(() => []),
   ])
   if (ctx && !ctx.isCurrent()) return
   if (!p || !p.nick) { mount(main, html`<div class="empty">${p && id === state.user?.id ? html`<button class="btn primary" onclick="location.reload()">Dokonči profil</button>` : 'Profil nenalezen.'}</div>`); return }
@@ -91,11 +93,13 @@ export async function render(main, [id], ctx) {
         <div class="row wrap" style="margin-top:6px;gap:6px">${ROLES.filter(x => x.level > 0 && x.level <= lvl).map(x => html`<span class="pill role">${x.label}</span>`)}</div>
       </div>
     </div>
+    ${communityBadges(comms)}
     ${p.bio ? html`<p style="margin-top:14px;white-space:pre-line">${p.bio}</p>` : ''}
     ${own ? html`<div class="row wrap" style="margin-top:14px">
       <button class="btn sm" data-act="edit">Upravit profil</button>
       <button class="btn sm ghost" data-act="pw">Změnit heslo</button>
       <button class="btn sm ghost" data-act="logout">Odhlásit</button></div>` : ''}
+    ${own && state.level >= 4 ? html`<section id="admin-req" class="admin-box"></section>` : ''}
 
     <div class="stats">
       <div class="stat"><div class="v">${tours.length}</div><div class="k">${tours.length === 1 ? 'turnaj' : tours.length >= 2 && tours.length <= 4 ? 'turnaje' : 'turnajů'}</div></div>
@@ -158,6 +162,7 @@ export async function render(main, [id], ctx) {
       </a>`)}</div>` : ''}
 
     ${events.length ? html`<h2>Akce</h2><div class="list">${events.map(t => html`<a class="li" href="#/t/${t.id}"><span class="grow">${t.name}</span><span class="small faint">${kindLabel(t)} · ${fmtDate(t.starts_at)}</span></a>`)}</div>` : ''}`)
+  if (own && state.level >= 4) adminRequests(main.querySelector('#admin-req'))
 
   on(main, 'click', '#bk [data-k]', (e, b) => {
     main.querySelectorAll('#bk button').forEach(x => x.classList.toggle('on', x === b))

@@ -144,7 +144,9 @@ export const STATUS = {
   canceled: { label: 'Zrušeno', cls: 'cancel' },
 }
 export const statusPill = (t) => {
-  const s = t.kind === 'event' && t.status === 'registration' ? { label: 'Přihlašování', cls: 'reg' } : STATUS[t.status] || STATUS.registration
+  const s = t.event_type === 'community' && t.status === 'registration' ? { label: 'Otevřený trénink', cls: 'live' }
+    : t.event_type === 'community' && t.status === 'finished' ? { label: 'Trénink skončil', cls: 'done' }
+    : t.kind === 'event' && t.status === 'registration' ? { label: 'Přihlašování', cls: 'reg' } : STATUS[t.status] || STATUS.registration
   return html`<span class="pill ${s.cls}">${s.label}</span>`
 }
 
@@ -171,7 +173,8 @@ setInterval(tickCountdowns, 1000)
 
 // druh akce
 export const EVENT_TYPES = [['training', 'Trénink'], ['fashion', 'Fashion'], ['other', 'Ostatní']]
-export const kindLabel = (t) => t.kind !== 'event' ? 'Turnaj' : t.event_type === 'fashion' ? 'Fashion' : t.event_type === 'other' ? 'Akce' : 'Trénink'
+export const kindLabel = (t) => t.kind !== 'event' ? 'Turnaj' : t.event_type === 'fashion' ? 'Fashion' : t.event_type === 'other' ? 'Akce'
+  : t.event_type === 'community' ? `Komunitní trénink${t.community ? ` · ${t.community}` : ''}` : 'Trénink'
 
 // druhy endů (BBXST: +3 xtreme, +2 burst / over, +1 spin)
 export const FINISHES = [['xtreme', 'Xtreme', 3], ['burst', 'Burst', 2], ['over', 'Over', 2], ['spin', 'Spin', 1]]

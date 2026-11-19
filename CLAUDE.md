@@ -10,6 +10,12 @@ Komunikuj **česky**, celé UI je česky.
   počítadlo; judge mód = načtení zápasu (QR / aréna / `?match=<id>&t=<turnaj>` z BBXU), výběr beyů po každém
   bodu (po přetažení +2 judge nejdřív vybere OVER / BURST), remíza, prohození stran při 0:0 (⇄), hláška „OTOČ ARÉNU“ po každé sadě 3 soubojů, odeslání přes RPC
   `submit_game` s offline frontou (`client_id` zajišťuje, že se hra nezapočítá dvakrát).
+  **Training mód** (komunitní trénink): zelené tahací tlačítko TRAINING nad judge (jen když je hráč na otevřeném
+  tréninku, `my_training`) → kolečko hráčů → výzva (`training_challenge`, soupeř potvrdí) → oba telefony zapisují
+  souboje (`training_battle` s `client_id`, čekající souboje se dopošlou), stav `training_state` (realtime na
+  `training_matches` + polling 4 s). S načteným soupeřem je tlačítko SETUP: mód 3v3/3v1/1v3/1v1 (v DB z pohledu
+  p1/p2), body na hru číslo nebo ∞ (změna = nová hra), sestavy z decků obou hráčů nebo nový bey z dílů.
+  Odkaz z BBXU: `bbxst.html?training=<id>`; rozehraný trénink se obnoví z `localStorage.bbxst_training`.
   Design BBXST se nemění – Adam ho chce zachovat.
 - `BBXST.html` (velká písmena) je **jen přesměrování** na `bbxst.html` kvůli starým odkazům. Neupravovat.
 - `js/core.js` – čistá turnajová logika (párování, pořadí, pavouk, umístění) – testovatelná v Node.
@@ -19,7 +25,7 @@ Komunikuj **česky**, celé UI je česky.
   (zdroj kyoganken.sakura.ne.jp/beyx/weight1.htm), Hasbro názvy jsou v `aliases`. Nové díly = nový SQL soubor
   s `insert … on conflict do update` (viz `07-parts-update.sql`); web se kvůli dílům nasazovat nemusí.
 - `js/config.js` – **obsahuje Adamovy živé klíče Supabase. Nikdy ho neměň ani nepřepisuj.**
-- `supabase/schema.sql`, `02-parts.sql`, `03-live-score.sql`, `04-security-hardening.sql`, `05-judge-handover.sql`, `06-formats-stats.sql`, `07-parts-update.sql`, `08-judge-per-match.sql`, `09-pause.sql`, `10-fashion.sql`, `11-finishes.sql`, `12-rated.sql` – databáze (spuštěné v produkci, nové soubory
+- `supabase/schema.sql`, `02-parts.sql`, `03-live-score.sql`, `04-security-hardening.sql`, `05-judge-handover.sql`, `06-formats-stats.sql`, `07-parts-update.sql`, `08-judge-per-match.sql`, `09-pause.sql`, `10-fashion.sql`, `11-finishes.sql`, `12-rated.sql`, `13-communities.sql` – databáze (spuštěné v produkci, nové soubory
   spouští Adam). Živé skóre: BBXST v judge módu posílá po každém bodu `live_score` → `matches.live_p1/p2`
   (TV rozpis, vstupenka, seznamy); trigger `bbx_clear_live` ho maže po uložení hry.
   Rozehraná hra: BBXST posílá s `live_score` i `p_state` → `matches.live_state` (souboje v orientaci p1/p2,
@@ -59,6 +65,17 @@ Komunikuj **česky**, celé UI je česky.
   místa postupně: 4.+ hned po `reveal_at`, 3. za 5 s, 2. za 10 s, 1. za 15 s (TV vyhlášení), body až na konci.
   Achievementy 1.–3. místa: `player_achievements` (profil); turnajové tituly se počítají jen z turnajů.
   Notifikace (jdi hodnotit / jsi na molu / rozstřel / boss) v `app.js` → `watchFashion`.
+- Komunity (13, `js/views/communities.js`, `#/communities`, `#/c/<id>`, přepínač Hráči | Komunity): zakládá
+  organizátor+ (`community_create`), schvaluje hlavní admin v profilu (`admin_requests`, `community_review`).
+  Zakladatel = leader, jmenuje zástupce (`community_set_role` 'sub'); členy přijímá leader i zástupce
+  (`community_decide`). Role v profilu (`player_communities`). Tabulky jen přes RPC (bez select policy).
+  **Komunitní trénink** = akce `event_type 'community'` + `community_id` (`js/views/training.js`, tournament.js
+  přesměruje); zakládá leader/zástupce (`community_training_create`, + Trénink na hlavní stránce, „Komunitní“ v + Akce,
+  stránka komunity), nezapočítává se do ratingu. Přidat se může člen nebo pozvaný (`training_invite`), jen účet,
+  jen jeden otevřený trénink naráz (hlídá registrační trigger), deck 1–3 beye s opakováním dílů.
+  `bbx_can_manage` pustí leadera/zástupce k řízení tréninku. Výzvy `training_matches`, souboje `training_battles`
+  (p1/p2 + díly beyů). Historie `training_history`, comba `training_combos` (me / all), meta komunity
+  `community_meta` (stránka Meta → Komunita, `#/meta?c=<id>`), notifikace výzev v app.js `watchTraining`.
 - `vendor/` – supabase-js, qrcode-generator, html5-qrcode (lokálně, kvůli slabé síti v hale).
 - `sw.js` – service worker (síť první, cache jako záloha).
 - Vzhled: cyberpunk (černé pozadí s mřížkou, azurová `--cyan` + purpurová `--magenta`, žlutá `--bolt` jen pro
@@ -114,8 +131,9 @@ Potřebují lokální PostgreSQL 16, Node a pro UI Python Playwright + Chrome a 
 - `node tests/core.test.mjs` – logika (párování 4–64 hráčů, pavouk 2–32 s byes, umístění).
 - `tests/reset_db.sh && node tests/db.test.mjs` – celý turnaj proti DB se stubem Supabase (role, RLS, RPC).
 - `node tests/fashion.test.mjs` – fashion show v DB (po reset_db / ui-up): judge, hodnocení, rozstřel, boss, vyhlášení.
+- `node tests/community.test.mjs` – komunity a komunitní trénink v DB (schválení, členové, trénink, výzvy, souboje, meta).
 - `tests/ui-up.sh && python3 tests/ui_smoke.py && python3 tests/bbxst_judge.py && python3 tests/test_tools.py` – proklik v Chrome
-  (`tests/judge_handover.py`, `tests/formats_stats.py`, `tests/arenas_status.py` a `tests/fashion_ui.py` každý zvlášť po čerstvém `ui-up.sh`: převzetí judge;
+  (`tests/judge_handover.py`, `tests/formats_stats.py`, `tests/arenas_status.py`, `tests/fashion_ui.py`, `tests/community_ui.py` a `tests/bbxst_training.py` každý zvlášť po čerstvém `ui-up.sh`: převzetí judge;
   deathmatch přes testovací nástroje až po finále, vyhodnocení, meta, profil)
   (poslední: zkušební turnaj 16 hráčů přes testovací nástroje až po ukončení).
 Když měníš SQL, přidej nový soubor i do `tests/reset_db.sh`. Po změně logiky nebo DB pusť testy.

@@ -639,6 +639,64 @@ body.judge .judgeBar { display: flex; }
 body.judge.has-match .judgeBar .drawBtn { display: block; }
 
 /* výběr beyů po bodu */
+/* ═════════════ TRAINING MÓD (komunitní trénink) ═════════════ */
+.trainBtn { bottom: 172px; display: none; }
+body.has-training .trainBtn { display: flex; }
+body.judge .trainBtn { display: none; }
+body.training .modeBtn:not(.trainBtn) { display: none; }
+body.training .trainBtn { color: var(--green); border-color: rgba(0,255,157,0.45); box-shadow: 0 0 22px rgba(0,255,157,0.3); background: #00160e; }
+.screenMode.train { box-shadow: inset 0 0 150px rgba(0,255,157,0.35); }
+.judgeBar.trainBar { display: none; }
+body.training .judgeBar.trainBar { display: flex; }
+body.judge .judgeBar.trainBar { display: none; }
+.trainBar .judgeTag { color: var(--green); border-color: rgba(0,255,157,0.35); background: rgba(0,22,14,0.85); }
+body.training .trainBar .drawBtn { display: none; }
+body.training.has-tmatch .trainBar .drawBtn { display: block; }
+.trOverlay { position: fixed; inset: 0; z-index: 205; background: rgba(2,6,9,0.95); backdrop-filter: blur(8px);
+  display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 12px; padding: 14px; overflow: auto; }
+.trOverlay > :first-child { margin-top: auto; } .trOverlay > :last-child { margin-bottom: auto; }
+.trOverlay.hidden { display: none; }
+.trTitle { font-family: 'Orbitron', monospace; font-size: clamp(13px, 2.2vw, 18px); letter-spacing: 3px; color: var(--green); text-align: center; }
+.trSub { font-size: 14px; color: rgba(200,240,255,0.6); text-align: center; }
+/* kolečko hráčů */
+.trRing { position: relative; width: min(78vh, 92vw, 520px); aspect-ratio: 1; flex: none; }
+.trRing::before { content: ""; position: absolute; inset: 14%; border-radius: 50%; border: 1px dashed rgba(0,255,157,0.25); }
+.trCenter { position: absolute; inset: 32%; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  text-align: center; border: 1px solid rgba(0,255,157,0.35); box-shadow: 0 0 30px rgba(0,255,157,0.15) inset; padding: 6px; }
+.trCenter b { font-family: 'Orbitron', monospace; font-size: clamp(10px, 1.8vw, 14px); letter-spacing: 2px; color: var(--green); }
+.trCenter small { font-size: 12px; color: rgba(200,240,255,0.55); margin-top: 4px; }
+.trP { position: absolute; transform: translate(-50%, -50%); min-width: 92px; max-width: 34%; padding: 10px 12px; border-radius: 14px; cursor: pointer;
+  font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: clamp(15px, 2.2vw, 19px); color: white; background: #0a1520;
+  border: 1px solid #1a3a4a; box-shadow: 0 0 16px rgba(0,255,255,0.12); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.trP small { display: block; font-family: 'Orbitron', monospace; font-size: 8px; letter-spacing: 1.5px; margin-top: 2px; opacity: .8; }
+.trP.active { border-color: var(--green); color: var(--green); box-shadow: 0 0 22px rgba(0,255,157,0.35); }
+.trP.incoming { border-color: var(--gold); color: var(--gold); box-shadow: 0 0 22px rgba(255,215,0,0.35); animation: trPulse 1.2s ease-in-out infinite; }
+.trP.outgoing { opacity: .7; border-style: dashed; }
+@keyframes trPulse { 50% { box-shadow: 0 0 36px rgba(255,215,0,0.6); } }
+.trBtns { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+/* setup */
+.trSetup { width: min(920px, 100%); display: flex; flex-direction: column; gap: 10px; }
+.trRow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.trRow > span { font-family: 'Orbitron', monospace; font-size: 10px; letter-spacing: 2px; color: rgba(200,240,255,0.6); width: 64px; }
+.trOpt { font-family: 'Orbitron', monospace; font-size: 12px; letter-spacing: 1px; padding: 8px 14px; border-radius: 10px; cursor: pointer;
+  background: #0a1520; color: var(--cyan); border: 1px solid #1a3a4a; }
+.trOpt.on { color: #00160e; background: var(--green); border-color: var(--green); box-shadow: 0 0 18px rgba(0,255,157,0.45); }
+.trWin { font-family: 'Orbitron', monospace; font-size: 22px; color: white; min-width: 52px; text-align: center; }
+.trCols { display: flex; gap: clamp(10px, 3vw, 30px); }
+.trCol { flex: 1; display: flex; flex-direction: column; gap: 6px; padding: 8px 10px; border-radius: 14px; border: 1px solid #0e2a3a; min-width: 0; }
+.trCol h4 { font-family: 'Orbitron', monospace; font-size: 11px; letter-spacing: 2px; text-align: center; }
+.trCol.left h4 { color: var(--cyan); } .trCol.right h4 { color: var(--red); }
+.trSlot { font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: clamp(14px, 2vw, 18px); padding: 6px 10px; border-radius: 10px; cursor: pointer;
+  background: #0a1520; color: white; border: 1px solid #1a3a4a; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.trSlot small { font-family: 'Orbitron', monospace; font-size: 8px; letter-spacing: 1.5px; color: rgba(200,240,255,0.45); display: block; }
+.trSlot.empty { color: rgba(200,240,255,0.4); border-style: dashed; }
+.trList { display: flex; flex-direction: column; gap: 8px; width: min(560px, 100%); max-height: 56vh; overflow: auto; }
+.trNew { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; width: min(620px, 100%); }
+.trNew label { display: flex; flex-direction: column; gap: 4px; font-family: 'Orbitron', monospace; font-size: 9px; letter-spacing: 1.5px; color: rgba(200,240,255,0.6); }
+.trNew input { font-family: 'Rajdhani', sans-serif; font-size: 18px; font-weight: 600; padding: 10px; border-radius: 10px; background: #0a1520; color: white; border: 1px solid #1a3a4a; }
+.trNew .full { grid-column: 1 / -1; }
+.trNew [hidden] { display: none; }
+
 .pickOverlay { position: fixed; inset: 0; z-index: 210; background: rgba(2,6,9,0.94); backdrop-filter: blur(8px);
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 16px; }
 .pickOverlay.hidden { display: none; }
@@ -907,6 +965,11 @@ body.judge.has-match.can-swap .swapBtn { display: flex; }
   <span class="mode-label" id="modeLabel">JUDGE</span>
 </div>
 <div id="screenMode" class="screenMode"></div>
+<!-- TRAINING (táhni = komunitní trénink; s načteným soupeřem = setup) -->
+<div class="modeBtn trainBtn" id="trainBtn" aria-label="Training mód">
+  <span class="drag-label">DRAG TO</span>
+  <span class="mode-label" id="trainLabel">TRAINING</span>
+</div>
 
 <!-- JUDGE BAR -->
 <button class="swapBtn" id="swapBtn" onclick="swapSides()" aria-label="Prohodit strany hráčů">
@@ -921,6 +984,15 @@ body.judge.has-match.can-swap .swapBtn { display: flex; }
   <button class="judgeBtn drawBtn" id="drawBtn" onclick="openPicker(0, 0)">= REMÍZA</button>
   <button class="judgeBtn" id="judgeMatchBtn" onclick="openManualMatch()">VYBRAT ZÁPAS</button>
 </div>
+
+<div class="judgeBar trainBar" id="trainBar">
+  <button class="judgeTag" id="trainTag" onclick="trBackToBBXU()">◂ BBXU</button>
+  <div class="judgeInfo" id="trainInfo">Vyber soupeře</div>
+  <button class="judgeBtn drawBtn" onclick="openPicker(0, 0)">= REMÍZA</button>
+  <button class="judgeBtn" id="trainBtnBar" onclick="trPrimary()">HRÁČI</button>
+</div>
+<div class="trOverlay hidden" id="trCircle"></div>
+<div class="trOverlay hidden" id="trSetup"></div>
 
 <!-- VÝBĚR BEYŮ -->
 <div class="pickOverlay hidden" id="pickOverlay">
@@ -1055,11 +1127,13 @@ function addScore(p, pts, battle) {
 
 function subtractScore(p) {
   if (judgeHasMatch()) return showOverlay("V JUDGE MÓDU POUŽIJ REVERT", "xtreme")
+  if (trainingMode) return showOverlay("V TRÉNINKU POUŽIJ REVERT", "xtreme")
   if (p === 1 && score1 > 0) addScore(1, -1)
   if (p === 2 && score2 > 0) addScore(2, -1)
 }
 
 function revert() {
+  if (trainingMode) return trUndo()
   const h = history.pop()
   if (!h) return
   if (h.battle) { judge.battles.pop(); renderJudgePlayers() }   // judge: zahoď i zápis souboje (vč. remízy)
@@ -1159,6 +1233,7 @@ function showOverlay(text, cls) {
    – oba mají 0     → odhlásí i naskenované hráče
 ══════════════════════════════════════════════ */
 function resetScore() {
+  if (trainingMode) return showOverlay("V TRÉNINKU POUŽIJ REVERT", "xtreme")
   const clearPlayers = score1 === 0 && score2 === 0
 
   score1 = score2 = 0
@@ -1677,11 +1752,11 @@ function takenOver(msg) {
 function jShow(html, cls = "") { const b = document.getElementById("jBox"); b.className = "jBox " + cls; b.innerHTML = html; document.getElementById("jOverlay").classList.remove("hidden") }
 function jHide() { document.getElementById("jOverlay").classList.add("hidden") }
 function jAlert(html) {
-  jShow(`<h3>JUDGE</h3><p>${html}</p><div class="jRow"><button class="qr-btn confirm" onclick="jHide()">OK</button></div>`)
+  jShow(`<h3>${typeof trainingMode !== "undefined" && trainingMode ? "TRÉNINK" : "JUDGE"}</h3><p>${html}</p><div class="jRow"><button class="qr-btn confirm" onclick="jHide()">OK</button></div>`)
 }
 function jConfirm(html, okText = "POTVRDIT") {
   return new Promise(res => {
-    jShow(`<h3>JUDGE</h3><p>${html}</p><div class="jRow">
+    jShow(`<h3>${typeof trainingMode !== "undefined" && trainingMode ? "TRÉNINK" : "JUDGE"}</h3><p>${html}</p><div class="jRow">
       <button class="qr-btn cancel" id="jNo">ZPĚT</button><button class="qr-btn confirm" id="jYes">${okText}</button></div>`)
     document.getElementById("jYes").onclick = () => { jHide(); res(true) }
     document.getElementById("jNo").onclick = () => { jHide(); res(false) }
@@ -1727,6 +1802,7 @@ function clearBoard() {
 }
 
 async function enterJudge(silent) {
+  if (trainingMode) exitTraining(true)
   if (!sb) { jAlert("Judge mód potřebuje propojení s BBXU – vyplň <b>js/config.js</b>."); return false }
   const { data: { session } } = await sb.auth.getSession()
   if (!session || session.user.is_anonymous) {
@@ -1792,11 +1868,12 @@ function renderJudgeBar() {
 
 /* ── hráči a jejich beyblady ── */
 function cycleUsed(side) {
+  if (trainingMode) return []
   const start = judge.battles.length - (judge.battles.length % 3)
   return judge.battles.slice(start).map(b => b.beys[side]).filter(Boolean)
 }
 function renderJudgePlayers() {
-  if (!judgeMode) return
+  if (!judgeMode && !trainingMode) return
   for (const side of [1, 2]) {
     const p = judge.sides[side]
     const el = document.getElementById(side === 1 ? "player1Info" : "player2Info")
@@ -1911,6 +1988,7 @@ async function passJudge() {
 /* ── prohození stran před začátkem hry ── */
 function swapSides() {
   if (!canSwap()) return
+  if (trainingMode) { tr.leftSlot = 3 - tr.leftSlot; trRender(); if (vibrateEnabled) navigator.vibrate?.(30); return showOverlay(`${player1Name} ⇄ ${player2Name}`, "win") }
   judge.leftSlot = 3 - judge.leftSlot
   ;[judge.sides[1], judge.sides[2]] = [judge.sides[2], judge.sides[1]]
   ;[player1Name, player2Name] = [player2Name, player1Name]
@@ -2049,6 +2127,7 @@ async function openManualMatch(pre = {}) {
 /* ── bod → výběr beyů ── */
 let pick = null
 function scoreFromDrag(side, pts) {
+  if (trainingMode) return trScore(side, pts)
   if (!judgeMode) return addScore(side, pts)
   if (!judge.match) return showOverlay("NEJDŘÍV NAČTI ZÁPAS", "xtreme")
   if (matchOver) return
@@ -2056,7 +2135,8 @@ function scoreFromDrag(side, pts) {
 }
 
 function openPicker(side, pts) {
-  if (!judgeHasMatch() || (matchOver && side !== 0)) return
+  if (trainingMode) { if (!trActive()) return }
+  else if (!judgeHasMatch() || (matchOver && side !== 0)) return
   // druh endu: +3 xtreme, +1 spin, +2 vybere judge (over / burst)
   pick = { side, pts, finish: side === 0 ? null : pts === 3 ? "xtreme" : pts === 1 ? "spin" : null, beys: { 1: null, 2: null } }
   for (const s of [1, 2]) {
@@ -2117,6 +2197,7 @@ function commitPick() {
   pick = null
   document.getElementById("pickOverlay").classList.add("hidden")
   const battle = { slot: side, pts, finish: side === 0 ? null : finish, beys: { 1: beys[1], 2: beys[2] } }
+  if (trainingMode) return trCommit(battle)
   if (side === 0) {
     judge.battles.push(battle)
     history.push({ p: 0, pts: 0, battle: true })
@@ -2132,7 +2213,7 @@ function commitPick() {
 function closePicker() { pick = null; document.getElementById("pickOverlay").classList.add("hidden") }
 
 /* ── odeslání výsledku ── */
-function canSwap() { return judgeHasMatch() && !score1 && !score2 && !judge.battles.length && !resultSent }
+function canSwap() { return trainingMode ? trActive() : judgeHasMatch() && !score1 && !score2 && !judge.battles.length && !resultSent }
 
 /* ── živé skóre pro TV rozpis a hráče ── */
 let liveTimer = null, liveSent = ""
@@ -2237,6 +2318,442 @@ async function flushJudgePending() {
   if (sent && !list.length) showOverlay("ULOŽENÉ VÝSLEDKY ODESLÁNY ✓", "win")
 }
 window.addEventListener("online", flushJudgePending)
+
+/* ══════════════════════════════════════════════
+   TRAINING MÓD – komunitní trénink z BBXU
+   Výzva (soupeř potvrdí) → oba telefony zapisují souboje (RPC training_battle),
+   stav se sdílí přes training_state (realtime + polling). Mód 3v3 / 3v1 / 1v3 / 1v1,
+   body na hru číslo nebo ∞, sestavy jdou měnit v setupu.
+══════════════════════════════════════════════ */
+const TR_KEY = "bbxst_training"
+let trainingMode = false
+const tr = { info: null, match: null, leftSlot: 1, pending: [], ch: null, poll: null, waitPoll: null, lastWin: "", parts: null, edit: null }
+const trActive = () => trainingMode && tr.match?.status === "active"
+const uuid = () => crypto.randomUUID ? crypto.randomUUID() : "xxxxxxxx-xxxx-4xxx-8xxx-xxxxxxxxxxxx".replace(/x/g, () => (Math.random() * 16 | 0).toString(16))
+const dbSlot = (side) => side === 0 ? 0 : (side === 1 ? tr.leftSlot : 3 - tr.leftSlot)
+const sideOf = (slot) => slot === 0 ? 0 : (slot === tr.leftSlot ? 1 : 2)
+const modeCounts = (mode) => { const [a, b] = String(mode || "3v3").split("v").map(Number); return { 1: a || 3, 2: b || 3 } }
+const lineupOf = (slot) => (tr.match?.settings?.lineup?.["p" + slot] || [])
+const trBeys = (slot) => lineupOf(slot).slice(0, modeCounts(tr.match?.settings?.mode)[slot]).map(b => b.name)
+
+async function trLoadInfo() {
+  if (!sb) return null
+  try {
+    const { data: { session } } = await sb.auth.getSession()
+    if (!session || session.user.is_anonymous) { tr.info = null }
+    else tr.info = await rpc("my_training")
+  } catch (e) { /* bez sítě nech poslední */ }
+  document.body.classList.toggle("has-training", !!tr.info || trainingMode)
+  return tr.info
+}
+
+function trSetModeUI() {
+  document.body.classList.toggle("training", trainingMode)
+  document.body.classList.toggle("has-tmatch", trActive())
+  document.body.classList.toggle("has-training", !!tr.info || trainingMode)
+  document.getElementById("trainLabel").textContent = !trainingMode ? "TRAINING" : trActive() ? "SETUP" : "HRÁČI"
+  document.getElementById("trainBtnBar").textContent = trActive() ? "SETUP" : "HRÁČI"
+  document.body.classList.toggle("can-swap", canSwap())
+}
+
+async function enterTraining(silent) {
+  if (judgeMode) { if (judgeHasMatch() && (score1 || score2) && !resultSent) return jAlert("Nejdřív dokonči nebo předej judge zápas."); unloadJudge(); judgeMode = false; setModeUI() }
+  if (!(await trLoadInfo())) {
+    jAlert(`Training mód je pro hráče přihlášené na <b>komunitní trénink</b>.<br>Přidej se na trénink v <a href="${BBXU_URL}#/">BBXU</a> (stejný účet jako tady).`)
+    return false
+  }
+  trainingMode = true
+  clearBoard(); resetPlayersInfo()
+  winScore = 7
+  trSetModeUI(); trRender()
+  if (!silent) showOverlay("TRAINING MÓD", "win")
+  return true
+}
+
+function exitTraining(silent) {
+  trUnload()
+  trainingMode = false
+  try { localStorage.removeItem(TR_KEY) } catch (e) {}
+  clearBoard(); resetPlayersInfo()
+  winScore = 7; document.getElementById("settingsWinVal").textContent = winScore
+  trSetModeUI()
+  document.getElementById("trCircle").classList.add("hidden")
+  document.getElementById("trSetup").classList.add("hidden")
+  if (!silent) showOverlay("CASUAL MÓD", "win")
+}
+
+function trUnload() {
+  if (tr.ch) { sb.removeChannel(tr.ch); tr.ch = null }
+  clearInterval(tr.poll); tr.poll = null
+  clearInterval(tr.waitPoll); tr.waitPoll = null
+  tr.match = null; tr.pending = []; tr.lastWin = ""
+  judge.sides = { 1: null, 2: null }; judge.battles = []
+  player1Name = ""; player2Name = ""
+}
+
+async function trLoadMatch(id, quiet) {
+  let st
+  try { st = await rpc("training_state", { p_match: id }) } catch (e) { return jAlert(esc(e.message)) }
+  if (st.status === "pending") {
+    if (st.me === 2) {
+      if (!await jConfirm(`<b>${esc(st.p1.nick)}</b> tě vyzývá na trénink. Přijmout?`, "PŘIJMOUT")) return
+      try { await rpc("training_respond", { p_match: id, p_accept: true }) } catch (e) { return jAlert(esc(e.message)) }
+      st = await rpc("training_state", { p_match: id })
+    } else return trWait(st)
+  }
+  if (st.status !== "active") { try { localStorage.removeItem(TR_KEY) } catch (e) {} ; return jAlert(st.status === "declined" ? `${esc(st.p2.nick)} výzvu odmítl.` : "Tenhle souboj už je ukončený.") }
+  if (!trainingMode && !(await enterTraining(true))) return
+  trUnload()
+  tr.match = st
+  tr.leftSlot = st.me            // já vlevo
+  try { localStorage.setItem(TR_KEY, id) } catch (e) {}
+  if (sb) tr.ch = sb.channel("trm-" + id)
+    .on("postgres_changes", { event: "UPDATE", schema: "public", table: "training_matches", filter: `id=eq.${id}` }, () => trRefresh())
+    .subscribe()
+  tr.poll = setInterval(trRefresh, 4000)
+  document.getElementById("trCircle").classList.add("hidden")
+  trSetModeUI(); trRender()
+  if (!quiet) showOverlay(`${player1Name} VS ${player2Name}`, "win")
+}
+
+// čeká, až vyzvaný potvrdí
+function trWait(st) {
+  jShow(`<h3>VÝZVA ODESLÁNA</h3><p>Čekám, až <b>${esc(st.p2.nick)}</b> potvrdí výzvu (v BBXU nebo v BBXST).</p>
+    <div class="jRow"><button class="qr-btn cancel" id="trWaitNo">ZRUŠIT VÝZVU</button><button class="qr-btn confirm" id="trWaitOk">SCHOVAT</button></div>`)
+  document.getElementById("trWaitOk").onclick = () => { jHide() }
+  document.getElementById("trWaitNo").onclick = async () => {
+    clearInterval(tr.waitPoll); tr.waitPoll = null; jHide()
+    await rpc("training_end", { p_match: st.id }).catch(() => {})
+    trOpenCircle()
+  }
+  clearInterval(tr.waitPoll)
+  tr.waitPoll = setInterval(async () => {
+    let s2; try { s2 = await rpc("training_state", { p_match: st.id }) } catch (e) { return }
+    if (s2.status === "pending") return
+    clearInterval(tr.waitPoll); tr.waitPoll = null; jHide()
+    if (s2.status === "active") { if (vibrateEnabled) navigator.vibrate?.([200, 100, 200]); trLoadMatch(st.id) }
+    else jAlert(`<b>${esc(st.p2.nick)}</b> výzvu odmítl.`)
+  }, 2000)
+}
+
+async function trRefresh() {
+  const id = tr.match?.id
+  if (!id) return
+  await trFlush()
+  try {
+    const st = await rpc("training_state", { p_match: id })
+    if (tr.match?.id !== id) return
+    const before = tr.match.last_seq
+    tr.match = st
+    if (st.status !== "active") {
+      trUnload(); trSetModeUI(); trRender()
+      try { localStorage.removeItem(TR_KEY) } catch (e) {}
+      return showOverlay("SOUBOJ UKONČEN", "win")
+    }
+    if (st.last_seq !== before) trRender(true)
+    else trRender()
+  } catch (e) { /* bez sítě – další pokus za chvíli */ }
+}
+
+// aktuální hra = stav ze serveru + čekající (neodeslané) souboje
+function trCompute() {
+  const st = tr.match, win = st.settings?.win ?? null
+  let no = st.game.no, a = st.game.s1, b = st.game.s2
+  const battles = st.battles.map(x => ({ ...x }))
+  for (const p of tr.pending) {
+    if (win != null && (a >= win || b >= win)) { no++; a = 0; b = 0; battles.length = 0 }
+    const pts = p.slot === 0 ? 0 : win == null ? p.pts : Math.min(p.pts, win - (p.slot === 1 ? a : b))
+    if (p.slot === 1) a += pts; else if (p.slot === 2) b += pts
+    battles.push({ slot: p.slot, pts, finish: p.finish, p1_bey: p.p1_bey, p2_bey: p.p2_bey, pending: true })
+  }
+  return { no, a, b, win, battles, over: win != null && (a >= win || b >= win) }
+}
+
+function trRender(fromServer) {
+  const info = document.getElementById("trainInfo")
+  trSetModeUI()
+  if (!trainingMode) return
+  if (!tr.match) {
+    s1.innerText = "0"; s2.innerText = "0"
+    info.textContent = tr.info ? `${tr.info.tournament.name} · vyber soupeře` : "Komunitní trénink"
+    resetPlayersInfo(); document.querySelectorAll(".scanBtn").forEach(b => b.classList.add("hidden"))
+    return
+  }
+  const st = tr.match, c = trCompute()
+  const L = tr.leftSlot === 1 ? st.p1 : st.p2, R = tr.leftSlot === 1 ? st.p2 : st.p1
+  player1Name = L.nick; player2Name = R.nick
+  score1 = tr.leftSlot === 1 ? c.a : c.b; score2 = tr.leftSlot === 1 ? c.b : c.a
+  s1.innerText = score1; s2.innerText = score2
+  winScore = c.win ?? 99
+  judge.sides = { 1: { nick: L.nick, beys: trBeys(tr.leftSlot) }, 2: { nick: R.nick, beys: trBeys(3 - tr.leftSlot) } }
+  judge.battles = c.battles.map(x => ({ slot: sideOf(x.slot), pts: x.pts, beys: { 1: tr.leftSlot === 1 ? x.p1_bey : x.p2_bey, 2: tr.leftSlot === 1 ? x.p2_bey : x.p1_bey } }))
+  if (!firstScoreUsed && (score1 || score2)) { firstScoreUsed = true; document.querySelectorAll(".arrowGroup").forEach(a => a.classList.add("hidden")) }
+  renderJudgePlayers()
+  info.textContent = [st.tournament?.name, (st.settings?.mode || "3v3").replace("v", " v "), `hra ${c.no}`,
+    c.win == null ? "bez limitu" : `do ${c.win}`, c.over ? "dohráno" : ""].filter(Boolean).join(" · ")
+  info.title = info.textContent
+  // výhra soupeře zapsaná z druhého telefonu
+  const key = `${st.id}:${c.no}`
+  if (c.over && tr.lastWin !== key) {
+    tr.lastWin = key
+    if (fromServer) {
+      const lw = score1 >= winScore
+      showOverlay(`${lw ? player1Name : player2Name} WINS`, "win")
+    }
+  }
+}
+
+function trScore(side, pts) {
+  if (!trActive()) { showOverlay("VYBER SOUPEŘE", "xtreme"); return trOpenCircle() }
+  openPicker(side, pts)
+}
+
+async function trCommit(battle) {
+  const slot = dbSlot(battle.slot)
+  const nameOf = (s) => battle.beys[sideOf(s)] || null
+  const idx = (s) => { const n = nameOf(s); const i = n ? lineupOf(s).findIndex(b => b.name === n) : -1; return i >= 0 ? i : null }
+  const before = trCompute()
+  const p = { client_id: uuid(), slot, pts: battle.slot === 0 ? 0 : battle.pts, finish: battle.finish || null,
+              i1: idx(1), i2: idx(2), p1_bey: nameOf(1), p2_bey: nameOf(2) }
+  tr.pending.push(p)
+  trRender()
+  const after = trCompute()
+  // hlášky jako v judge módu
+  const q = []
+  if (battle.slot === 0) q.push(["REMÍZA", "win"])
+  else {
+    if (battle.pts === 3) q.push(["XTREME FINISH", "xtreme"])
+    if (after.over && !before.over) { const lw = (battle.slot === 1); q.push([`${lw ? player1Name : player2Name} WINS`, "win"]); tr.lastWin = `${tr.match.id}:${after.no}` }
+  }
+  if (!after.over && (tr.match.settings?.mode || "3v3") === "3v3" && after.battles.length % 3 === 0 && after.battles.length) {
+    q.push(["OTOČ ARÉNU", "rotate"]); if (vibrateEnabled) navigator.vibrate?.([120, 80, 120])
+  }
+  if (q.length) showOverlaySequence(q)
+  if (battle.slot !== 0) startCooldown()
+  await trFlush()
+}
+
+let trFlushing = false
+async function trFlush() {
+  if (trFlushing || !tr.match || !tr.pending.length) return
+  trFlushing = true
+  try {
+    while (tr.pending.length) {
+      const p = tr.pending[0]
+      try {
+        const st = await rpc("training_battle", { p_match: tr.match.id, p_client_id: p.client_id, p_slot: p.slot, p_pts: p.pts,
+                                                  p_finish: p.finish, p_i1: p.i1, p_i2: p.i2 })
+        tr.pending.shift(); tr.match = st
+      } catch (e) {
+        if (isNetErr(e)) break            // pošle se při dalším pokusu
+        tr.pending.shift(); jAlert(esc(e.message))
+      }
+    }
+  } finally { trFlushing = false; trRender() }
+}
+window.addEventListener("online", trFlush)
+
+async function trUndo() {
+  if (!trActive()) return
+  if (tr.pending.length) { tr.pending.pop(); return trRender() }
+  try { tr.match = await rpc("training_undo", { p_match: tr.match.id }); tr.lastWin = ""; trRender(); showOverlay("REVERT", "win") }
+  catch (e) { jAlert(isNetErr(e) ? "Bez připojení nejde vrátit souboj." : esc(e.message)) }
+}
+
+function trPrimary() { trActive() ? trOpenSetup() : trOpenCircle() }
+function trBackToBBXU() { location.href = BBXU_URL + (tr.match?.tournament_id || tr.info?.tournament?.id ? `#/t/${tr.match?.tournament_id || tr.info.tournament.id}` : "#/") }
+
+/* ── kolečko hráčů ── */
+async function trOpenCircle() {
+  await trLoadInfo()
+  const box = document.getElementById("trCircle")
+  if (!tr.info) { box.classList.add("hidden"); return jAlert("Nejsi přihlášený na žádný otevřený komunitní trénink.") }
+  const ps = tr.info.players, ms = tr.info.matches
+  const n = Math.max(ps.length, 1)
+  box.innerHTML = `<div class="trTitle">${esc(tr.info.tournament.name)}</div>
+    <div class="trRing">
+      <div class="trCenter"><b>VYZVI HRÁČE</b><small>${esc(tr.info.tournament.community || "")}</small></div>
+      ${ps.map((p, i) => {
+        const a = -Math.PI / 2 + (2 * Math.PI * i) / n
+        const x = 50 + 41 * Math.cos(a), y = 50 + 41 * Math.sin(a)
+        const m = ms.find(z => z.opp_reg === p.reg)
+        const cls = !m ? "" : m.status === "active" ? "active" : m.incoming ? "incoming" : "outgoing"
+        const tag = !m ? "" : m.status === "active" ? "POKRAČOVAT" : m.incoming ? "VYZVAL TĚ" : "ČEKÁ"
+        return `<button class="trP ${cls}" style="left:${x}%;top:${y}%" data-reg="${p.reg}">${esc(p.nick)}${tag ? `<small>${tag}</small>` : ""}</button>`
+      }).join("")}
+    </div>
+    ${ps.length ? "" : `<div class="trSub">Na tréninku zatím nikdo další není.</div>`}
+    <div class="trBtns"><button class="qr-btn cancel" id="trCircleCasual">CASUAL</button><button class="qr-btn confirm" id="trCircleClose">ZPĚT</button></div>`
+  box.classList.remove("hidden")
+  document.getElementById("trCircleClose").onclick = () => box.classList.add("hidden")
+  document.getElementById("trCircleCasual").onclick = () => exitTraining()
+  box.querySelectorAll(".trP").forEach(b => b.onclick = async () => {
+    const reg = b.dataset.reg, m = ms.find(z => z.opp_reg === reg)
+    if (m) return trLoadMatch(m.id)
+    try {
+      const id = await rpc("training_challenge", { p_tournament: tr.info.tournament.id, p_opponent: reg })
+      box.classList.add("hidden")
+      trLoadMatch(id)
+    } catch (e) { jAlert(esc(e.message)) }
+  })
+}
+
+/* ── setup: mód, body, sestavy ── */
+function trOpenSetup() {
+  if (!trActive()) return trOpenCircle()
+  const s = tr.match.settings || {}
+  tr.edit = { mode: s.mode || "3v3", win: s.win ?? null, lineup: { 1: [...lineupOf(1)], 2: [...lineupOf(2)] }, lastWin: s.win ?? 7 }
+  trDrawSetup()
+  document.getElementById("trSetup").classList.remove("hidden")
+}
+
+function trDrawSetup() {
+  const e = tr.edit, st = tr.match, box = document.getElementById("trSetup")
+  const Ls = tr.leftSlot, Rs = 3 - tr.leftSlot
+  const cnt = modeCounts(e.mode)
+  const uiMode = `${cnt[Ls]}v${cnt[Rs]}`
+  const nick = (slot) => (slot === 1 ? st.p1 : st.p2).nick
+  const col = (slot, cls) => `<div class="trCol ${cls}"><h4>${esc(nick(slot))}</h4>
+    ${Array.from({ length: cnt[slot] }, (_, i) => { const b = e.lineup[slot][i]
+      return `<button class="trSlot ${b ? "" : "empty"}" data-slot="${slot}" data-i="${i}"><small>BEY ${i + 1}</small>${b ? esc(b.name || "nový bey") : "vybrat"}</button>` }).join("")}
+  </div>`
+  box.innerHTML = `<div class="trSetup">
+    <div class="trTitle">TRAINING SETUP</div>
+    <div class="trRow"><span>MÓD</span>${["3v3", "3v1", "1v3", "1v1"].map(m => `<button class="trOpt ${m === uiMode ? "on" : ""}" data-mode="${m}">${m.replace("v", " v ")}</button>`).join("")}</div>
+    <div class="trRow"><span>BODY</span><button class="trOpt" data-win="-1">−</button><b class="trWin">${e.win == null ? "∞" : e.win}</b><button class="trOpt" data-win="1">+</button>
+      <button class="trOpt ${e.win == null ? "on" : ""}" data-inf>∞ NEOMEZENĚ</button></div>
+    <div class="trCols">${col(Ls, "left")}${col(Rs, "right")}</div>
+    <div class="trBtns">
+      <button class="qr-btn cancel" id="trEnd">UKONČIT SOUBOJ</button>
+      <button class="qr-btn cancel" id="trBack">ZPĚT</button>
+      <button class="qr-btn confirm" id="trSave">ULOŽIT</button>
+    </div>
+    <div class="trSub">Změna módu nebo bodů začne novou hru. Sestavu měníš pro sebe i soupeře.</div>
+  </div>`
+  box.querySelectorAll("[data-mode]").forEach(b => b.onclick = () => {
+    const [l, r] = b.dataset.mode.split("v")
+    e.mode = Ls === 1 ? `${l}v${r}` : `${r}v${l}`; trDrawSetup()
+  })
+  box.querySelectorAll("[data-win]").forEach(b => b.onclick = () => {
+    const cur = e.win == null ? e.lastWin : e.win
+    e.win = Math.min(99, Math.max(1, cur + Number(b.dataset.win))); e.lastWin = e.win; trDrawSetup()
+  })
+  box.querySelector("[data-inf]").onclick = () => { e.win = e.win == null ? e.lastWin : null; trDrawSetup() }
+  box.querySelectorAll("[data-slot]").forEach(b => b.onclick = () => trChooseBey(Number(b.dataset.slot), Number(b.dataset.i)))
+  document.getElementById("trBack").onclick = () => box.classList.add("hidden")
+  document.getElementById("trEnd").onclick = async () => {
+    if (!await jConfirm("Ukončit souboj? Zapsané souboje zůstanou v historii tréninku.", "UKONČIT")) return
+    try { await rpc("training_end", { p_match: st.id }) } catch (err) { return jAlert(esc(err.message)) }
+    box.classList.add("hidden"); trUnload()
+    try { localStorage.removeItem(TR_KEY) } catch (x) {}
+    clearBoard(); trRender(); showOverlay("SOUBOJ UKONČEN", "win"); trOpenCircle()
+  }
+  document.getElementById("trSave").onclick = async () => {
+    const clean = (l) => l.filter(Boolean).map(({ name, ...rest }) => rest)
+    try {
+      const settings = await rpc("training_setup", { p_match: st.id, p_settings: { mode: e.mode, win: e.win, lineup: { p1: clean(e.lineup[1]), p2: clean(e.lineup[2]) } } })
+      tr.match.settings = settings
+      box.classList.add("hidden")
+      await trRefresh()
+      showOverlay(`${(settings.mode || "").replace("v", " v ")} · ${settings.win == null ? "∞" : "DO " + settings.win}`, "win")
+    } catch (err) { jAlert(esc(err.message)) }
+  }
+}
+
+// výběr beye do slotu: z decků obou hráčů, nebo nový z dílů
+function trChooseBey(slot, i) {
+  const st = tr.match, e = tr.edit, box = document.getElementById("trSetup")
+  const seen = new Set(), opts = []
+  for (const b of [...(st.decks?.p1 || []), ...(st.decks?.p2 || []), ...e.lineup[1], ...e.lineup[2]]) {
+    if (b?.name && !seen.has(b.name)) { seen.add(b.name); opts.push(b) }
+  }
+  box.innerHTML = `<div class="trTitle">BEY ${i + 1} · ${esc((slot === 1 ? st.p1 : st.p2).nick)}</div>
+    <div class="trList">${opts.map((b, k) => `<button class="beyPick" data-k="${k}">${esc(b.name)}</button>`).join("")}</div>
+    <div class="trBtns"><button class="qr-btn cancel" id="trChBack">ZPĚT</button><button class="qr-btn confirm" id="trChNew">+ NOVÝ BEY Z DÍLŮ</button></div>`
+  box.querySelectorAll("[data-k]").forEach(b => b.onclick = () => { e.lineup[slot][i] = opts[Number(b.dataset.k)]; trDrawSetup() })
+  document.getElementById("trChBack").onclick = trDrawSetup
+  document.getElementById("trChNew").onclick = () => trNewBey(slot, i)
+}
+
+async function trNewBey(slot, i) {
+  const box = document.getElementById("trSetup")
+  if (!tr.parts) {
+    try {
+      const { data, error } = await sb.from("bey_parts").select("category,name,abbr,aliases").eq("active", true).limit(2000)
+      if (error) throw error
+      tr.parts = data
+    } catch (err) { return jAlert("Seznam dílů se nepodařilo načíst: " + esc(err.message)) }
+  }
+  const dl = (id, cats) => `<datalist id="${id}">${tr.parts.filter(p => cats.includes(p.category)).map(p => `<option value="${esc(p.name)}">`).join("")}</datalist>`
+  let type = "bx"
+  const draw = () => {
+    box.innerHTML = `<div class="trTitle">NOVÝ BEY</div>
+      <div class="trRow">${["bx", "cx"].map(t => `<button class="trOpt ${t === type ? "on" : ""}" data-t="${t}">${t === "bx" ? "BX / UX" : "CX"}</button>`).join("")}</div>
+      <div class="trNew">
+        <label class="full" ${type === "cx" ? "hidden" : ""}>BLADE<input list="dlBlade" id="nbBlade" autocomplete="off"></label>
+        <label ${type === "bx" ? "hidden" : ""}>LOCK CHIP<input list="dlLock" id="nbLock" autocomplete="off"></label>
+        <label ${type === "bx" ? "hidden" : ""}>MAIN / METAL BLADE<input list="dlMain" id="nbMain" autocomplete="off"></label>
+        <label ${type === "bx" ? "hidden" : ""}>OVER BLADE (jen metal)<input list="dlOver" id="nbOver" autocomplete="off"></label>
+        <label ${type === "bx" ? "hidden" : ""}>ASSIST BLADE<input list="dlAssist" id="nbAssist" autocomplete="off"></label>
+        <label>RATCHET<input list="dlRatchet" id="nbRatchet" autocomplete="off"></label>
+        <label>BIT<input list="dlBit" id="nbBit" autocomplete="off"></label>
+      </div>
+      ${dl("dlBlade", ["blade"])}${dl("dlLock", ["lock_chip"])}${dl("dlMain", ["main_blade", "metal_blade"])}${dl("dlOver", ["over_blade"])}
+      ${dl("dlAssist", ["assist_blade"])}${dl("dlRatchet", ["ratchet"])}${dl("dlBit", ["bit"])}
+      <div class="trBtns"><button class="qr-btn cancel" id="nbBack">ZPĚT</button><button class="qr-btn confirm" id="nbOk">POUŽÍT</button></div>
+      <div class="trSub">Název se ověří při uložení setupu.</div>`
+    box.querySelectorAll("[data-t]").forEach(b => b.onclick = () => { type = b.dataset.t; draw() })
+    document.getElementById("nbBack").onclick = () => trChooseBey(slot, i)
+    document.getElementById("nbOk").onclick = () => {
+      const v = (id) => document.getElementById(id).value.trim()
+      const el = type === "bx" ? { type: "bx", blade: v("nbBlade"), ratchet: v("nbRatchet"), bit: v("nbBit") }
+        : { type: "cx", lock: v("nbLock"), main: v("nbMain"), over: v("nbOver"), assist: v("nbAssist"), ratchet: v("nbRatchet"), bit: v("nbBit") }
+      if (type === "bx" ? !el.blade || !el.bit : !el.lock || !el.main || !el.assist || !el.bit) return jAlert("Doplň díly ze seznamu.")
+      const label = type === "bx" ? `${el.blade} ${el.ratchet}${el.bit}` : `${el.lock} ${el.main} ${el.ratchet}${el.bit}`
+      tr.edit.lineup[slot][i] = { ...el, name: label + " (nový)" }
+      trDrawSetup()
+    }
+  }
+  draw()
+}
+
+/* tahací tlačítko TRAINING / SETUP */
+;(function () {
+  const btn = document.getElementById("trainBtn")
+  let sx = 0, sy = 0, dragging = false
+  btn.addEventListener("pointerdown", e => { dragging = true; sx = e.clientX; sy = e.clientY; btn.setPointerCapture(e.pointerId) })
+  btn.addEventListener("pointermove", e => {
+    if (!dragging) return
+    const dx = e.clientX - sx, dy = e.clientY - sy
+    btn.style.transform = `translate(${dx}px,${dy}px)`
+    screenMode.classList.add("train")
+    screenMode.classList.toggle("active", dx > 80 || dy < -80)
+  })
+  const end = async (commit) => {
+    if (!dragging) return
+    btn.style.transform = ""
+    const go = commit && screenMode.classList.contains("active")
+    screenMode.classList.remove("active"); setTimeout(() => screenMode.classList.remove("train"), 250)
+    dragging = false
+    if (!go) return
+    if (vibrateEnabled) navigator.vibrate?.(40)
+    if (!trainingMode) { if (await enterTraining()) trOpenCircle() }
+    else trPrimary()
+  }
+  btn.addEventListener("pointerup", () => end(true))
+  btn.addEventListener("pointercancel", () => end(false))
+})()
+
+/* otevření z BBXU (bbxst.html?training=<id>) nebo pokračování rozehraného tréninku */
+;(async function trBoot() {
+  const id = new URLSearchParams(location.search).get("training")
+  if (id) window.history.replaceState(null, "", location.pathname)
+  const info = await trLoadInfo()
+  if (id) return trLoadMatch(id)
+  let saved = null
+  try { saved = localStorage.getItem(TR_KEY) } catch (e) {}
+  if (saved && info && !OPENED_WITH_MATCH && !readLocal()?.match_id) trLoadMatch(saved, true)
+})()
 
 /* ── otevření z BBXU: bbxst.html?match=<id> ── */
 ;(async function openFromLink() {

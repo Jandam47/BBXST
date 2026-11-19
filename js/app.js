@@ -10,6 +10,7 @@ import * as Profile from './views/profile.js'
 import * as Chat from './views/chat.js'
 import * as Meta from './views/meta.js'
 import * as Auth from './views/auth.js'
+import * as Communities from './views/communities.js'
 
 const cfg = window.BBX_CONFIG
 
@@ -20,6 +21,8 @@ const routes = [
   [/^\/t\/([0-9a-f-]{36})\/tv$/, Tournament.renderTV, 'home'],
   [/^\/t\/([0-9a-f-]{36})(?:\/([a-z]+))?$/, Tournament.render, 'home'],
   [/^\/players$/, Players.render, 'players'],
+  [/^\/communities$/, Communities.renderList, 'players'],
+  [/^\/c\/([0-9a-f-]{36})$/, Communities.renderDetail, 'players'],
   [/^\/meta$/, Meta.render, 'meta'],
   [/^\/p\/([0-9a-f-]{36})$/, Profile.render, 'me'],
   [/^\/me$/, Profile.renderMe, 'me'],
@@ -148,6 +151,33 @@ async function watchFashion() {
     .subscribe()
 }
 
+// ── komunitní trénink: nová výzva / přijatá výzva ──
+let trChannel = null
+function watchTraining() {
+  if (trChannel) { sb.removeChannel(trChannel); trChannel = null }
+  if (!isLoggedIn() || !state.myRegs.length) return
+  const mine = new Set(state.myRegs.map(r => r.id))
+  const seen = new Map()
+  const nick = async (reg) => (await q(sb.from('registrations').select('nick').eq('id', reg).maybeSingle()).catch(() => null))?.nick || 'Soupeř'
+  trChannel = sb.channel('my-training')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'training_matches' }, async ({ eventType, new: m }) => {
+      if (!m?.id || seen.get(m.id) === m.status) return
+      seen.set(m.id, m.status)
+      if (m.status === 'pending' && mine.has(m.p2_reg) && eventType === 'INSERT') {
+        const n = await nick(m.p1_reg)
+        toast(html`<a href="#/t/${m.tournament_id}/me"><b>${n}</b> tě vyzývá na trénink – potvrď výzvu.</a>`, 'call', 10000)
+        systemNotify(`${n} tě vyzývá na souboj`, 'Komunitní trénink', 'tr-' + m.id); navigator.vibrate?.([200, 100, 200])
+      } else if (m.status === 'active' && mine.has(m.p1_reg)) {
+        const n = await nick(m.p2_reg)
+        toast(html`<a href="bbxst.html?training=${m.id}"><b>${n}</b> přijal výzvu – otevřít BBXST.</a>`, 'call', 10000)
+        systemNotify(`${n} přijal výzvu`, 'Otevři BBXST v training módu', 'tr-' + m.id)
+      } else if (m.status === 'declined' && mine.has(m.p1_reg)) {
+        toast(`${await nick(m.p2_reg)} výzvu odmítl.`, '', 5000)
+      }
+    })
+    .subscribe()
+}
+
 async function boot() {
   if (!configured) {
     mount($('main'), html`
@@ -163,10 +193,12 @@ async function boot() {
   renderChrome()
   watchMyMatches()
   watchFashion()
+  watchTraining()
   onState((evt) => {
     renderChrome()
     watchMyMatches()
     watchFashion()
+    watchTraining()
     if (evt === 'PASSWORD_RECOVERY') Auth.newPasswordModal()
     if (evt === 'SIGNED_IN' && isLoggedIn() && state.profile && !state.profile.nick && !document.querySelector('#f-onb')) Auth.onboardingModal()
     if (evt === 'SIGNED_OUT') route()

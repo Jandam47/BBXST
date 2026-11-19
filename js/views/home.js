@@ -4,9 +4,14 @@
 import { sb, state, rpc, q, errMsg, isLoggedIn, canManage } from '../supa.js'
 import { html, mount, on, formData, toast, busy, statusPill, fmtDate, fmtTime, toLocalInput, fromLocalInput, plural, EVENT_TYPES, kindLabel } from '../ui.js'
 import { DEFAULT_BO, FORMATS } from '../core.js'
+import { trainingForm } from './communities.js'
 
 export async function renderList(main, _p, ctx) {
-  const all = await rpc('tournament_list')
+  const [all, leads, invites] = await Promise.all([
+    rpc('tournament_list'),
+    isLoggedIn() ? rpc('my_lead_communities').catch(() => []) : [],
+    isLoggedIn() ? rpc('my_training_invites').catch(() => []) : [],
+  ])
   if (!ctx.isCurrent()) return
   const mine = new Set(state.myRegs.map(r => r.tournament_id))
   let query = '', filter = 'upcoming'
@@ -43,7 +48,7 @@ export async function renderList(main, _p, ctx) {
   }
 
   const card = (t) => html`
-    <a class="card t-card ${t.kind === 'event' ? 'is-event' : ''} ${t.event_type === 'fashion' && t.kind === 'event' ? 'is-fashion' : ''} ${['swiss', 'topcut', 'show'].includes(t.status) ? 'is-live' : ''}" href="#/t/${t.id}">
+    <a class="card t-card ${t.kind === 'event' ? 'is-event' : ''} ${t.event_type === 'fashion' && t.kind === 'event' ? 'is-fashion' : ''} ${t.event_type === 'community' ? 'is-community' : ''} ${['swiss', 'topcut', 'show'].includes(t.status) ? 'is-live' : ''}" href="#/t/${t.id}">
       <div class="row between"><span class="t-date">${t.starts_at ? `${fmtDate(t.starts_at)} · ${fmtTime(t.starts_at)}` : 'Termín upřesníme'}</span>${statusPill(t)}</div>
       <h3>${t.name}</h3>
       <div class="meta">
@@ -56,9 +61,15 @@ export async function renderList(main, _p, ctx) {
 
   mount(main, html`
     ${callHtml}
+    ${invites.map(i => html`<a class="banner-call invite" href="#/t/${i.tournament_id}">
+      <span class="big">👥</span>
+      <span><b>Pozvánka na trénink ${i.name}</b><br><span class="muted small">${i.community}${i.by ? ` · zve ${i.by}` : ''}${i.starts_at ? ` · ${fmtDate(i.starts_at)} ${fmtTime(i.starts_at)}` : ''}</span></span></a>`)}
     <div class="row between wrap" style="gap:12px">
       <h1>Turnaje a akce</h1>
-      ${state.level >= 2 ? html`<div class="row"><a class="btn sm" href="#/new/event">+ Akce</a><a class="btn primary sm" href="#/new">+ Turnaj</a></div>` : ''}
+      <div class="row">
+        ${leads.length ? html`<button class="btn sm" data-act="training">+ Trénink</button>` : ''}
+        ${state.level >= 2 ? html`<a class="btn sm" href="#/new/event">+ Akce</a><a class="btn primary sm" href="#/new">+ Turnaj</a>` : ''}
+      </div>
     </div>
     <input class="input" style="margin-top:14px" type="search" placeholder="Hledat podle názvu, místa nebo organizátora" id="t-q" aria-label="Hledat turnaj">
     <div class="tabs" role="tablist">
@@ -71,6 +82,7 @@ export async function renderList(main, _p, ctx) {
     ${!isLoggedIn() ? html`<p class="hint" style="text-align:center;margin-top:24px">Máš účet? <a href="#/login">Přihlas se</a> – výsledky se ti budou ukládat do profilu.</p>` : ''}`)
 
   on(main, 'input', '#t-q', (e, el) => { query = el.value; draw() })
+  on(main, 'click', '[data-act=training]', () => trainingForm(leads, leads[0]?.id))
   on(main, 'click', '[data-f]', (e, el) => {
     filter = el.dataset.f
     main.querySelectorAll('.tabs [data-f]').forEach(a => a.classList.toggle('on', a.dataset.f === filter))
@@ -90,10 +102,12 @@ export async function renderEditor(main, [kindArg, id]) {
             format: 'swiss', unique_parts: true, rated: true, event_type: 'training', fashion_beys: 3 }
   if (id) {
     t = await q(sb.from('tournaments').select('*').eq('id', id).single())
+    if (t.event_type === 'community') { location.hash = `#/t/${id}/manage`; return }
     if (!canManage(t)) { mount(main, html`<div class="notice err">Tenhle turnaj nemůžeš upravovat.</div>`); return }
   }
   const started = id && t.status !== 'registration'
   const isEv = t.kind === 'event'
+  const leads = isEv && !id ? await rpc('my_lead_communities').catch(() => []) : []
   const topPreset = [0, 4, 8, 16, 32].includes(t.top_cut) ? String(t.top_cut) : 'custom'
   const bo = { ...DEFAULT_BO, ...(t.bo_config || {}) }
 
@@ -113,6 +127,7 @@ export async function renderEditor(main, [kindArg, id]) {
         <fieldset class="f ev-type"><span>Druh akce</span>
           <div class="seg" role="radiogroup" aria-label="Druh akce">
             ${EVENT_TYPES.map(([k, l]) => html`<label class="seg-opt"><input type="radio" name="event_type" value="${k}" ${t.event_type === k ? 'checked' : ''} ${started ? 'disabled' : ''}><span>${l}</span></label>`)}
+            ${leads.length ? html`<label class="seg-opt"><input type="radio" name="event_type" value="community"><span>Komunitní</span></label>` : ''}
           </div>
           <div class="hint" id="ev-hint">${evHint(t.event_type)}</div>
         </fieldset>
@@ -159,6 +174,11 @@ export async function renderEditor(main, [kindArg, id]) {
     </form>`)
 
   on(main, 'change', '[name=event_type]', (e, el) => {
+    if (el.value === 'community') {
+      // komunitní trénink má vlastní formulář (komunita, termín, místo)
+      main.querySelector(`[name=event_type][value="${t.event_type}"]`).checked = true
+      return trainingForm(leads, leads[0]?.id)
+    }
     main.querySelector('#f-fbeys').hidden = el.value !== 'fashion'
     main.querySelector('#ev-hint').textContent = evHint(el.value)
   })

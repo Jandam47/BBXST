@@ -7,6 +7,7 @@ import { computeStandings, matchLabel, qrPayload, nextPow2, phaseName, arenaQueu
 import { renderManage } from './manage.js'
 import { icon } from '../icons.js'
 import * as Fashion from './fashion.js'
+import * as Training from './training.js'
 import { loadParts, deckEditor, bindDeckEditor } from '../parts.js'
 
 const cfg = window.BBX_CONFIG
@@ -62,10 +63,13 @@ function tabsFor(d) {
 }
 
 // fashion show má vlastní pohled
-const fashionKind = async (id) => Fashion.isFashion(await q(sb.from('tournaments').select('kind,event_type').eq('id', id).maybeSingle()))
+const kindOf = (id) => q(sb.from('tournaments').select('kind,event_type').eq('id', id).maybeSingle())
+const fashionKind = async (id) => Fashion.isFashion(await kindOf(id))
 
 export async function render(main, [id, tabArg]) {
-  if (await fashionKind(id)) return Fashion.render(main, [id, tabArg])
+  const k = await kindOf(id)
+  if (Fashion.isFashion(k)) return Fashion.render(main, [id, tabArg])
+  if (Training.isTraining(k)) return Training.render(main, [id, tabArg])
   let d = await load(id)
   if (!d.t) { mount(main, html`<div class="empty"><h2>Turnaj nenalezen</h2><a class="btn" href="#/">Zpět</a></div>`); return }
 

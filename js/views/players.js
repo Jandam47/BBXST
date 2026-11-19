@@ -4,6 +4,7 @@
 import { rpc, state } from '../supa.js'
 import { html, mount, on, plural } from '../ui.js'
 import { REGIONS, ROLES } from '../core.js'
+import { peopleTabs } from './communities.js'
 
 export async function render(main, _p, ctx) {
   const all = await rpc('players_list')
@@ -12,7 +13,8 @@ export async function render(main, _p, ctx) {
   const roleLabel = (r) => r === 'player' ? '' : ROLES.find(x => x.key === r)?.label
 
   mount(main, html`
-    <h1>Hráči</h1>
+    ${peopleTabs('players')}
+    <h1 style="margin-top:14px">Hráči</h1>
     <p class="muted" style="margin-top:4px">${all.length} hráčů s účtem, seřazeno podle ratingu.</p>
     <div class="row wrap" style="margin-top:14px">
       <input class="input grow" type="search" placeholder="Hledat nick" id="pq" aria-label="Hledat nick" style="flex:1 1 200px">
