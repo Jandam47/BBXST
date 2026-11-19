@@ -2,7 +2,7 @@
 //  Detail turnaje / akce: můj status, hráči, swiss, pavouk, judge menu, TV
 // ════════════════════════════════════════════════════════════════
 import { sb, state, rpc, q, errMsg, canManage, ensureSession, refreshMe, askNotify } from '../supa.js'
-import { html, mount, on, formData, toast, modal, busy, confirmBox, qrSvg, qrPng, statusPill, fmtDate, fmtTime } from '../ui.js'
+import { html, mount, on, formData, toast, modal, busy, confirmBox, qrSvg, qrPng, statusPill, fmtDate, fmtTime, pauseLeft, fmtLeft } from '../ui.js'
 import { computeStandings, matchLabel, qrPayload, nextPow2, phaseName, arenaQueue, busyRegs } from '../core.js'
 import { renderManage } from './manage.js'
 import { loadParts, deckEditor, bindDeckEditor } from '../parts.js'
@@ -35,6 +35,13 @@ export function liveChannel(id, onChange) {
 }
 
 const running = (t) => t.status === 'swiss' || t.status === 'topcut'
+export const paused = (t) => pauseLeft(t?.pause_until) > 0
+// pruh „pauza“ s odpočtem (Můj Status, Swiss i ostatní záložky turnaje)
+export const pauseBanner = (t) => paused(t) ? html`<div class="pause-banner" data-countdown-box role="status">
+  <span class="pb-ico" aria-hidden="true">⏸</span>
+  <span class="pb-txt"><b>Pořadatel vyhlásil pauzu</b><small>Pokračujeme za</small></span>
+  <span class="pb-time num" data-countdown="${t.pause_until}">${fmtLeft(t.pause_until)}</span>
+</div>` : ''
 const nickOf = (d, reg) => d.pmap.get(reg)?.nick || '?'
 
 function tabsFor(d) {
@@ -83,6 +90,7 @@ export async function render(main, [id, tabArg]) {
         </div>
         ${t.description ? html`<p class="desc">${t.description}</p>` : ''}
       </header>
+      ${pauseBanner(t)}
       <nav class="tabs t-nav" role="tablist" aria-label="Turnaj">${tabs.map(([k, l, ico]) => html`<a href="#/t/${t.id}/${k}" class="${k === tab ? 'on' : ''}" role="tab" aria-selected="${k === tab}"><span class="ico" aria-hidden="true">${ico}</span><span class="lb">${l}</span></a>`)}</nav>
       <section id="tab"></section>`)
     const box = main.querySelector('#tab')
@@ -111,7 +119,9 @@ export async function render(main, [id, tabArg]) {
   const onMine = () => reload()
   window.addEventListener('bbx:my-match', onMine)
   document.body.classList.add('has-tnav')
-  return () => { alive = false; off(); window.removeEventListener('bbx:my-match', onMine); document.body.classList.remove('has-tnav') }
+  const onPauseOver = () => { if (alive) draw() }
+  window.addEventListener('bbx:countdown-over', onPauseOver)
+  return () => { alive = false; off(); window.removeEventListener('bbx:my-match', onMine); window.removeEventListener('bbx:countdown-over', onPauseOver); document.body.classList.remove('has-tnav') }
 }
 
 // ────────────────────────────────────────────────────────────────
@@ -604,6 +614,7 @@ export async function renderTV(main, [id]) {
     }
     mount(main, html`
       <div class="tv-head"><h1>${t.name}</h1><div class="r">${phase} · ${clock()}</div></div>
+      ${paused(t) ? html`<div class="tv-pause" data-countdown-box><b>PAUZA</b><span class="num" data-countdown="${t.pause_until}">${fmtLeft(t.pause_until)}</span></div>` : ''}
       ${body}
       <a class="btn sm tv-exit" href="#/t/${t.id}">Zavřít TV</a>`)
     startScroll()
@@ -626,7 +637,8 @@ export async function renderTV(main, [id]) {
   const tick = setInterval(() => { const r = main.querySelector('.tv-head .r'); if (r) r.textContent = r.textContent.replace(/\d{1,2}:\d{2}$/, clock()) }, 15000)
   // pojistka, kdyby realtime vypadl
   const poll = setInterval(async () => { try { d = await load(id); draw() } catch {} }, 60000)
-  return () => { off(); clearInterval(tick); clearInterval(poll); clearInterval(scrollTimer); document.body.classList.remove('tv') }
+  window.addEventListener('bbx:countdown-over', draw)
+  return () => { off(); clearInterval(tick); clearInterval(poll); clearInterval(scrollTimer); window.removeEventListener('bbx:countdown-over', draw); document.body.classList.remove('tv') }
 }
 
 export { nickOf, running }

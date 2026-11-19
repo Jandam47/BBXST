@@ -19,7 +19,7 @@ Komunikuj **česky**, celé UI je česky.
   (zdroj kyoganken.sakura.ne.jp/beyx/weight1.htm), Hasbro názvy jsou v `aliases`. Nové díly = nový SQL soubor
   s `insert … on conflict do update` (viz `07-parts-update.sql`); web se kvůli dílům nasazovat nemusí.
 - `js/config.js` – **obsahuje Adamovy živé klíče Supabase. Nikdy ho neměň ani nepřepisuj.**
-- `supabase/schema.sql`, `02-parts.sql`, `03-live-score.sql`, `04-security-hardening.sql`, `05-judge-handover.sql`, `06-formats-stats.sql`, `07-parts-update.sql`, `08-judge-per-match.sql` – databáze (spuštěné v produkci, nové soubory
+- `supabase/schema.sql`, `02-parts.sql`, `03-live-score.sql`, `04-security-hardening.sql`, `05-judge-handover.sql`, `06-formats-stats.sql`, `07-parts-update.sql`, `08-judge-per-match.sql`, `09-pause.sql` – databáze (spuštěné v produkci, nové soubory
   spouští Adam). Živé skóre: BBXST v judge módu posílá po každém bodu `live_score` → `matches.live_p1/p2`
   (TV rozpis, vstupenka, seznamy); trigger `bbx_clear_live` ho maže po uložení hry.
   Rozehraná hra: BBXST posílá s `live_score` i `p_state` → `matches.live_state` (souboje v orientaci p1/p2,
@@ -35,6 +35,9 @@ Komunikuj **česky**, celé UI je česky.
   pak čekající podle `wave`; zápas hráče, který právě judguje jiný rozehraný zápas, se posune o místo níž.
   Používá ji Můj Status (Tvoje aréna + pořadí v aréně), Judge menu, TV rozpis (obdélník na arénu), Řízení
   a BBXST. `rebalance_arenas` (tlačítko „Obsadit volné arény“ v Řízení) přesune čekající zápasy na volné arény.
+- Pauza (09): `tournaments.pause_until`, RPC `set_pause(turnaj, minuty)` (0 = konec). Pruh s odpočtem pod
+  záhlavím turnaje (`pauseBanner`), velké PAUZA na TV; odpočet tiká přes `[data-countdown]` v ui.js a po
+  vypršení pošle `bbx:countdown-over` (pohled se překreslí).
 - Statistiky (06): `bbx_battles()` rozloží každý zapsaný souboj (`points`) na dva řádky (bey, díly z decku,
   výsledek, body). Nad tím `tournament_report` (záložka Vyhodnocení), `meta_ranking` (stránka `#/meta`,
   `js/views/meta.js`, jen skončené turnaje, bez testovacích hráčů „T-…“ bez účtu) a `player_bey_stats` (profil).

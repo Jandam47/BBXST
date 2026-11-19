@@ -71,6 +71,27 @@ with sync_playwright() as p:
     assert 'Rozehráno' in page.inner_text('.arena-card.free')
     c.close()
 
+    # ── pauza: organizátor vyhlásí, hráč i TV vidí odpočet
+    c, page = ctx(b, 'org@test.cz')
+    page.goto(BASE + f'#/t/{t_id}/manage'); page.wait_for_selector('[data-act=pause]')
+    page.fill('#pause-min', '7'); page.click('[data-act=pause]'); page.wait_for_selector('.pause-banner')
+    assert sql(f"select pause_until > now() + interval '6 minutes' from tournaments where id = '{t_id}'") == 't'
+    page.wait_for_selector('[data-act=pause-end]')
+    page.screenshot(path=OUT + '84_manage_pause.png', full_page=True)
+    c.close()
+    c, page = ctx(b, nick.lower() + '@test.cz')
+    page.goto(BASE + f'#/t/{t_id}/me'); page.wait_for_selector('.pause-banner')
+    assert 'Pořadatel vyhlásil pauzu' in page.inner_text('.pause-banner') and re.match(r'^[67]:\d\d$', page.inner_text('.pb-time'))
+    page.screenshot(path=OUT + '85_status_pause.png')
+    c.close()
+    c, page = ctx(b, 'org@test.cz', 1280, 720)
+    page.goto(BASE + f'#/t/{t_id}/tv'); page.wait_for_selector('.tv-pause')
+    page.wait_for_timeout(600); page.screenshot(path=OUT + '86_tv_pause.png')
+    page.goto(BASE + f'#/t/{t_id}/manage'); page.wait_for_selector('[data-act=pause-end]'); page.click('[data-act=pause-end]')
+    page.wait_for_selector('[data-act=pause]')
+    assert sql(f"select pause_until is null from tournaments where id = '{t_id}'") == 't'
+    c.close()
+
     # ── TV rozpis
     c, page = ctx(b, 'org@test.cz', 1280, 720)
     page.goto(BASE + f'#/t/{t_id}/tv'); page.wait_for_selector('.tv-arena')

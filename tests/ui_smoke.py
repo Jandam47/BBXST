@@ -91,12 +91,12 @@ def run(only=None):
         page.click('text=Listopadový Cup'); page.wait_for_selector('.tabs >> text=Řízení')
         page.click('.tabs >> text=Řízení'); page.wait_for_selector('text=Rozehrané'); shot(page, '15_manage_swiss')
         page.click('[data-result] >> nth=0'); page.wait_for_selector('#f-res')
-        page.fill('input[name=s1]', '7'); page.fill('input[name=s2]', '4'); page.click('#f-res button'); page.wait_for_timeout(800)
+        page.fill('input[name=s1]', '7'); page.fill('input[name=s2]', '4'); page.click('#f-res button'); page.wait_for_selector('#f-res', state='detached'); page.wait_for_timeout(500)
         # dohraj zbytek kola ručně
         for _ in range(8):
             if page.locator('[data-result]').count() == 0: break
             page.click('[data-result] >> nth=0'); page.wait_for_selector('#f-res')
-            page.fill('input[name=s1]', '3'); page.fill('input[name=s2]', '7'); page.click('#f-res button'); page.wait_for_timeout(700)
+            page.fill('input[name=s1]', '3'); page.fill('input[name=s2]', '7'); page.click('#f-res button'); page.wait_for_selector('#f-res', state='detached'); page.wait_for_timeout(500)
         page.click('[data-act=draw]'); page.wait_for_selector('[data-ok]'); shot(page, '16_draw_preview')
         page.click('[data-reroll]'); page.click('[data-ok]'); page.wait_for_selector('.standings'); shot(page, '17_round3')
         page.goto(BASE + '#/new'); page.wait_for_selector('#f-t'); shot(page, '18_new_tournament')

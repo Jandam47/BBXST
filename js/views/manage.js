@@ -3,7 +3,7 @@
 //  registrace → start → swiss kola → top cut → ukončení
 // ════════════════════════════════════════════════════════════════
 import { sb, rpc, q, errMsg, state } from '../supa.js'
-import { html, mount, on, formData, toast, modal, busy, confirmBox, plural } from '../ui.js'
+import { html, mount, on, formData, toast, modal, busy, confirmBox, plural, pauseLeft, fmtLeft } from '../ui.js'
 import { pairSwissRound, pairRoundRobin, roundRobinRounds, makeRng, buildDoubleElim, computePlacements, DEFAULT_BO, matchLabel, phaseName, FORMATS, arenaQueue } from '../core.js'
 import { standingsFor, nickOf } from './tournament.js'
 import { loadParts, deckEditor, bindDeckEditor } from '../parts.js'
@@ -66,6 +66,26 @@ export function renderManage(box, { d, reload }) {
       <h3>Ukončení turnaje</h3>
       <p class="muted">${t.status === 'topcut' ? (t.top_cut === 2 ? 'Finále je dohrané.' : 'Grand finále je dohrané.') : `${phase} je dohraný.`} Ukončením se uloží konečné pořadí do profilů hráčů a vyhodnocení turnaje.</p>
       <button class="btn ${t.status === 'topcut' ? 'primary' : ''}" data-act="finish">${t.status === 'topcut' ? 'Ukončit a uložit turnaj' : dm ? 'Ukončit podle tabulky' : 'Ukončit bez top cutu'}</button>
+    </div>`)
+  }
+
+  // ── pauza ──────────────────────────────────────
+  if (t.kind === 'tournament' && ['swiss', 'topcut'].includes(t.status)) {
+    const left = pauseLeft(t.pause_until)
+    sections.push(html`<div class="card stack pause-card ${left > 0 ? 'on' : ''}">
+      <h3>Pauza</h3>
+      ${left > 0 ? html`
+        <p class="muted">Pauza běží – zbývá <b class="num" data-countdown="${t.pause_until}">${fmtLeft(t.pause_until)}</b>. Hráči ji vidí v Můj Status a TV rozpis ukazuje odpočet.</p>
+        <div class="row wrap">
+          <button class="btn" data-pause-add="5">+5 min</button>
+          <button class="btn" data-pause-add="10">+10 min</button>
+          <button class="btn primary" data-act="pause-end">Ukončit pauzu</button>
+        </div>` : html`
+        <p class="muted">Hráči uvidí „Pořadatel vyhlásil pauzu“ s odpočtem v Můj Status, nahoře v turnaji i na TV rozpisu.</p>
+        <div class="row wrap" style="align-items:center">
+          <label class="row" style="gap:8px;align-items:center"><input class="input" type="number" id="pause-min" min="1" max="240" value="10" style="width:90px" aria-label="Počet minut"> minut</label>
+          <button class="btn primary" data-act="pause">⏸ Vyhlásit pauzu</button>
+        </div>`}
     </div>`)
   }
 
@@ -160,6 +180,17 @@ export function renderManage(box, { d, reload }) {
   })
   on(box, 'click', '[data-act=walkin]', (e, b) => busy(b, () => walkinModal(d, reload)))
   on(box, 'change', '[data-arena]', (e, s) => act(() => q(sb.from('matches').update({ arena: Number(s.value) }).eq('id', s.dataset.arena)), 'Aréna změněna.'))
+  const setPause = (b, min) => busy(b, async () => {
+    try { await rpc('set_pause', { p_tournament: t.id, p_minutes: min }); toast(min ? `Pauza ${min} min.` : 'Pauza ukončena.', 'ok'); reload() }
+    catch (err) { toast(errMsg(err), 'err') }
+  })
+  on(box, 'click', '[data-act=pause]', (e, b) => {
+    const min = Math.round(Number(box.querySelector('#pause-min').value))
+    if (!(min >= 1 && min <= 240)) return toast('Zadej 1 až 240 minut.', 'err')
+    setPause(b, min)
+  })
+  on(box, 'click', '[data-pause-add]', (e, b) => setPause(b, Math.ceil(pauseLeft(t.pause_until) / 60000) + Number(b.dataset.pauseAdd)))
+  on(box, 'click', '[data-act=pause-end]', (e, b) => setPause(b, 0))
   on(box, 'click', '[data-act=rebalance]', (e, b) => busy(b, async () => {
     try {
       const n = await rpc('rebalance_arenas', { p_tournament: t.id })

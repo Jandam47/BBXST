@@ -346,7 +346,18 @@ step('vyhodnocení turnaje (díly, top buildy), meta žebříček, statistiky be
   assert.equal((await as(null, 'select judge_id from matches where id = $1', [q1[0].id]))[0].judge_id, null)
   await as(org, 'select cancel_tournament($1)', [ta.id])
 }
-step('fronta arény (hráč-judge o místo níž), obsazení volných arén, uvolnění judge organizátorem')
+// pauza
+{
+  await fails(players[0], 'select set_pause($1, 10)', [t2.id], /nemůžeš řídit/)
+  await fails(org, 'select set_pause($1, 500)', [t2.id], /240/)
+  const [{ u }] = await as(org, 'select set_pause($1, 10) as u', [t2.id])
+  const left = (new Date(u) - Date.now()) / 60000
+  assert.ok(left > 9 && left <= 10.1, 'pauza 10 min')
+  assert.equal((await as(guest2, 'select pause_until from tournaments where id = $1', [t2.id]))[0].pause_until.toISOString(), new Date(u).toISOString())
+  await as(org, 'select set_pause($1, 0)', [t2.id])
+  assert.equal((await as(null, 'select pause_until from tournaments where id = $1', [t2.id]))[0].pause_until, null)
+}
+step('fronta arény (hráč-judge o místo níž), obsazení volných arén, uvolnění judge organizátorem, pauza')
 
 // ── formáty: deathmatch + díly se nesmí opakovat ───────────────────
 const [dm] = await as(org, `insert into tournaments (name, format, unique_parts, arena_count) values ('Deathmatch Cup', 'deathmatch', true, 2) returning *`)

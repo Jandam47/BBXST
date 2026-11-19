@@ -149,3 +149,21 @@ export const statusPill = (t) => {
 
 export const AVATARS = ['🌀', '⚔️', '🐉', '🦅', '🦈', '🐺', '🦁', '🐍', '🦂', '🔥', '⚡', '❄️', '🌪️', '🌑', '☀️', '💎',
   '🗡️', '🛡️', '👑', '🎯', '🚀', '🤖', '👾', '🧿']
+
+// ── odpočet (pauza): prvky s data-countdown="<ISO čas>" se každou sekundu přepíšou na mm:ss;
+//    po vypršení dostane nejbližší [data-countdown-box] třídu „over“
+const mmss = (ms) => { const t = Math.max(0, Math.ceil(ms / 1000)); return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}` }
+export const pauseLeft = (until) => until ? new Date(until).getTime() - Date.now() : 0
+export const fmtLeft = (until) => mmss(pauseLeft(until))
+function tickCountdowns() {
+  for (const el of document.querySelectorAll('[data-countdown]')) {
+    const left = pauseLeft(el.dataset.countdown)
+    el.textContent = mmss(left)
+    if (left <= 0 && !el.dataset.over) {
+      el.dataset.over = '1'
+      el.closest('[data-countdown-box]')?.classList.add('over')
+      window.dispatchEvent(new Event('bbx:countdown-over'))   // pohled se překreslí bez pauzy
+    }
+  }
+}
+setInterval(tickCountdowns, 1000)
