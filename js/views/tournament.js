@@ -39,13 +39,14 @@ const nickOf = (d, reg) => d.pmap.get(reg)?.nick || '?'
 
 function tabsFor(d) {
   const { t } = d
-  const tabs = [['me', d.myReg ? 'Můj Status' : t.kind === 'event' ? 'Přihlásit se' : 'Registrace']]
-  tabs.push(['players', `Hráči (${d.players.filter(p => p.status === 'active').length})`])
-  if (t.kind === 'tournament' && t.status !== 'registration' && d.matches.some(m => m.stage === 'swiss')) tabs.push(['swiss', phaseName(t)])
-  if (d.matches.some(m => m.stage !== 'swiss')) tabs.push(['bracket', t.top_cut === 2 ? 'Finále' : 'Top cut'])
-  if (t.kind === 'tournament' && (t.status === 'finished' || (canManage(t) && running(t)))) tabs.push(['report', 'Vyhodnocení'])
-  if (t.kind === 'tournament' && running(t) && (state.level >= 1 || canManage(t))) tabs.push(['judge', 'Judge menu'])
-  if (canManage(t)) tabs.push(['manage', 'Řízení'])
+  // [klíč, popisek, ikona]
+  const tabs = [['me', d.myReg ? 'Můj Status' : t.kind === 'event' ? 'Přihlásit se' : 'Registrace', d.myReg ? '🎫' : '✍️']]
+  tabs.push(['players', `Hráči (${d.players.filter(p => p.status === 'active').length})`, '👥'])
+  if (t.kind === 'tournament' && t.status !== 'registration' && d.matches.some(m => m.stage === 'swiss')) tabs.push(['swiss', phaseName(t), '📋'])
+  if (d.matches.some(m => m.stage !== 'swiss')) tabs.push(['bracket', t.top_cut === 2 ? 'Finále' : 'Top cut', '🏆'])
+  if (t.kind === 'tournament' && (t.status === 'finished' || (canManage(t) && running(t)))) tabs.push(['report', 'Vyhodnocení', '📊'])
+  if (t.kind === 'tournament' && running(t) && (state.level >= 1 || canManage(t))) tabs.push(['judge', 'Judge menu', '⚖️'])
+  if (canManage(t)) tabs.push(['manage', 'Řízení', '⚙️'])
   return tabs
 }
 
@@ -68,8 +69,7 @@ export async function render(main, [id, tabArg]) {
     const tabs = tabsFor(d)
     if (!tabs.some(([k]) => k === tab)) tab = tabs[0][0]
     mount(main, html`
-      <a class="small muted" href="#/">← Turnaje</a>
-      <header class="t-head" style="margin-top:8px">
+      <header class="t-head">
         <div class="row between wrap">${statusPill(t)}
           ${t.kind === 'tournament' && t.status !== 'registration' ? html`<a class="btn sm ghost" href="#/t/${t.id}/tv">📺 TV rozpis</a>` : ''}</div>
         <h1 style="margin-top:10px">${t.name}</h1>
@@ -81,7 +81,7 @@ export async function render(main, [id, tabArg]) {
         </div>
         ${t.description ? html`<p class="desc">${t.description}</p>` : ''}
       </header>
-      <nav class="tabs" role="tablist">${tabs.map(([k, l]) => html`<a href="#/t/${t.id}/${k}" class="${k === tab ? 'on' : ''}" role="tab">${l}</a>`)}</nav>
+      <nav class="tabs t-nav" role="tablist" aria-label="Turnaj">${tabs.map(([k, l, ico]) => html`<a href="#/t/${t.id}/${k}" class="${k === tab ? 'on' : ''}" role="tab" aria-selected="${k === tab}"><span class="ico" aria-hidden="true">${ico}</span><span class="lb">${l}</span></a>`)}</nav>
       <section id="tab"></section>`)
     const box = main.querySelector('#tab')
     const ctx = { d, reload, draw }
@@ -108,7 +108,8 @@ export async function render(main, [id, tabArg]) {
   })
   const onMine = () => reload()
   window.addEventListener('bbx:my-match', onMine)
-  return () => { alive = false; off(); window.removeEventListener('bbx:my-match', onMine) }
+  document.body.classList.add('has-tnav')
+  return () => { alive = false; off(); window.removeEventListener('bbx:my-match', onMine); document.body.classList.remove('has-tnav') }
 }
 
 // ────────────────────────────────────────────────────────────────
