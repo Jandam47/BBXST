@@ -583,12 +583,16 @@ export async function renderTV(main, [id]) {
 
   const draw = () => {
     const { t } = d
+    // v top cutu / finále se prázdné arény neukazují
     const arenas = Array.from({ length: t.arena_count }, (_, i) => i + 1).map(a => ({ a, q: queueOf(d, a) }))
+      .filter(x => t.status !== 'topcut' || x.q.length)
     const anyOpen = arenas.some(x => x.q.length)
+    // série BO3: číslo hry a stav výher (modrá : červená)
+    const series = (m) => m.best_of > 1 ? html`<span class="tv-series"><em>Hra ${Math.min(m.p1_wins + m.p2_wins + 1, m.best_of)}</em><span><u class="l">${m.p1_wins}</u><i>:</i><u class="r">${m.p2_wins}</u></span></span>` : ''
     const phase = t.status === 'swiss' ? `${phaseName(t)} · kolo ${t.current_round}/${t.swiss_rounds}` : t.status === 'topcut' ? (t.top_cut === 2 ? 'Finále' : `Top ${t.top_cut}`) : t.status === 'finished' ? 'Konec turnaje' : 'Registrace'
     let body
     if (anyOpen) {
-      body = html`<div class="tv-arenas">${arenas.map(({ a, q: qa }) => {
+      body = html`<div class="tv-arenas ${arenas.length === 1 ? 'one' : ''}">${arenas.map(({ a, q: qa }) => {
         const [cur, ...rest] = qa
         return html`<section class="tv-arena ${cur?.status === 'live' ? 'live' : ''} ${cur ? '' : 'idle'}">
           <div class="tv-ano"><small>aréna</small>${a}</div>
@@ -596,8 +600,8 @@ export async function renderTV(main, [id]) {
             ${cur ? html`<div class="tv-now">
               <span class="n l">${nickOf(d, cur.p1_reg)}</span>
               ${cur.live_p1 != null
-                ? html`<span class="sc"><b>${cur.live_p1}<i>:</i>${cur.live_p2}</b>${cur.best_of > 1 ? html`<small>hra ${cur.p1_wins + cur.p2_wins + 1} · ${cur.p1_wins}:${cur.p2_wins}</small>` : ''}</span>`
-                : html`<span class="vs">${cur.status === 'live' ? (cur.best_of > 1 ? `${cur.p1_wins}:${cur.p2_wins}` : 'hraje') : 'na řadě'}</span>`}
+                ? html`<span class="sc"><b>${cur.live_p1}<i>:</i>${cur.live_p2}</b>${series(cur)}</span>`
+                : html`<span class="vs">${cur.status === 'live' ? 'hraje' : 'na řadě'}${cur.status === 'live' ? series(cur) : ''}</span>`}
               <span class="n r">${nickOf(d, cur.p2_reg)}</span>
             </div>` : html`<div class="tv-free">volno</div>`}
             ${rest.map((m, i) => html`<div class="tv-next"><span class="i">${i + 2}.</span><span class="n l">${nickOf(d, m.p1_reg)}</span><span class="vs">vs</span><span class="n r">${nickOf(d, m.p2_reg)}</span></div>`)}

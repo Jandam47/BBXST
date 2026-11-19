@@ -572,3 +572,18 @@ body.tv main { max-width: none; padding: 3vh 4vw; }
 .tv-pause.over { display: none; }
 .tv-pause b { font-family: var(--display); font-weight: 700; font-size: clamp(48px, 8vw, 150px); line-height: 1; letter-spacing: .06em; color: var(--bolt); }
 .tv-pause span { font-family: var(--display); font-weight: 700; font-size: clamp(48px, 8vw, 150px); line-height: 1; font-variant-numeric: tabular-nums; }
+
+/* série BO3 na TV: číslo hry + výhry modrá : červená */
+.tv-series { display: inline-flex; align-items: center; gap: .6em; margin-top: 1vh; padding: .25em .7em; border-radius: 999px;
+  background: rgba(255,210,31,.14); border: 1px solid rgba(255,210,31,.6);
+  font-family: var(--display); font-weight: 700; font-size: clamp(16px, 1.7vw, 32px); line-height: 1.1; white-space: nowrap; }
+.tv-series em { font-style: normal; color: var(--bolt); }
+.tv-series u { text-decoration: none; font-variant-numeric: tabular-nums; }
+.tv-series u.l { color: #b9d4ff; } .tv-series u.r { color: #ffc2cd; }
+.tv-series i { font-style: normal; color: var(--faint); margin: 0 .15em; }
+.tv-now .vs { display: flex; flex-direction: column; align-items: center; }
+/* jediná aréna (finále) přes celou šířku a větší */
+.tv-arenas.one { grid-template-columns: minmax(0, 1fr); }
+.tv-arenas.one .tv-now .n { font-size: clamp(28px, 4vw, 72px); }
+.tv-arenas.one .tv-now .sc b { font-size: clamp(44px, 7vw, 120px); }
+.tv-arenas.one .tv-series { font-size: clamp(18px, 2.4vw, 44px); }
