@@ -40,6 +40,12 @@ export const ICONS = {
   // ozubené kolo – řízení
   gear: svg(`<path class="i1" d="M10.3 3.5h3.4l.5 2.3 1.6.9 2.2-.8 1.7 2.9-1.7 1.6v1.8l1.7 1.6-1.7 2.9-2.2-.8-1.6.9-.5 2.3h-3.4l-.5-2.3-1.6-.9-2.2.8-1.7-2.9 1.7-1.6v-1.8L4.3 8.8 6 5.9l2.2.8 1.6-.9z"/>
     <circle class="i2" cx="12" cy="12" r="2.8"/>`),
+  // hvězda – hodnocení
+  star: svg(`<path class="i1" d="m12 3.5 2.6 5.3 5.8.8-4.2 4.1 1 5.8-5.2-2.8-5.2 2.8 1-5.8-4.2-4.1 5.8-.8z"/>
+    <path class="i2" d="M12 8.2v4.3M12 15v.2"/>`),
+  // ramínko – fashion
+  hanger: svg(`<path class="i1" d="M12 8.5 3.6 15.2a1.3 1.3 0 0 0 .8 2.3h15.2a1.3 1.3 0 0 0 .8-2.3L12 8.5z"/>
+    <path class="i2" d="M10 6a2 2 0 1 1 2.6 1.9c-.4.1-.6.4-.6.8v.8"/>`),
   // televize
   tv: svg(`<rect class="i1" x="3" y="6" width="18" height="12" rx="1.5"/><path class="i2" d="m8.5 2.8 3.5 3.2 3.5-3.2M8 21h8"/>`),
 }

@@ -19,7 +19,7 @@ Komunikuj **česky**, celé UI je česky.
   (zdroj kyoganken.sakura.ne.jp/beyx/weight1.htm), Hasbro názvy jsou v `aliases`. Nové díly = nový SQL soubor
   s `insert … on conflict do update` (viz `07-parts-update.sql`); web se kvůli dílům nasazovat nemusí.
 - `js/config.js` – **obsahuje Adamovy živé klíče Supabase. Nikdy ho neměň ani nepřepisuj.**
-- `supabase/schema.sql`, `02-parts.sql`, `03-live-score.sql`, `04-security-hardening.sql`, `05-judge-handover.sql`, `06-formats-stats.sql`, `07-parts-update.sql`, `08-judge-per-match.sql`, `09-pause.sql` – databáze (spuštěné v produkci, nové soubory
+- `supabase/schema.sql`, `02-parts.sql`, `03-live-score.sql`, `04-security-hardening.sql`, `05-judge-handover.sql`, `06-formats-stats.sql`, `07-parts-update.sql`, `08-judge-per-match.sql`, `09-pause.sql`, `10-fashion.sql` – databáze (spuštěné v produkci, nové soubory
   spouští Adam). Živé skóre: BBXST v judge módu posílá po každém bodu `live_score` → `matches.live_p1/p2`
   (TV rozpis, vstupenka, seznamy); trigger `bbx_clear_live` ho maže po uložení hry.
   Rozehraná hra: BBXST posílá s `live_score` i `p_state` → `matches.live_state` (souboje v orientaci p1/p2,
@@ -42,6 +42,18 @@ Komunikuj **česky**, celé UI je česky.
   výsledek, body). Nad tím `tournament_report` (záložka Vyhodnocení), `meta_ranking` (stránka `#/meta`,
   `js/views/meta.js`, jen skončené turnaje, bez testovacích hráčů „T-…“ bez účtu) a `player_bey_stats` (profil).
   Blade u CX = lock chip + main blade. Souboje bez beyů (ruční výsledek) se nepočítají.
+- Akce mají druh `tournaments.event_type` (10): `training` (Trénink), `fashion`, `other` (Ostatní); Trénink/Ostatní =
+  jen přihlášení. **Fashion** (`js/views/fashion.js`, vlastní pohled i TV; tournament.js ho přesměruje): přihláška
+  s `fashion_beys` beyi (deck, stejné beye OK), design judge (`fashion_judges`, jen účet, nesoutěží, jen před startem).
+  `fashion_start` zamíchá pořadí do `registrations.seed`, status `show`, stav v `tournaments.fashion`
+  (`phase` scoring/tiebreak/boss/done, `current`, `last`, `tie`, `boss`, `reveal_at`, `v` = verze kvůli realtime).
+  `fashion_rate` (0–10 design, 0–5 sladěnost, 0–5 cosplay, 0–3 unikátnost, +1 dojem); když ohodnotí všichni
+  judge vyvolaného, vyvolá se další. Body (`fashion_scores`) nikdo nevidí do vyhlášení – čte se jen přes
+  `fashion_board`. `fashion_finish`: shoda na 1. místě → rozstřel (`fashion_vote`, +1), znovu shoda → náhodný
+  boss of fashion z judgů (`fashion_boss_pick`). Ostatní shody = dělené místo (1, 2, 2, 4). `fashion_board` vrací
+  místa postupně: 4.+ hned po `reveal_at`, 3. za 5 s, 2. za 10 s, 1. za 15 s (TV vyhlášení), body až na konci.
+  Achievementy 1.–3. místa: `player_achievements` (profil); turnajové tituly se počítají jen z turnajů.
+  Notifikace (jdi hodnotit / jsi na molu / rozstřel / boss) v `app.js` → `watchFashion`.
 - `vendor/` – supabase-js, qrcode-generator, html5-qrcode (lokálně, kvůli slabé síti v hale).
 - `sw.js` – service worker (síť první, cache jako záloha).
 - Vzhled: cyberpunk (černé pozadí s mřížkou, azurová `--cyan` + purpurová `--magenta`, žlutá `--bolt` jen pro
@@ -94,8 +106,9 @@ Komunikuj **česky**, celé UI je česky.
 Potřebují lokální PostgreSQL 16, Node a pro UI Python Playwright + Chrome a PostgREST (`/tmp/postgrest`).
 - `node tests/core.test.mjs` – logika (párování 4–64 hráčů, pavouk 2–32 s byes, umístění).
 - `tests/reset_db.sh && node tests/db.test.mjs` – celý turnaj proti DB se stubem Supabase (role, RLS, RPC).
+- `node tests/fashion.test.mjs` – fashion show v DB (po reset_db / ui-up): judge, hodnocení, rozstřel, boss, vyhlášení.
 - `tests/ui-up.sh && python3 tests/ui_smoke.py && python3 tests/bbxst_judge.py && python3 tests/test_tools.py` – proklik v Chrome
-  (`tests/judge_handover.py`, `tests/formats_stats.py` a `tests/arenas_status.py` každý zvlášť po čerstvém `ui-up.sh`: převzetí judge;
+  (`tests/judge_handover.py`, `tests/formats_stats.py`, `tests/arenas_status.py` a `tests/fashion_ui.py` každý zvlášť po čerstvém `ui-up.sh`: převzetí judge;
   deathmatch přes testovací nástroje až po finále, vyhodnocení, meta, profil)
   (poslední: zkušební turnaj 16 hráčů přes testovací nástroje až po ukončení).
 Když měníš SQL, přidej nový soubor i do `tests/reset_db.sh`. Po změně logiky nebo DB pusť testy.

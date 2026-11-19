@@ -139,6 +139,7 @@ export const STATUS = {
   registration: { label: 'Registrace otevřená', cls: 'reg' },
   swiss: { label: 'Probíhá swiss', cls: 'live' },
   topcut: { label: 'Probíhá top cut', cls: 'live' },
+  show: { label: 'Probíhá fashion show', cls: 'live' },
   finished: { label: 'Ukončeno', cls: 'done' },
   canceled: { label: 'Zrušeno', cls: 'cancel' },
 }
@@ -167,3 +168,7 @@ function tickCountdowns() {
   }
 }
 setInterval(tickCountdowns, 1000)
+
+// druh akce
+export const EVENT_TYPES = [['training', 'Trénink'], ['fashion', 'Fashion'], ['other', 'Ostatní']]
+export const kindLabel = (t) => t.kind !== 'event' ? 'Turnaj' : t.event_type === 'fashion' ? 'Fashion' : t.event_type === 'other' ? 'Akce' : 'Trénink'

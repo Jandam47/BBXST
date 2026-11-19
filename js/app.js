@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════════════════════════
 //  BBXU – shell, router, globální notifikace o zápasech
 // ════════════════════════════════════════════════════════════════
-import { sb, state, configured, initAuth, onState, isLoggedIn, systemNotify } from './supa.js'
+import { sb, state, configured, initAuth, onState, isLoggedIn, systemNotify, rpc, q } from './supa.js'
 import { html, mount, $, toast } from './ui.js'
 import * as Home from './views/home.js'
 import * as Tournament from './views/tournament.js'
@@ -104,6 +104,50 @@ function watchMyMatches() {
     .subscribe()
 }
 
+// ── fashion show: „jdi hodnotit“ (design judge), „jsi na molu“ (soutěžící) ──
+let fxChannel = null, fxToken = 0
+const fxSeen = new Map()
+async function watchFashion() {
+  const token = ++fxToken
+  if (fxChannel) { sb.removeChannel(fxChannel); fxChannel = null }
+  if (!state.user) return
+  const judging = isLoggedIn() ? (await rpc('my_fashion_judging').catch(() => [])).map(r => r.tournament_id) : []
+  const myT = new Set(state.myRegs.map(r => r.tournament_id)), judgeT = new Set(judging)
+  const myRegIds = new Set(state.myRegs.map(r => r.id))
+  const ids = [...new Set([...myT, ...judgeT])]
+  if (!ids.length || token !== fxToken) return
+  const key = (t) => `${t.status}:${t.fashion?.phase}:${t.fashion?.current}`
+  const now = await q(sb.from('tournaments').select('id,status,fashion,event_type,kind').in('id', ids)).catch(() => [])
+  if (token !== fxToken) return
+  now.filter(t => t.event_type === 'fashion').forEach(t => fxSeen.set(t.id, key(t)))
+  if (![...fxSeen.keys()].some(id => ids.includes(id))) return
+  const say = (msg, title, tag) => {
+    toast(msg, 'call', 9000); systemNotify(title, '', tag); navigator.vibrate?.([200, 100, 200])
+  }
+  fxChannel = sb.channel('my-fashion')
+    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tournaments' }, async ({ new: t }) => {
+      if (!t || t.kind !== 'event' || t.event_type !== 'fashion' || !t.fashion) return
+      const amJ = judgeT.has(t.id), amP = myT.has(t.id)
+      if (!amJ && !amP) return
+      const k = key(t), prev = fxSeen.get(t.id)
+      fxSeen.set(t.id, k)
+      if (prev === k) return
+      const f = t.fashion, link = `#/t/${t.id}/${amJ ? 'show' : 'me'}`
+      if (t.status === 'show' && f.phase === 'scoring' && f.current) {
+        if (amP && myRegIds.has(f.current)) return say(html`<a href="${link}"><b>Jsi na řadě!</b> Běž na molo – ${t.name}</a>`, 'Jsi na řadě na molu!', 'fx-' + f.current)
+        if (amP && prev?.startsWith('registration')) return say(html`<a href="${link}"><b>Fashion show začala!</b> Pořadí na molu najdeš v Můj Status.</a>`, 'Fashion show začala', 'fx-start-' + t.id)
+        if (amJ) {
+          const r = await q(sb.from('registrations').select('nick').eq('id', f.current).maybeSingle()).catch(() => null)
+          return say(html`<a href="${link}">Na molu je <b>${r?.nick || 'další hráč'}</b> – jdi hodnotit.</a>`, `Hodnoť: ${r?.nick || 'další hráč'}`, 'fx-' + f.current)
+        }
+      }
+      if (amJ && t.status === 'show' && f.phase === 'tiebreak') return say(html`<a href="${link}"><b>Rozstřel o 1. místo</b> – dej +1 jednomu z hráčů.</a>`, 'Rozstřel o 1. místo', 'fx-tie-' + t.id)
+      if (t.status === 'show' && f.phase === 'boss' && f.boss === state.user?.id) return say(html`<a href="${link}"><b>Jsi boss of fashion!</b> Vyber vítěze.</a>`, 'Jsi boss of fashion', 'fx-boss-' + t.id)
+      if (t.status === 'finished') toast(html`<a href="#/t/${t.id}/tv">Vyhlášení <b>${t.name}</b> běží na TV.</a>`, 'call', 8000)
+    })
+    .subscribe()
+}
+
 async function boot() {
   if (!configured) {
     mount($('main'), html`
@@ -118,9 +162,11 @@ async function boot() {
   await initAuth()
   renderChrome()
   watchMyMatches()
+  watchFashion()
   onState((evt) => {
     renderChrome()
     watchMyMatches()
+    watchFashion()
     if (evt === 'PASSWORD_RECOVERY') Auth.newPasswordModal()
     if (evt === 'SIGNED_IN' && isLoggedIn() && state.profile && !state.profile.nick && !document.querySelector('#f-onb')) Auth.onboardingModal()
     if (evt === 'SIGNED_OUT') route()

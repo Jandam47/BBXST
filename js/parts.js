@@ -188,11 +188,11 @@ export function bindCombos(root, cat, onPick = () => {}) {
   })
 }
 
-// ── editor decku (3 beyblady) ─────────────────────────────
+// ── editor decku (turnaj 3 beyblady, fashion N) ───────────
 const blankBey = { type: 'bx' }
 
-export function deckEditor(deck) {
-  const beys = [0, 1, 2].map(i => ({ ...blankBey, ...((deck || [])[i] || {}) }))
+export function deckEditor(deck, n = 3) {
+  const beys = Array.from({ length: n }, (_, i) => ({ ...blankBey, ...((deck || [])[i] || {}) }))
   return html`<div class="deck" data-deck>${beys.map((b, i) => html`
     <fieldset class="bey-card" data-bey="${i}" data-type="${b.type === 'cx' ? 'cx' : 'bx'}">
       <div class="row between">
@@ -217,7 +217,7 @@ export function deckEditor(deck) {
     </fieldset>`)}</div>`
 }
 
-export function bindDeckEditor(root, cat) {
+export function bindDeckEditor(root, cat, { distinct = true } = {}) {
   const cards = [...root.querySelectorAll('[data-bey]')]
   const val = (card, key) => card.querySelector(`[data-combo="${key}"] input`)?.value.trim() || ''
   const readBey = (card) => card.dataset.type === 'cx'
@@ -269,7 +269,7 @@ export function bindDeckEditor(root, cat) {
         throw new Error(`Beyblade ${i + 1}: vyber všechny díly ze seznamu.`)
       }
     })
-    if (new Set(names.map(n => n.toLowerCase())).size < 3) throw new Error('Každý beyblade musí být jiný.')
+    if (distinct && new Set(names.map(n => n.toLowerCase())).size < names.length) throw new Error('Každý beyblade musí být jiný.')
     return deck.map(b => Object.fromEntries(Object.entries(b).filter(([, v]) => v !== '')))
   }
 }

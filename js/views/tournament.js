@@ -6,6 +6,7 @@ import { html, raw, mount, on, formData, toast, modal, busy, confirmBox, qrSvg, 
 import { computeStandings, matchLabel, qrPayload, nextPow2, phaseName, arenaQueue, busyRegs } from '../core.js'
 import { renderManage } from './manage.js'
 import { icon } from '../icons.js'
+import * as Fashion from './fashion.js'
 import { loadParts, deckEditor, bindDeckEditor } from '../parts.js'
 
 const cfg = window.BBX_CONFIG
@@ -60,7 +61,11 @@ function tabsFor(d) {
   return tabs
 }
 
+// fashion show má vlastní pohled
+const fashionKind = async (id) => Fashion.isFashion(await q(sb.from('tournaments').select('kind,event_type').eq('id', id).maybeSingle()))
+
 export async function render(main, [id, tabArg]) {
+  if (await fashionKind(id)) return Fashion.render(main, [id, tabArg])
   let d = await load(id)
   if (!d.t) { mount(main, html`<div class="empty"><h2>Turnaj nenalezen</h2><a class="btn" href="#/">Zpět</a></div>`); return }
 
@@ -290,7 +295,7 @@ async function regForm(box, d, reload, existing) {
   })
 }
 
-function guestPrompt() {
+export function guestPrompt() {
   return new Promise(res => {
     modal(html`
       <h2>Nechceš si založit účet?</h2>
@@ -577,6 +582,7 @@ async function tabJudge(box, { d, reload }) {
 //  TV ROZPIS (nahrazuje BBX_watchTV)
 // ────────────────────────────────────────────────────────────────
 export async function renderTV(main, [id]) {
+  if (await fashionKind(id)) return Fashion.renderTV(main, [id])
   document.body.classList.add('tv')
   let d = await load(id)
   let scrollTimer = null

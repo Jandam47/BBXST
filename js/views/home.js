@@ -2,7 +2,7 @@
 //  Hlavní stránka (turnaje a akce) + formulář pro založení / úpravu
 // ════════════════════════════════════════════════════════════════
 import { sb, state, rpc, q, errMsg, isLoggedIn, canManage } from '../supa.js'
-import { html, mount, on, formData, toast, busy, statusPill, fmtDate, fmtTime, toLocalInput, fromLocalInput, plural } from '../ui.js'
+import { html, mount, on, formData, toast, busy, statusPill, fmtDate, fmtTime, toLocalInput, fromLocalInput, plural, EVENT_TYPES, kindLabel } from '../ui.js'
 import { DEFAULT_BO, FORMATS } from '../core.js'
 
 export async function renderList(main, _p, ctx) {
@@ -43,11 +43,11 @@ export async function renderList(main, _p, ctx) {
   }
 
   const card = (t) => html`
-    <a class="card t-card ${t.kind === 'event' ? 'is-event' : ''} ${['swiss', 'topcut'].includes(t.status) ? 'is-live' : ''}" href="#/t/${t.id}">
+    <a class="card t-card ${t.kind === 'event' ? 'is-event' : ''} ${t.event_type === 'fashion' && t.kind === 'event' ? 'is-fashion' : ''} ${['swiss', 'topcut', 'show'].includes(t.status) ? 'is-live' : ''}" href="#/t/${t.id}">
       <div class="row between"><span class="t-date">${t.starts_at ? `${fmtDate(t.starts_at)} · ${fmtTime(t.starts_at)}` : 'Termín upřesníme'}</span>${statusPill(t)}</div>
       <h3>${t.name}</h3>
       <div class="meta">
-        <span>${t.kind === 'event' ? 'Akce' : 'Turnaj'}</span>
+        <span>${kindLabel(t)}</span>
         ${t.location ? html`<span>📍 ${t.location}</span>` : ''}
         <span>👥 ${plural(Number(t.players), 'hráč', 'hráči', 'hráčů')}${t.max_players ? ` / ${t.max_players}` : ''}</span>
         ${mine.has(t.id) ? html`<span style="color:var(--bolt)">✓ Jsi přihlášený</span>` : ''}
@@ -87,7 +87,7 @@ export async function renderEditor(main, [kindArg, id]) {
   }
   let t = { kind: kindArg === 'event' ? 'event' : 'tournament', name: '', description: '', location: '', starts_at: null,
             swiss_rounds: 4, top_cut: 8, arena_count: 4, win_score: 7, bo_config: DEFAULT_BO, max_players: null,
-            format: 'swiss', unique_parts: true }
+            format: 'swiss', unique_parts: true, event_type: 'training', fashion_beys: 3 }
   if (id) {
     t = await q(sb.from('tournaments').select('*').eq('id', id).single())
     if (!canManage(t)) { mount(main, html`<div class="notice err">Tenhle turnaj nemůžeš upravovat.</div>`); return }
@@ -109,6 +109,15 @@ export async function renderEditor(main, [kindArg, id]) {
         </div>
         <label class="f"><span>Místo</span><input class="input" name="location" maxlength="120" value="${t.location || ''}" placeholder="Klub, adresa"></label>
         <label class="f"><span>Popis</span><textarea class="input" name="description" maxlength="2000" placeholder="Pravidla, startovné, co si vzít s sebou…">${t.description || ''}</textarea></label>
+        ${isEv ? html`
+        <fieldset class="f ev-type"><span>Druh akce</span>
+          <div class="seg" role="radiogroup" aria-label="Druh akce">
+            ${EVENT_TYPES.map(([k, l]) => html`<label class="seg-opt"><input type="radio" name="event_type" value="${k}" ${t.event_type === k ? 'checked' : ''} ${started ? 'disabled' : ''}><span>${l}</span></label>`)}
+          </div>
+          <div class="hint" id="ev-hint">${evHint(t.event_type)}</div>
+        </fieldset>
+        <label class="f" id="f-fbeys" ${t.event_type === 'fashion' ? '' : 'hidden'}><span>Kolik beybladů ukáže každý hráč</span>
+          <input class="input" type="number" min="1" max="10" name="fashion_beys" value="${t.fashion_beys || 3}" ${started ? 'disabled' : ''}></label>` : ''}
         <label class="f"><span>Maximální počet hráčů (nepovinné)</span><input class="input" type="number" min="2" max="512" name="max_players" value="${t.max_players || ''}"></label>
       </div>
       ${isEv ? '' : html`
@@ -147,6 +156,10 @@ export async function renderEditor(main, [kindArg, id]) {
       <button class="btn primary block">${id ? 'Uložit změny' : isEv ? 'Vypsat akci' : 'Vypsat turnaj'}</button>
     </form>`)
 
+  on(main, 'change', '[name=event_type]', (e, el) => {
+    main.querySelector('#f-fbeys').hidden = el.value !== 'fashion'
+    main.querySelector('#ev-hint').textContent = evHint(el.value)
+  })
   on(main, 'change', '#top-preset', (e, el) => { main.querySelector('#top-custom').hidden = el.value !== 'custom' })
   on(main, 'change', '[name=format]', (e, el) => {
     const dm = el.value === 'deathmatch'
@@ -172,6 +185,8 @@ export async function renderEditor(main, [kindArg, id]) {
       if (row.top_cut === 1 || row.top_cut < 0) return toast('Top cut musí mít aspoň 2 hráče, nebo 0.', 'err')
     } else {
       Object.assign(row, { swiss_rounds: 1, top_cut: 0 })
+      if (!started) Object.assign(row, { event_type: d.event_type || 'training',
+                                         fashion_beys: Math.min(10, Math.max(1, Number(d.fashion_beys) || 3)) })
     }
     await busy(f.querySelector('button.primary'), async () => {
       try {
@@ -184,3 +199,7 @@ export async function renderEditor(main, [kindArg, id]) {
     })
   })
 }
+
+const evHint = (k) => k === 'fashion'
+  ? 'Soutěž o nejlepší sestavu: hráči se přihlásí s beyblady, design judge je hodnotí a na TV se vyhlásí top 3.'
+  : k === 'other' ? 'Cokoliv dalšího – hráči se jen přihlásí.' : 'Trénink – hráči se jen přihlásí, bez výsledků.'

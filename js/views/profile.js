@@ -2,7 +2,7 @@
 //  Profil hráče: role, statistiky, historie turnajů, beyblady, rating
 // ════════════════════════════════════════════════════════════════
 import { sb, state, rpc, q, errMsg, refreshMe, isLoggedIn } from '../supa.js'
-import { html, mount, on, formData, toast, modal, busy, confirmBox, fmtDate, raw, plural } from '../ui.js'
+import { html, mount, on, formData, toast, modal, busy, confirmBox, fmtDate, raw, plural, kindLabel } from '../ui.js'
 import { ROLES, REGIONS, roleLevel } from '../core.js'
 import { avatarPicker } from './auth.js'
 
@@ -38,6 +38,18 @@ function sparkline(points) {
     <circle cx="${last[0]}" cy="${last[1]}" r="4" fill="#ffd21f"/></svg>`)
 }
 
+// pohár achievementu (1 zlatý, 2 stříbrný, 3 bronzový)
+const TROPHY = { 1: ['#fff27a', '#ffd21f', '#b98a00'], 2: ['#ffffff', '#cfdbe8', '#7f93a8'], 3: ['#ffc59a', '#e0894a', '#8a4a1c'] }
+function trophy(place) {
+  const [a, b, c] = TROPHY[place] || TROPHY[3]
+  return raw(`<svg class="ach-cup" viewBox="0 0 64 64" aria-hidden="true">
+    <defs><linearGradient id="cup${place}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${a}"/><stop offset=".55" stop-color="${b}"/><stop offset="1" stop-color="${c}"/></linearGradient></defs>
+    <path d="M18 10h28v10c0 9-6 16-14 16s-14-7-14-16z" fill="url(#cup${place})"/>
+    <path d="M18 14h-6a6 6 0 0 0 7 9M46 14h6a6 6 0 0 1-7 9" fill="none" stroke="${b}" stroke-width="3" stroke-linecap="round"/>
+    <path d="M29 36h6v8h-6zM21 50c0-4 4-6 11-6s11 2 11 6v4H21z" fill="url(#cup${place})"/>
+    <text x="32" y="28" text-anchor="middle" font-family="Chakra Petch, sans-serif" font-weight="700" font-size="15" fill="${c}">${place}</text></svg>`)
+}
+
 const BEY_KINDS = [['build', 'Buildy'], ['blade', 'Blady'], ['ratchet', 'Ratchety'], ['bit', 'Bity']]
 function beyList(rows = []) {
   if (!rows.length) return html`<div class="empty">Nic tu není.</div>`
@@ -54,10 +66,11 @@ function beyList(rows = []) {
 }
 
 export async function render(main, [id], ctx) {
-  const [p, stats, bs] = await Promise.all([
+  const [p, stats, bs, ach] = await Promise.all([
     q(sb.from('profiles').select('*').eq('id', id).maybeSingle()),
     rpc('player_stats', { p_user: id }),
     rpc('player_bey_stats', { p_user: id }).catch(() => ({})),
+    rpc('player_achievements', { p_user: id }).catch(() => []),
   ])
   if (ctx && !ctx.isCurrent()) return
   if (!p || !p.nick) { mount(main, html`<div class="empty">${p && id === state.user?.id ? html`<button class="btn primary" onclick="location.reload()">Dokonči profil</button>` : 'Profil nenalezen.'}</div>`); return }
@@ -90,6 +103,13 @@ export async function render(main, [id], ctx) {
       <div class="stat"><div class="v">${r.titles}</div><div class="k">${r.titles === 1 ? 'titul' : r.titles >= 2 && r.titles <= 4 ? 'tituly' : 'titulů'}</div></div>
       <div class="stat"><div class="v">${r.podiums}</div><div class="k">na bedně</div></div>
     </div>
+
+    ${ach.length ? html`<h2>Achievementy</h2>
+    <div class="ach-grid">${ach.map(a => html`<a class="ach p${a.place}" href="#/t/${a.tournament_id}" title="${a.name}">
+      ${trophy(a.place)}
+      <b>Fashion ${a.place}</b>
+      <small class="ellipsis">${a.name}</small>
+      <small class="faint">${fmtDate(a.at)}</small></a>`)}</div>` : ''}
 
     ${stats.rating.length > 1 ? html`<h2>Vývoj ratingu</h2><div class="card">${sparkline(stats.rating)}
       <div class="row between small faint"><span>start 1000</span><span>teď ${p.rating}</span></div></div>` : ''}
@@ -133,7 +153,7 @@ export async function render(main, [id], ctx) {
         <span class="num">${m.best_of > 1 ? `${m.my_wins}:${m.opp_wins}` : `${m.my_score}:${m.opp_score}`}</span>
       </a>`)}</div>` : ''}
 
-    ${events.length ? html`<h2>Akce</h2><div class="list">${events.map(t => html`<a class="li" href="#/t/${t.id}"><span class="grow">${t.name}</span><span class="small faint">${fmtDate(t.starts_at)}</span></a>`)}</div>` : ''}`)
+    ${events.length ? html`<h2>Akce</h2><div class="list">${events.map(t => html`<a class="li" href="#/t/${t.id}"><span class="grow">${t.name}</span><span class="small faint">${kindLabel(t)} · ${fmtDate(t.starts_at)}</span></a>`)}</div>` : ''}`)
 
   on(main, 'click', '#bk [data-k]', (e, b) => {
     main.querySelectorAll('#bk button').forEach(x => x.classList.toggle('on', x === b))
