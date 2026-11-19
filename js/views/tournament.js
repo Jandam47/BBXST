@@ -41,8 +41,10 @@ function tabsFor(d) {
   const { t } = d
   // [klíč, popisek, ikona]
   const tabs = [['me', d.myReg ? 'Můj Status' : t.kind === 'event' ? 'Přihlásit se' : 'Registrace', d.myReg ? '🎫' : '✍️']]
-  tabs.push(['players', `Hráči (${d.players.filter(p => p.status === 'active').length})`, '👥'])
-  if (t.kind === 'tournament' && t.status !== 'registration' && d.matches.some(m => m.stage === 'swiss')) tabs.push(['swiss', phaseName(t), '📋'])
+  // po startu je seznam hráčů v tabulce swissu / deathmatche, záložka Hráči se už neukazuje
+  const hasTable = t.kind === 'tournament' && t.status !== 'registration' && d.matches.some(m => m.stage === 'swiss')
+  if (!hasTable) tabs.push(['players', `Hráči (${d.players.filter(p => p.status === 'active').length})`, '👥'])
+  if (hasTable) tabs.push(['swiss', phaseName(t), '📋'])
   if (d.matches.some(m => m.stage !== 'swiss')) tabs.push(['bracket', t.top_cut === 2 ? 'Finále' : 'Top cut', '🏆'])
   if (t.kind === 'tournament' && (t.status === 'finished' || (canManage(t) && running(t)))) tabs.push(['report', 'Vyhodnocení', '📊'])
   if (t.kind === 'tournament' && running(t) && (state.level >= 1 || canManage(t))) tabs.push(['judge', 'Judge menu', '⚖️'])

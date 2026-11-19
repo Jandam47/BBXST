@@ -75,7 +75,7 @@ def run(only=None):
         page.goto(BASE + '#/'); page.wait_for_selector('.t-card')
         page.click('.tabs >> text=Odehrané'); page.click('text=Pardubice Cup'); page.wait_for_selector('.tabs')
         page.click('.tabs >> text=Top cut'); page.wait_for_selector('.b-match'); shot(page, '09_bracket')
-        page.click('.tabs >> text=Hráči'); page.wait_for_selector('.list'); shot(page, '10_players_finished')
+        assert page.locator('.tabs >> text=Hráči').count() == 0, 'po startu bez záložky Hráči'
         page.goto(BASE + '#/me'); page.wait_for_selector('.stats'); shot(page, '11_profile')
         page.click('text=Upravit profil'); page.wait_for_selector('#f-prof'); page.click('[data-av="🦈"]'); page.click('#f-prof button.primary')
         page.wait_for_selector('.prof-head .av >> text=🦈')
