@@ -172,3 +172,20 @@ setInterval(tickCountdowns, 1000)
 // druh akce
 export const EVENT_TYPES = [['training', 'Trénink'], ['fashion', 'Fashion'], ['other', 'Ostatní']]
 export const kindLabel = (t) => t.kind !== 'event' ? 'Turnaj' : t.event_type === 'fashion' ? 'Fashion' : t.event_type === 'other' ? 'Akce' : 'Trénink'
+
+// druhy endů (BBXST: +3 xtreme, +2 burst / over, +1 spin)
+export const FINISHES = [['xtreme', 'Xtreme', 3], ['burst', 'Burst', 2], ['over', 'Over', 2], ['spin', 'Spin', 1]]
+const fsum = (c) => c ? FINISHES.reduce((a, [k]) => a + (c[k] || 0), 0) + (c.plus2 || 0) : 0
+// dlaždice endů: velké číslo = dané, malé = obdržené
+export function finishTiles(given, taken) {
+  if (!fsum(given) && !fsum(taken)) return ''
+  return html`<div class="fin-tiles">${FINISHES.map(([k, l, p]) => html`
+    <div class="fin ${k}"><span class="fin-l">${l} <i>+${p}</i></span><b class="num">${given?.[k] || 0}</b>
+      <small>obdržel ${taken?.[k] || 0}</small></div>`)}</div>
+    ${(given?.plus2 || taken?.plus2) ? html`<p class="hint">Starší +2 bez rozlišení Burst / Over: dané ${given?.plus2 || 0}, obdržené ${taken?.plus2 || 0}.</p>` : ''}`
+}
+// kompaktní řádek endů „X 2 · B 1 · O 0 · S 3“
+export function finishLine(c) {
+  if (!fsum(c)) return html`<span class="faint">–</span>`
+  return html`${FINISHES.filter(([k]) => c[k]).map(([k, l]) => html`<span class="fin-chip ${k}">${l} ${c[k]}</span>`)}${c.plus2 ? html`<span class="fin-chip">+2 ${c.plus2}</span>` : ''}`
+}

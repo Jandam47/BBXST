@@ -655,6 +655,15 @@ body.judge.has-match .judgeBar .drawBtn { display: block; }
 .beyPick:disabled { opacity: .25; cursor: not-allowed; }
 .beyPick.win  { background: rgba(0,255,157,0.18); border-color: var(--green); color: var(--green); box-shadow: 0 0 18px rgba(0,255,157,0.3); }
 .beyPick.lose { background: rgba(255,34,68,0.16); border-color: var(--red); color: #ffb3c0; }
+/* druh endu u +2 (Over / Burst) */
+.pickFinish { display: flex; gap: clamp(14px, 4vw, 48px); width: min(720px, 100%); }
+.pickFinish.hidden, .pickCols.hidden { display: none; }
+.finishPick { flex: 1; font-family: 'Orbitron', monospace; font-weight: 700; font-size: clamp(22px, 4.4vw, 40px); letter-spacing: 3px;
+  padding: clamp(22px, 6vh, 48px) 12px; border-radius: 16px; cursor: pointer; background: #0a1520; color: var(--cyan);
+  border: 1px solid #0e2a3a; box-shadow: 0 0 20px rgba(0,255,255,0.15); transition: all .15s; }
+.finishPick small { display: block; font-size: .4em; letter-spacing: 2px; opacity: .6; margin-top: 6px; }
+.finishPick[data-f="burst"] { color: var(--red); box-shadow: 0 0 20px rgba(255,34,68,0.18); }
+.finishPick:active { transform: scale(.97); border-color: var(--gold); box-shadow: 0 0 34px rgba(255,215,0,0.35); }
 
 /* prohození stran (jen při 0:0) */
 .swapBtn { position: fixed; top: 10px; left: 50%; transform: translateX(-50%); z-index: 30; display: none;
@@ -916,7 +925,11 @@ body.judge.has-match.can-swap .swapBtn { display: flex; }
 <!-- VÝBĚR BEYŮ -->
 <div class="pickOverlay hidden" id="pickOverlay">
   <div class="pickTitle" id="pickTitle"></div>
-  <div class="pickCols">
+  <div class="pickFinish hidden" id="pickFinish">
+    <button class="finishPick" data-f="over">OVER<small>FINISH</small></button>
+    <button class="finishPick" data-f="burst">BURST<small>FINISH</small></button>
+  </div>
+  <div class="pickCols" id="pickCols">
     <div class="pickCol left"  id="pickLeft"></div>
     <div class="pickCol right" id="pickRight"></div>
   </div>
@@ -1628,7 +1641,7 @@ function stateNow() {   // orientace podle databáze (p1/p2), ne podle stran sto
   return {
     game: gameNo(judge.match), left: judge.leftSlot, started_at: judge.startedAt,
     battles: judge.battles.map(b => ({
-      slot: b.slot === 0 ? 0 : (p1Left ? b.slot : 3 - b.slot), pts: b.pts,
+      slot: b.slot === 0 ? 0 : (p1Left ? b.slot : 3 - b.slot), pts: b.pts, finish: b.finish || null,
       p1_bey: p1Left ? b.beys[1] : b.beys[2], p2_bey: p1Left ? b.beys[2] : b.beys[1],
     })),
   }
@@ -1642,7 +1655,7 @@ function saveLocal() {
 function applyState(st) {   // judge.leftSlot už musí být nastavený
   const p1Left = judge.leftSlot === 1
   judge.battles = (st.battles || []).map(b => ({
-    slot: b.slot === 0 ? 0 : (p1Left ? b.slot : 3 - b.slot), pts: b.pts,
+    slot: b.slot === 0 ? 0 : (p1Left ? b.slot : 3 - b.slot), pts: b.pts, finish: b.finish || null,
     beys: { 1: p1Left ? b.p1_bey : b.p2_bey, 2: p1Left ? b.p2_bey : b.p1_bey },
   }))
   history = judge.battles.map(b => ({ p: b.slot, pts: b.slot ? b.pts : 0, battle: true }))
@@ -2044,21 +2057,37 @@ function scoreFromDrag(side, pts) {
 
 function openPicker(side, pts) {
   if (!judgeHasMatch() || (matchOver && side !== 0)) return
-  pick = { side, pts, beys: { 1: null, 2: null } }
+  // druh endu: +3 xtreme, +1 spin, +2 vybere judge (over / burst)
+  pick = { side, pts, finish: side === 0 ? null : pts === 3 ? "xtreme" : pts === 1 ? "spin" : null, beys: { 1: null, 2: null } }
   for (const s of [1, 2]) {
     const avail = judge.sides[s].beys.filter(b => b && !cycleUsed(s).includes(b))
     if (avail.length === 1) pick.beys[s] = avail[0]     // poslední bey v kole se doplní sám
   }
-  if (pick.beys[1] && pick.beys[2]) return commitPick()
+  if (pick.beys[1] && pick.beys[2] && !needFinish()) return commitPick()
   drawPicker()
   document.getElementById("pickOverlay").classList.remove("hidden")
 }
 
+const needFinish = () => pick && pick.side !== 0 && !pick.finish
+const FINISH_NAME = { xtreme: "XTREME", burst: "BURST", over: "OVER", spin: "SPIN" }
 function drawPicker() {
   const { side, pts } = pick
+  const askFinish = needFinish()
+  document.getElementById("pickFinish").classList.toggle("hidden", !askFinish)
+  document.getElementById("pickCols").classList.toggle("hidden", askFinish)
+  if (askFinish) {
+    document.getElementById("pickTitle").innerHTML = `<span class="pts">+${pts}</span> – JAKÝ END?`
+    document.querySelectorAll(".finishPick").forEach(btn => btn.onclick = () => {
+      if (!pick) return
+      pick.finish = btn.dataset.f
+      if (pick.beys[1] && pick.beys[2]) return commitPick()
+      drawPicker()
+    })
+    return
+  }
   const scorerDone = side === 0 || pick.beys[side]
   const title = side === 0 ? "REMÍZA – KTERÉ BEYE HRÁLY?"
-    : !scorerDone ? `KDO SKÓROVAL? <span class="pts">+${pts}${pts === 3 ? " XTREME" : ""}</span>`
+    : !scorerDone ? `KDO SKÓROVAL? <span class="pts">+${pts} ${FINISH_NAME[pick.finish] || ""}</span>`
     : "KTERÝ BEY PROHRÁL?"
   document.getElementById("pickTitle").innerHTML = title
   for (const s of [1, 2]) {
@@ -2084,10 +2113,10 @@ function drawPicker() {
 
 function commitPick() {
   if (!pick) return
-  const { side, pts, beys } = pick
+  const { side, pts, beys, finish } = pick
   pick = null
   document.getElementById("pickOverlay").classList.add("hidden")
-  const battle = { slot: side, pts, beys: { 1: beys[1], 2: beys[2] } }
+  const battle = { slot: side, pts, finish: side === 0 ? null : finish, beys: { 1: beys[1], 2: beys[2] } }
   if (side === 0) {
     judge.battles.push(battle)
     history.push({ p: 0, pts: 0, battle: true })
@@ -2151,6 +2180,7 @@ async function sendResult() {
     p_points: judge.battles.map(b => ({
       slot: b.slot === 0 ? 0 : (p1Left ? b.slot : 3 - b.slot),
       pts: b.pts,
+      finish: b.finish || null,
       p1_bey: p1Left ? b.beys[1] : b.beys[2],
       p2_bey: p1Left ? b.beys[2] : b.beys[1],
     })),

@@ -438,7 +438,8 @@ function fakeBattles(s1, s2, [b1, b2]) {
     const side = a < s1 && (b >= s2 || Math.random() < 0.5) ? 1 : 2
     const v = Math.min(side === 1 ? s1 - a : s2 - b, [1, 1, 2, 2, 3][Math.floor(Math.random() * 5)])
     if (side === 1) a += v; else b += v
-    out.push({ slot: side, pts: v, p1_bey: pickRand(b1.filter(Boolean)), p2_bey: pickRand(b2.filter(Boolean)) })
+    const finish = v === 3 ? 'xtreme' : v === 1 ? 'spin' : Math.random() < 0.5 ? 'burst' : 'over'
+    out.push({ slot: side, pts: v, finish, p1_bey: pickRand(b1.filter(Boolean)), p2_bey: pickRand(b2.filter(Boolean)) })
   }
   return out
 }

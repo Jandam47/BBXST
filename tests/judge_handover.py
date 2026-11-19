@@ -19,6 +19,8 @@ def drag(page, sel, dx):
 def score_point(page, side, pts):
     drag(page, f'.dragBtn[data-points="{pts}"]', -220 if side == 1 else 220)
     page.wait_for_timeout(150)
+    if page.locator('#pickFinish:not(.hidden)').count():
+        page.click('.finishPick[data-f="burst"]'); page.wait_for_timeout(150)
     if page.locator('#pickOverlay:not(.hidden)').count():
         scorer, other = ('#pickLeft', '#pickRight') if side == 1 else ('#pickRight', '#pickLeft')
         if page.locator(f'{scorer} .beyPick.win').count() == 0:
@@ -58,6 +60,7 @@ with sync_playwright() as p:
     assert a.inner_text('#judgeTag') == 'PASS JUDGE'
     st = json.loads(sql(f"select live_state from matches where id = '{m_id}'"))
     assert len(st['battles']) == 2 and st['left'] == a.evaluate('judge.leftSlot'), st
+    assert [x['finish'] for x in st['battles']] == ['burst', 'spin'], st
 
     # ── zavřít a znovu otevřít BBXST → skóre se načte
     a.goto(BASE + 'bbxst.html'); a.wait_for_selector('body.judge.has-match'); a.wait_for_timeout(1200)
@@ -78,6 +81,7 @@ with sync_playwright() as p:
     c.screenshot(path=OUT + '52_bbxst_takeover_confirm.png')
     c.click('#jYes'); c.wait_for_selector('body.judge.has-match'); c.wait_for_timeout(1500)
     assert board(c) == '2:1', 'převzato ' + board(c)
+    assert c.evaluate('judge.battles.map(b => b.finish).join()') == 'burst,spin', 'druh endu se převezme'
     assert db_live(m_id).split('|')[1] == judge2
     score_point(c, 1, 1)
     assert board(c) == '3:1'

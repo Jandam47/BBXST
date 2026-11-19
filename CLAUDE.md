@@ -8,7 +8,7 @@ Komunikuj **česky**, celé UI je česky.
   turnaje, judge arény, hráči, profily, chat, TV rozpis (`#/t/<id>/tv`). Vanilla JS, ES moduly, **žádný build**.
 - `bbxst.html` – **BBXST** scoreboard (jeden soubor, klasické `<script>`, globální proměnné). Casual mód =
   počítadlo; judge mód = načtení zápasu (QR / aréna / `?match=<id>&t=<turnaj>` z BBXU), výběr beyů po každém
-  bodu, remíza, prohození stran při 0:0 (⇄), hláška „OTOČ ARÉNU“ po každé sadě 3 soubojů, odeslání přes RPC
+  bodu (po přetažení +2 judge nejdřív vybere OVER / BURST), remíza, prohození stran při 0:0 (⇄), hláška „OTOČ ARÉNU“ po každé sadě 3 soubojů, odeslání přes RPC
   `submit_game` s offline frontou (`client_id` zajišťuje, že se hra nezapočítá dvakrát).
   Design BBXST se nemění – Adam ho chce zachovat.
 - `BBXST.html` (velká písmena) je **jen přesměrování** na `bbxst.html` kvůli starým odkazům. Neupravovat.
@@ -19,7 +19,7 @@ Komunikuj **česky**, celé UI je česky.
   (zdroj kyoganken.sakura.ne.jp/beyx/weight1.htm), Hasbro názvy jsou v `aliases`. Nové díly = nový SQL soubor
   s `insert … on conflict do update` (viz `07-parts-update.sql`); web se kvůli dílům nasazovat nemusí.
 - `js/config.js` – **obsahuje Adamovy živé klíče Supabase. Nikdy ho neměň ani nepřepisuj.**
-- `supabase/schema.sql`, `02-parts.sql`, `03-live-score.sql`, `04-security-hardening.sql`, `05-judge-handover.sql`, `06-formats-stats.sql`, `07-parts-update.sql`, `08-judge-per-match.sql`, `09-pause.sql`, `10-fashion.sql` – databáze (spuštěné v produkci, nové soubory
+- `supabase/schema.sql`, `02-parts.sql`, `03-live-score.sql`, `04-security-hardening.sql`, `05-judge-handover.sql`, `06-formats-stats.sql`, `07-parts-update.sql`, `08-judge-per-match.sql`, `09-pause.sql`, `10-fashion.sql`, `11-finishes.sql` – databáze (spuštěné v produkci, nové soubory
   spouští Adam). Živé skóre: BBXST v judge módu posílá po každém bodu `live_score` → `matches.live_p1/p2`
   (TV rozpis, vstupenka, seznamy); trigger `bbx_clear_live` ho maže po uložení hry.
   Rozehraná hra: BBXST posílá s `live_score` i `p_state` → `matches.live_state` (souboje v orientaci p1/p2,
@@ -42,6 +42,11 @@ Komunikuj **česky**, celé UI je česky.
   výsledek, body). Nad tím `tournament_report` (záložka Vyhodnocení), `meta_ranking` (stránka `#/meta`,
   `js/views/meta.js`, jen skončené turnaje, bez testovacích hráčů „T-…“ bez účtu) a `player_bey_stats` (profil).
   Blade u CX = lock chip + main blade. Souboje bez beyů (ruční výsledek) se nepočítají.
+- Druh endu (11): `points.finish` = `xtreme` (+3) / `burst` / `over` (+2) / `spin` (+1), remíza null. BBXST posílá
+  `finish` u každého souboje (i v `live_state` a offline frontě); `bbx_finish()` doplní chybějící z bodů (+2 bez
+  volby zůstane null = „+2 nerozlišeno“). `bbx_battles` vrací i `finish`, `opp_bey`. Profil: `player_bey_stats`
+  → `finishes` {given, taken} (dlaždice Endy, `finishTiles` v ui.js). Během turnaje „Můj deck“ v Můj Status
+  (`my_deck_stats`, jen vlastní registrace): bilance, body získané/ztracené, endy dané/obdržené, kdo ho porazil.
 - Akce mají druh `tournaments.event_type` (10): `training` (Trénink), `fashion`, `other` (Ostatní); Trénink/Ostatní =
   jen přihlášení. **Fashion** (`js/views/fashion.js`, vlastní pohled i TV; tournament.js ho přesměruje): přihláška
   s `fashion_beys` beyi (deck, stejné beye OK), design judge (`fashion_judges`, jen účet, nesoutěží, jen před startem).

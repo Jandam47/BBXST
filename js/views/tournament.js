@@ -2,7 +2,7 @@
 //  Detail turnaje / akce: můj status, hráči, swiss, pavouk, judge menu, TV
 // ════════════════════════════════════════════════════════════════
 import { sb, state, rpc, q, errMsg, canManage, ensureSession, refreshMe, askNotify } from '../supa.js'
-import { html, raw, mount, on, formData, toast, modal, busy, confirmBox, qrSvg, qrPng, statusPill, fmtDate, fmtTime, pauseLeft, fmtLeft } from '../ui.js'
+import { html, raw, mount, on, formData, toast, modal, busy, confirmBox, qrSvg, qrPng, statusPill, fmtDate, fmtTime, pauseLeft, fmtLeft, finishLine } from '../ui.js'
 import { computeStandings, matchLabel, qrPayload, nextPow2, phaseName, arenaQueue, busyRegs } from '../core.js'
 import { renderManage } from './manage.js'
 import { icon } from '../icons.js'
@@ -210,6 +210,7 @@ function tabMe(box, { d, reload }) {
       </div>`}
     </div>
     <div class="row wrap" style="margin-top:12px">
+      ${!isEv && t.status !== 'registration' ? html`<button class="btn sm primary btn-ico" data-act="deck">${raw(icon('bars'))}Můj deck</button>` : ''}
       ${!isEv ? html`<button class="btn sm" data-act="save-qr">Uložit QR do telefonu</button>` : ''}
       ${t.status === 'registration' ? html`
         ${!isEv ? html`<button class="btn sm" data-act="edit">Upravit beyblady</button>` : ''}
@@ -225,6 +226,7 @@ function tabMe(box, { d, reload }) {
     a.href = qrPng(qrText, 10); a.download = `bbxu-${t.name}-${myReg.nick}.png`.replace(/[^\w.-]+/g, '_'); a.click()
   })
   on(box, 'click', '[data-act=edit]', () => regForm(box, d, reload, myReg))
+  on(box, 'click', '[data-act=deck]', (e, b) => busy(b, () => deckModal(t)))
   on(box, 'click', '[data-act=leave]', async () => {
     if (!await confirmBox('Opravdu se odhlásit z turnaje?', { ok: 'Odhlásit', danger: true })) return
     try { await q(sb.from('registrations').delete().eq('id', myReg.id)); await refreshMe(); toast('Odhlášeno.', 'ok'); reload() }
@@ -653,3 +655,25 @@ export async function renderTV(main, [id]) {
 }
 
 export { nickOf, running }
+
+// ── Můj deck: jak si vede každý bey v tomhle turnaji ─────────────
+async function deckModal(t) {
+  let st
+  try { st = await rpc('my_deck_stats', { p_tournament: t.id }) } catch (e) { return toast(errMsg(e), 'err') }
+  modal(html`
+    <h2>Můj deck</h2>
+    <p class="muted" style="margin-top:-4px">${t.name} · souboje zapsané judgem v BBXST</p>
+    <div class="stack deck-stats">${st.beys.map(b => html`
+      <div class="card deck-bey">
+        <div class="row between"><b class="deck-name">${b.bey}</b>
+          <span class="small muted">${b.battles ? `${b.wins} V · ${b.draws} R · ${b.losses} P` : 'zatím nehrál'}</span></div>
+        ${b.battles ? html`
+        <div class="deck-pts"><span class="ok-t">+${b.points}</span> získal <span class="sep">·</span> <span class="bad-t">−${b.points_lost}</span> ztratil</div>
+        <div class="deck-row"><span class="lbl">Dal endy</span><div class="fin-line">${finishLine(b.given)}</div></div>
+        <div class="deck-row"><span class="lbl">Poražen</span><div class="fin-line">${finishLine(b.taken)}</div></div>
+        ${b.beaten_by.length ? html`<div class="deck-row"><span class="lbl">Porazil ho</span>
+          <div class="small">${b.beaten_by.map((o, i) => html`${i ? ', ' : ''}${o.bey} <span class="faint">×${o.n}</span>`)}</div></div>` : ''}` : ''}
+      </div>`)}</div>
+    <p class="hint">Počítají se jen souboje, u kterých judge vybral beye. Remízy body nemají.</p>
+    <button class="btn ghost block" data-close style="margin-top:12px">Zavřít</button>`)
+}

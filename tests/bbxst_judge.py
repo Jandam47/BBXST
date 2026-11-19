@@ -15,9 +15,11 @@ def drag(page, sel, dx):
     for i in range(1, 9): page.mouse.move(x + dx * i / 8, y)
     page.mouse.up()
 
-def score_point(page, side, pts_sel):
+def score_point(page, side, pts_sel, finish='burst'):
     drag(page, pts_sel, -220 if side == 1 else 220)
     page.wait_for_timeout(150)
+    if page.locator('#pickFinish:not(.hidden)').count():
+        page.click(f'.finishPick[data-f="{finish}"]'); page.wait_for_timeout(150)
     if page.locator('#pickOverlay:not(.hidden)').count():
         scorer = '#pickLeft' if side == 1 else '#pickRight'
         other = '#pickRight' if side == 1 else '#pickLeft'
@@ -65,7 +67,11 @@ with sync_playwright() as p:
     page.click('#swapBtn'); page.wait_for_timeout(1500)
 
     # bod +2 vlevo → výběr beyů
-    drag(page, '.dragBtn[data-points="2"]', -220); page.wait_for_selector('#pickOverlay:not(.hidden)')
+    drag(page, '.dragBtn[data-points="2"]', -220); page.wait_for_selector('#pickFinish:not(.hidden)')
+    assert page.is_hidden('#pickCols')
+    page.screenshot(path=OUT + '33a_bbxst_finish.png')
+    page.click('.finishPick[data-f="over"]'); page.wait_for_selector('#pickCols:not(.hidden)')
+    assert 'OVER' in page.inner_text('#pickTitle')
     page.locator('#pickLeft .beyPick').first.click(); page.wait_for_timeout(100)
     page.screenshot(path=OUT + '33_bbxst_pick.png')
     page.locator('#pickRight .beyPick:not([disabled])').first.click(); page.wait_for_timeout(500)
@@ -107,6 +113,10 @@ with sync_playwright() as p:
     assert st == 'done' and sorted([int(s1), int(s2)]) == [3, 7] and int(npts) >= 5
     beys_ok = sql(f"select bool_and(p1_bey is not null and p2_bey is not null) from points pt join games g on g.id = pt.game_id where g.match_id = '{m_id}'")
     assert beys_ok == 't'
+    fin = sql(f"select string_agg(coalesce(finish, '-'), ',' order by seq) from points pt join games g on g.id = pt.game_id where g.match_id = '{m_id}'")
+    print('finishes:', fin)
+    f = fin.split(',')
+    assert f[0] == 'over' and f[1] == '-' and 'xtreme' in f and f.count('burst') >= 1, fin
 
     # QR cesta: naskenuj dva hráče dalšího zápasu (obráceně) a ověř mapování stran
     page.evaluate('jHide(); unloadJudge()')

@@ -2,7 +2,7 @@
 //  Profil hráče: role, statistiky, historie turnajů, beyblady, rating
 // ════════════════════════════════════════════════════════════════
 import { sb, state, rpc, q, errMsg, refreshMe, isLoggedIn } from '../supa.js'
-import { html, mount, on, formData, toast, modal, busy, confirmBox, fmtDate, raw, plural, kindLabel } from '../ui.js'
+import { html, mount, on, formData, toast, modal, busy, confirmBox, fmtDate, raw, plural, kindLabel, finishTiles } from '../ui.js'
 import { ROLES, REGIONS, roleLevel } from '../core.js'
 import { avatarPicker } from './auth.js'
 
@@ -134,6 +134,10 @@ export async function render(main, [id], ctx) {
           <div class="small muted ellipsis">${[fmtDate(t.starts_at), plural(Number(t.players), 'hráč', 'hráči', 'hráčů'), (t.beys || []).filter(Boolean).join(', ')].filter(Boolean).join(' · ')}</div>
         </div>
       </a>`)}</div>` : html`<div class="empty">Zatím žádný odehraný turnaj.</div>`}
+
+    ${finishTiles(bs.finishes?.given, bs.finishes?.taken) ? html`<h2>Endy</h2>
+    ${finishTiles(bs.finishes?.given, bs.finishes?.taken)}
+    <p class="hint">Velké číslo = kolikrát ${own ? 'jsi' : 'hráč'} soupeře takhle dorazil, malé = kolikrát ${own ? 'jsi' : 'byl'} takhle poražen${own ? '' : ''}.</p>` : ''}
 
     ${bs.build?.length ? html`<h2>Beyblady</h2>
     <div class="seg" id="bk" role="tablist">
