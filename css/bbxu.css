@@ -878,3 +878,8 @@ body.tv { background-color: #000; }
 .fx-pod.p3 .fx-pod-step b { color: #f0a066; }
 .fx-pod.p1.on .fx-pod-who { color: var(--bolt); text-shadow: var(--glow-y), 0 0 50px rgba(255,228,31,.4); }
 @media (max-width: 760px) { .fx-reveal { grid-template-columns: 1fr; } }
+
+/* Discord */
+.btn.discord { display: flex; align-items: center; justify-content: center; gap: 10px; background: #5865f2; border-color: #5865f2; color: #fff;
+  box-shadow: 0 0 16px -4px rgba(88,101,242,.8); }
+.btn.discord:hover { background: #6b77ff; }

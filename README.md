@@ -45,8 +45,10 @@ tests/                testy (na web nenahrávat)
 1. [discord.com/developers](https://discord.com/developers/applications) → New Application → OAuth2.
    Redirect: `https://<tvuj-projekt>.supabase.co/auth/v1/callback`
 2. Supabase → Authentication → Sign In / Providers → Discord → vlož Client ID a Secret.
-3. V `js/config.js` nastav `discordEnabled: true`.
+3. Hotovo – tlačítko „Pokračovat přes Discord“ se v přihlášení ukáže samo, jakmile je Discord v Supabase zapnutý
+   (aplikace se ptá `/auth/v1/settings`). `discordEnabled: true` v `js/config.js` ho jen vynutí.
    Nick se převezme z Discordu, pokud je volný; jinak si ho hráč při prvním přihlášení zvolí.
+   Hráč, který už má účet se stejným ověřeným e-mailem, se přes Discord přihlásí do toho samého účtu.
 
 ## 2. GitHub Pages
 Nahraj obsah složky (kromě `tests/`) do repozitáře → **Settings → Pages** → branch `main`, složka `/ (root)`.

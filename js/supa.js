@@ -21,6 +21,17 @@ export const state = {
   myRegs: [],           // [{id, tournament_id, nick, status}]
 }
 
+// zapnuté přihlašovací služby v Supabase (Discord se v aplikaci ukáže sám, jakmile ho Adam zapne)
+let providers = null
+export async function authProviders() {
+  if (providers) return providers
+  try {
+    const r = await fetch(cfg.supabaseUrl + '/auth/v1/settings', { headers: { apikey: cfg.supabaseAnonKey } })
+    providers = r.ok ? ((await r.json()).external || {}) : {}
+  } catch { providers = {} }
+  return providers
+}
+
 const listeners = new Set()
 export const onState = (fn) => { listeners.add(fn); return () => listeners.delete(fn) }
 const emit = (evt) => listeners.forEach(fn => { try { fn(evt) } catch (e) { console.error(e) } })

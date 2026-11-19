@@ -1,18 +1,20 @@
 // ════════════════════════════════════════════════════════════════
 //  Přihlášení, registrace účtu, převod hosta na účet, nový profil
 // ════════════════════════════════════════════════════════════════
-import { sb, state, errMsg, refreshMe, isLoggedIn, q } from '../supa.js'
-import { html, mount, on, formData, toast, modal, busy, AVATARS } from '../ui.js'
+import { sb, state, errMsg, refreshMe, isLoggedIn, q, authProviders } from '../supa.js'
+import { html, raw, mount, on, formData, toast, modal, busy, AVATARS } from '../ui.js'
 import { REGIONS } from '../core.js'
 
 const cfg = window.BBX_CONFIG
 const redirectTo = () => location.origin + location.pathname
+const DISCORD_SVG = '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="currentColor"><path d="M19.6 5.3A17 17 0 0 0 15.4 4l-.5 1a15.7 15.7 0 0 0-4.8 0l-.5-1a17 17 0 0 0-4.2 1.3C2.7 9.3 2 13.2 2.3 17a17 17 0 0 0 5.2 2.6l1.1-1.8a11 11 0 0 1-1.7-.8l.4-.3a12.2 12.2 0 0 0 10.4 0l.4.3-1.7.8 1.1 1.8a17 17 0 0 0 5.2-2.6c.4-4.4-.7-8.3-2.3-11.7zM9.3 14.7c-1 0-1.9-.9-1.9-2.1s.8-2.1 1.9-2.1 1.9.9 1.9 2.1-.8 2.1-1.9 2.1zm5.4 0c-1 0-1.9-.9-1.9-2.1s.8-2.1 1.9-2.1 1.9.9 1.9 2.1-.8 2.1-1.9 2.1z"/></svg>'
 
 const regionOptions = (sel) => html`<option value="">Vyber kraj…</option>${REGIONS.map(r => html`<option ${r === sel ? 'selected' : ''}>${r}</option>`)}`
 
 export async function render(main, [mode]) {
   if (isLoggedIn()) { location.hash = '#/me'; return }
   mode = mode === 'signup' ? 'signup' : mode === 'forgot' ? 'forgot' : 'login'
+  const discord = !!cfg.discordEnabled || !!(await authProviders()).discord
   const guestNote = state.isAnon
     ? html`<div class="notice" style="margin-bottom:16px">Teď jsi tu jako host. Když si založíš účet, tvoje dosavadní registrace a výsledky zůstanou u tebe.</div>`
     : ''
@@ -53,9 +55,9 @@ export async function render(main, [mode]) {
             <label class="f"><span>E-mail</span><input class="input" name="email" type="email" required></label>
             <button class="btn primary block">Poslat odkaz</button>
           </form>` : ''}
-        ${cfg.discordEnabled && mode !== 'forgot' && !state.isAnon ? html`
+        ${discord && mode !== 'forgot' && !state.isAnon ? html`
           <div class="or">nebo</div>
-          <button class="btn discord block" data-act="discord">Pokračovat přes Discord</button>` : ''}
+          <button class="btn discord block" data-act="discord">${raw(DISCORD_SVG)}Pokračovat přes Discord</button>` : ''}
       </div>
       <div class="or">nebo</div>
       <a class="btn ghost block" href="#/">Pokračovat bez účtu</a>
