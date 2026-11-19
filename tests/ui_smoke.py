@@ -109,10 +109,10 @@ def run(only=None):
         # ── judge + TV ──
         c, page = ctx()
         login(page, 'judge@test.cz')
-        page.click('text=Listopadový Cup'); page.click('.tabs >> text=Judge'); page.wait_for_selector('[data-claim], [data-release]')
-        if page.locator('[data-claim="2"]').count(): page.click('[data-claim="2"]'); page.wait_for_selector('[data-release="2"]')
+        page.click('text=Listopadový Cup'); page.click('.tabs >> text=Judge menu'); page.wait_for_selector('.arena-card')
+        assert page.locator('[data-claim]').count() == 0, 'arény se už nezabírají'
         shot(page, '20_judge')
-        page.goto(page.url.replace('/judge', '/tv')); page.wait_for_selector('.tv-head'); page.set_viewport_size({'width': 1280, 'height': 720}); shot(page, '21_tv')
+        page.goto(page.url.replace('/judge', '/tv')); page.wait_for_selector('.tv-arena'); page.set_viewport_size({'width': 1280, 'height': 720}); shot(page, '21_tv')
         c.close()
 
         # ── admin: role ──

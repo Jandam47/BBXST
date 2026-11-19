@@ -194,9 +194,8 @@ for (let round = 1; round <= 3; round++) {
     assert.deepEqual(row, { judge_id: null, status: 'live', live_p1: 4, live_state: st })
     assert.equal((await as(null, 'select count(*)::int c from arena_judges where tournament_id = $1 and arena = 2', [t.id]))[0].c, 0)
     // druhý judge naváže, zabere arénu; první už nic nepošle
-    await as(judge, 'insert into arena_judges (tournament_id, arena) values ($1, 2)', [t.id])
     await as(judge2, 'select start_match($1)', [sm.id])
-    assert.deepEqual((await as(null, 'select judge_id from arena_judges where tournament_id = $1 and arena = 2', [t.id])).map(r => r.judge_id), [judge2.id])
+    assert.equal((await as(null, 'select count(*)::int c from arena_judges where tournament_id = $1', [t.id]))[0].c, 0, 'arény se nezabírají')
     await as(judge2, 'select live_score($1, 5, 3)', [sm.id])
     assert.deepEqual((await as(null, 'select live_state from matches where id = $1', [sm.id]))[0].live_state, st)   // bez stavu zůstane poslední
     await fails(judge, 'select live_score($1, 5, 4)', [sm.id], /převzal judge Judge2/)
@@ -207,7 +206,6 @@ for (let round = 1; round <= 3; round++) {
     assert.deepEqual(row, { judge_id: null, status: 'pending', live_p1: null, live_state: null })
     await fails(players[0], 'select pass_match($1)', [sm.id], /judge/)
     await fails(players[0], 'select bbx_judge_nick($1)', [judge.id], /permission/)
-    await as(judge2, 'delete from arena_judges where tournament_id = $1 and arena = 2', [t.id])
   }
   for (const m of (await allMatches()).filter(m => m.stage === 'swiss' && m.round === round && m.status !== 'done')) await playMatch(m.id)
 }
@@ -316,6 +314,39 @@ assert.ok(pbs.build.length === 3 && pbs.blade.length === 3 && pbs.bit.length ===
 assert.equal(pbs.build.reduce((a, x) => a + x.battles, 0), pbs.bit.reduce((a, x) => a + x.battles, 0))
 await fails(guest2, 'select bbx_battles()', [], /permission/)
 step('vyhodnocení turnaje (díly, top buildy), meta žebříček, statistiky beyů na profilu')
+
+// ── fronta arény: hráč, který judguje, o místo níž; obsazení volných arén ──
+{
+  const [ta] = await as(org, `insert into tournaments (name, arena_count, swiss_rounds) values ('Arény', 2, 1) returning *`)
+  const pj = [judge, ...players.slice(0, 7)]          // judge hraje taky
+  for (const p of pj) await as(p, `insert into registrations (tournament_id, nick, deck) values ($1,'x',$2)`, [ta.id, deck()])
+  await as(org, 'select start_tournament($1)', [ta.id])
+  const regs = await as(org, 'select * from tournament_players($1)', [ta.id])
+  const rid = (u) => regs.find(r => r.user_id === u.id).id
+  // 4 zápasy, všechny na arénu 1 (judge hraje 2. zápas), aréna 2 prázdná
+  const pairs = [[players[0], players[1]], [judge, players[2]], [players[3], players[4]], [players[5], players[6]]]
+  await as(org, 'select create_swiss_round($1, 1, $2)', [ta.id, JSON.stringify(pairs.map(([a, b]) => ({ p1: rid(a), p2: rid(b) })))])
+  await as(null, `update matches set arena = 1, wave = pos where tournament_id = $1`, [ta.id])
+  const key = (q) => q.map(m => m.p1.nick + '-' + m.p2.nick)
+  let [{ q: q1 }] = await as(judge, 'select judge_arena_queue($1, 1) as q', [ta.id])
+  assert.deepEqual(q1.map(m => m.p1.reg), pairs.map(([a]) => rid(a)))
+  // judge řídí 1. zápas → jeho vlastní (2.) se posune za 3.
+  await as(judge, 'select start_match($1)', [q1[0].id])
+  ;[{ q: q1 }] = await as(judge, 'select judge_arena_queue($1, 1) as q', [ta.id])
+  assert.deepEqual(q1.map(m => m.p1.reg), [rid(players[0]), rid(players[3]), rid(judge), rid(players[5])], 'hráč-judge o místo níž')
+  // organizátor obsadí volnou arénu 2 posledním čekajícím zápasem z arény 1
+  await fails(players[0], 'select rebalance_arenas($1)', [ta.id], /nemůžeš řídit/)
+  const [{ n }] = await as(org, 'select rebalance_arenas($1) as n', [ta.id])
+  assert.equal(n, 1)
+  const [{ q: q2 }] = await as(judge, 'select judge_arena_queue($1, 2) as q', [ta.id])
+  assert.equal(q2.length, 1); assert.equal(q2[0].p1.reg, rid(players[5]))
+  assert.equal((await as(org, 'select rebalance_arenas($1) as n', [ta.id]))[0].n, 0, 'nic dalšího')
+  // organizátor uvolní judge → rozehráno bez judge
+  await as(org, 'select pass_match($1)', [q1[0].id])
+  assert.equal((await as(null, 'select judge_id from matches where id = $1', [q1[0].id]))[0].judge_id, null)
+  await as(org, 'select cancel_tournament($1)', [ta.id])
+}
+step('fronta arény (hráč-judge o místo níž), obsazení volných arén, uvolnění judge organizátorem')
 
 // ── formáty: deathmatch + díly se nesmí opakovat ───────────────────
 const [dm] = await as(org, `insert into tournaments (name, format, unique_parts, arena_count) values ('Deathmatch Cup', 'deathmatch', true, 2) returning *`)

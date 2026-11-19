@@ -179,6 +179,30 @@ export function pairRoundRobin({ players, round, salt = '' }) {
   return { pairs, byes }
 }
 
+// ────────────────────────────────────────────────────────────────────
+//  FRONTA ARÉNY – rozehraný zápas první, pak čekající podle pořadí.
+//  Zápas hráče, který zrovna judguje jiný rozehraný zápas, se posune o místo níž.
+//  Stejné pravidlo má SQL funkce judge_arena_queue (BBXST).
+// ────────────────────────────────────────────────────────────────────
+export function busyRegs(matches, players) {
+  const judging = new Map()   // user_id → id zápasu, který judguje
+  for (const m of matches) if (m.status === 'live' && m.judge_id) judging.set(m.judge_id, m.id)
+  const out = new Map()       // reg id → id zápasu, který judguje
+  for (const p of players) if (p.user_id && judging.has(p.user_id)) out.set(p.id, judging.get(p.user_id))
+  return out
+}
+
+export function arenaQueue(matches, arena, busy = new Map()) {
+  const open = matches.filter(m => m.arena === arena && m.status !== 'done' && m.p1_reg && m.p2_reg)
+  const by = (a, b) => (a.wave || 0) - (b.wave || 0) || (a.pos || 0) - (b.pos || 0)
+  const live = open.filter(m => m.status === 'live').sort(by)
+  const isBusy = (m) => [m.p1_reg, m.p2_reg].some(r => busy.has(r) && busy.get(r) !== m.id)
+  const pend = open.filter(m => m.status !== 'live').sort(by)
+    .map((m, i) => ({ m, k: i + 1 + (isBusy(m) ? 1.5 : 0) }))
+    .sort((a, b) => a.k - b.k).map(x => x.m)
+  return [...live, ...pend]
+}
+
 // název první fáze podle formátu
 export const phaseName = (t) => (t?.format === 'deathmatch' ? 'Deathmatch' : 'Swiss')
 export const FORMATS = [

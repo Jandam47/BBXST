@@ -76,8 +76,8 @@ with sync_playwright() as p:
     live = sql(f"select live_p1 || ':' || live_p2 from matches where id = '{m_id}'")
     exp = '2:0' if page.evaluate('judge.leftSlot') == 1 else '0:2'
     assert live == exp, (live, exp)
-    tv = page.context.new_page(); tv.goto(BASE + f'#/t/{t_id}/tv'); tv.wait_for_selector('.tv-card .sc')
-    assert exp.replace(':', '') in tv.inner_text('.tv-card.live .sc b').replace(':', '').replace(' ', ''), tv.inner_text('.tv-card.live .sc b')
+    tv = page.context.new_page(); tv.goto(BASE + f'#/t/{t_id}/tv'); tv.wait_for_selector('.tv-arena .sc')
+    assert exp.replace(':', '') in tv.inner_text('.tv-arena.live .sc b').replace(':', '').replace(' ', ''), tv.inner_text('.tv-arena.live .sc b')
     tv.set_viewport_size({'width': 1280, 'height': 720}); tv.wait_for_timeout(400); tv.screenshot(path=OUT + '39_tv_live.png'); tv.close()
     # remíza a revert
     page.click('#drawBtn'); page.wait_for_selector('#pickOverlay:not(.hidden)')

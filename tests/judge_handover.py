@@ -5,6 +5,7 @@ from playwright.sync_api import sync_playwright
 BASE = 'http://localhost:8080/'
 OUT = '/tmp/shots/'
 errors = []
+GO1 = ".arena-card:has(.arena-no:text-is('1')) [data-go]"
 def sql(q):
     return subprocess.check_output(['psql', '-h', '/tmp/pg', '-p', '5499', '-U', 'postgres', '-d', 'bbx', '-tAc', q]).decode().strip()
 
@@ -48,8 +49,8 @@ with sync_playwright() as p:
 
     # ── Judge 1 rozehraje zápas na aréně 1
     a = new_page(b, 'judge@test.cz')
-    a.goto(BASE + f'#/t/{t_id}/judge'); a.wait_for_selector('[data-go="1"]')
-    a.click('[data-go="1"]'); a.wait_for_selector('body.judge.has-match')
+    a.goto(BASE + f'#/t/{t_id}/judge'); a.wait_for_selector(GO1)
+    a.click(GO1); a.wait_for_selector('body.judge.has-match')
     a.wait_for_timeout(1500)
     m_id = a.evaluate('judge.match.id')
     score_point(a, 1, 2); score_point(a, 2, 1)
@@ -67,18 +68,17 @@ with sync_playwright() as p:
 
     # ── Judge 2 převezme zápas z BBXU
     c = new_page(b, 'judge2@test.cz')
-    c.goto(BASE + f'#/t/{t_id}/judge'); c.wait_for_selector('[data-go="1"]')
-    assert c.inner_text('[data-go="1"]') == 'Převzít', c.inner_text('[data-go="1"]')
-    card = c.locator('.arena-card', has=c.locator('[data-go="1"]'))
+    c.goto(BASE + f'#/t/{t_id}/judge'); c.wait_for_selector(GO1)
+    assert c.inner_text(GO1) == 'Převzít', c.inner_text(GO1)
+    card = c.locator(".arena-card:has(.arena-no:text-is('1'))")
     assert '2:1' in card.inner_text().replace(' ', '').replace('\n', '') or '1:2' in card.inner_text().replace(' ', '').replace('\n', '')
     c.screenshot(path=OUT + '51_bbxu_takeover.png')
-    c.click('[data-go="1"]'); c.wait_for_selector('#jYes')
+    c.click(GO1); c.wait_for_selector('#jYes')
     assert 'Judge' in c.inner_text('#jBox') and 'Převzít' in c.inner_text('#jBox')
     c.screenshot(path=OUT + '52_bbxst_takeover_confirm.png')
     c.click('#jYes'); c.wait_for_selector('body.judge.has-match'); c.wait_for_timeout(1500)
     assert board(c) == '2:1', 'převzato ' + board(c)
     assert db_live(m_id).split('|')[1] == judge2
-    assert sql(f"select judge_id from arena_judges where tournament_id = '{t_id}' and arena = 1") == judge2
     score_point(c, 1, 1)
     assert board(c) == '3:1'
 
@@ -93,7 +93,6 @@ with sync_playwright() as p:
     assert not c.evaluate('judge.match')
     live = db_live(m_id)
     assert live.split('|')[1] == '' and live.endswith('live'), live
-    assert sql(f"select count(*) from arena_judges where tournament_id = '{t_id}' and arena = 1") == '0'
     assert c.inner_text('#judgeTag') == '◂ BBXU'
     # dlaždice v BBXST ukazují volné místo
     c.click('#judgeMatchBtn'); c.wait_for_selector('#mTiles .aTile'); c.wait_for_timeout(300)
@@ -102,10 +101,10 @@ with sync_playwright() as p:
     c.evaluate('stopArenaPoll(); jHide()')
 
     # ── Judge 1 naváže z BBXU (bez dotazu), dohraje a odešle
-    a.goto(BASE + f'#/t/{t_id}/judge'); a.wait_for_selector('[data-go="1"]')
-    assert 'Předáno' in a.inner_text('.arena-card.free') and a.inner_text('[data-go="1"]') == 'Navázat'
+    a.goto(BASE + f'#/t/{t_id}/judge'); a.wait_for_selector(GO1)
+    assert 'Rozehráno' in a.inner_text('.arena-card.free') and a.inner_text(GO1) == 'Navázat'
     a.screenshot(path=OUT + '54_bbxu_free.png')
-    a.click('[data-go="1"]'); a.wait_for_selector('body.judge.has-match'); a.wait_for_timeout(1500)
+    a.click(GO1); a.wait_for_selector('body.judge.has-match'); a.wait_for_timeout(1500)
     assert board(a) == '3:1', 'navázání ' + board(a)
     for _ in range(3):
         if a.locator('#sendResultBtn').is_visible(): break

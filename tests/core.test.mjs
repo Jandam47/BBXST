@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { computeStandings, pairSwissRound, buildDoubleElim, seedOrder, computePlacements, makeRng,
-         matchLabel, parseQrPayload, qrPayload, pairRoundRobin, roundRobinRounds } from '../js/core.js'
+         matchLabel, parseQrPayload, qrPayload, pairRoundRobin, roundRobinRounds, arenaQueue, busyRegs } from '../js/core.js'
 
 let pass = 0
 const t = (name, fn) => { fn(); pass++; console.log('✓', name) }
@@ -215,6 +215,17 @@ t('popisky: deathmatch a finále top 2', () => {
   assert.equal(matchLabel({ stage: 'swiss', round: 3 }, 0, 'deathmatch'), 'Deathmatch · kolo 3')
   assert.equal(matchLabel({ stage: 'gf' }, 2), 'Finále')
   assert.equal(matchLabel({ stage: 'gf' }, 8), 'Grand finále')
+})
+
+t('fronta arény: rozehraný první, hráč-judge o místo níž, dohrané pryč', () => {
+  const M = (id, arena, wave, status = 'pending', extra = {}) => ({ id, arena, wave, pos: wave, status, p1_reg: id + 'a', p2_reg: id + 'b', ...extra })
+  const ms = [M('m3', 1, 3), M('m1', 1, 1, 'done'), M('m2', 1, 2), M('m4', 1, 4), M('L', 1, 5, 'live'), M('x', 2, 1, 'live', { judge_id: 'u1' })]
+  assert.deepEqual(arenaQueue(ms, 1).map(m => m.id), ['L', 'm2', 'm3', 'm4'])
+  const busy = busyRegs(ms, [{ id: 'm2a', user_id: 'u1' }, { id: 'm4b', user_id: 'u9' }])
+  assert.deepEqual([...busy.keys()], ['m2a'])
+  assert.deepEqual(arenaQueue(ms, 1, busy).map(m => m.id), ['L', 'm3', 'm2', 'm4'])
+  // poslední čekající se nemá kam posunout
+  assert.deepEqual(arenaQueue([M('a', 1, 1), M('b', 1, 2, 'pending', { p1_reg: 'm2a' })], 1, busy).map(m => m.id), ['a', 'b'])
 })
 
 t('QR payload', () => {

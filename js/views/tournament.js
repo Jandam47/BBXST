@@ -1,26 +1,28 @@
 // ════════════════════════════════════════════════════════════════
-//  Detail turnaje / akce: vstupenka, hráči, swiss, pavouk, judge, TV
+//  Detail turnaje / akce: můj status, hráči, swiss, pavouk, judge menu, TV
 // ════════════════════════════════════════════════════════════════
 import { sb, state, rpc, q, errMsg, canManage, ensureSession, refreshMe, askNotify } from '../supa.js'
 import { html, mount, on, formData, toast, modal, busy, confirmBox, qrSvg, qrPng, statusPill, fmtDate, fmtTime } from '../ui.js'
-import { computeStandings, matchLabel, qrPayload, nextPow2, phaseName } from '../core.js'
+import { computeStandings, matchLabel, qrPayload, nextPow2, phaseName, arenaQueue, busyRegs } from '../core.js'
 import { renderManage } from './manage.js'
 import { loadParts, deckEditor, bindDeckEditor } from '../parts.js'
 
 const cfg = window.BBX_CONFIG
 
 export async function load(id) {
-  const [t, players, matches, judges] = await Promise.all([
+  const [t, players, matches] = await Promise.all([
     q(sb.from('tournaments').select('*').eq('id', id).maybeSingle()),
     rpc('tournament_players', { p_tournament: id }),
     q(sb.from('matches').select('*').eq('tournament_id', id).order('stage').order('round').order('pos')),
-    q(sb.from('arena_judges').select('*').eq('tournament_id', id)),
   ])
   let myReg = null
   if (state.user && t) myReg = (await rpc('my_registration', { p_tournament: id }))?.[0] || null
   const pmap = new Map(players.map(p => [p.id, p]))
-  return { t, players, matches, judges, myReg, pmap }
+  return { t, players, matches, myReg, pmap, busy: busyRegs(matches, players) }
 }
+
+// fronta zápasů na aréně (rozehraný první, hráč, který judguje, o místo níž)
+export const queueOf = (d, arena) => arenaQueue(d.matches, arena, d.busy)
 
 export function liveChannel(id, onChange) {
   let timer = null
@@ -28,7 +30,6 @@ export function liveChannel(id, onChange) {
   const ch = sb.channel('t-' + id)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'matches', filter: `tournament_id=eq.${id}` }, bump)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'tournaments', filter: `id=eq.${id}` }, bump)
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'arena_judges', filter: `tournament_id=eq.${id}` }, bump)
     .subscribe()
   return () => { clearTimeout(timer); sb.removeChannel(ch) }
 }
@@ -38,12 +39,12 @@ const nickOf = (d, reg) => d.pmap.get(reg)?.nick || '?'
 
 function tabsFor(d) {
   const { t } = d
-  const tabs = [['me', d.myReg ? 'Moje vstupenka' : t.kind === 'event' ? 'Přihlásit se' : 'Registrace']]
+  const tabs = [['me', d.myReg ? 'Můj Status' : t.kind === 'event' ? 'Přihlásit se' : 'Registrace']]
   tabs.push(['players', `Hráči (${d.players.filter(p => p.status === 'active').length})`])
   if (t.kind === 'tournament' && t.status !== 'registration' && d.matches.some(m => m.stage === 'swiss')) tabs.push(['swiss', phaseName(t)])
   if (d.matches.some(m => m.stage !== 'swiss')) tabs.push(['bracket', t.top_cut === 2 ? 'Finále' : 'Top cut'])
   if (t.kind === 'tournament' && (t.status === 'finished' || (canManage(t) && running(t)))) tabs.push(['report', 'Vyhodnocení'])
-  if (t.kind === 'tournament' && running(t) && (state.level >= 1 || canManage(t))) tabs.push(['judge', 'Judge'])
+  if (t.kind === 'tournament' && running(t) && (state.level >= 1 || canManage(t))) tabs.push(['judge', 'Judge menu'])
   if (canManage(t)) tabs.push(['manage', 'Řízení'])
   return tabs
 }
@@ -134,13 +135,17 @@ function tabMe(box, { d, reload }) {
   const qrText = qrPayload(t.id, myReg.qr_token)
   const beys = [myReg.bey1, myReg.bey2, myReg.bey3].filter(Boolean)
 
+  // pořadí v aréně: dohrané zápasy zmizí, můj je zvýrazněný
+  const aq = called ? queueOf(d, current.arena) : []
+  const myPos = aq.findIndex(m => m.id === current?.id)
+  const myStand = !isEv && running(t) && myReg.status === 'active' ? standingsFor(d).find(s => s.id === myReg.id) : null
+
   let arenaBlock
   if (called) {
-    arenaBlock = html`<div class="lbl">${current.status === 'live' ? 'Hraješ teď na aréně' : 'Tvoje aréna'}</div>
+    arenaBlock = html`<div class="lbl">Tvoje aréna</div>
       <div class="big">${current.arena}</div>
       <div class="vs">proti ${opp}</div>
-      ${current.live_p1 != null ? html`<div class="pass-live">Stav ${current.p1_reg === myReg.id ? current.live_p1 : current.live_p2} : ${current.p1_reg === myReg.id ? current.live_p2 : current.live_p1}</div>` : ''}
-      <div class="faint small">${matchLabel(current, t.top_cut, t.format)}${current.best_of > 1 ? ` · BO${current.best_of} (${current.p1_reg === myReg.id ? current.p1_wins : current.p2_wins}:${current.p1_reg === myReg.id ? current.p2_wins : current.p1_wins})` : ''}${current.wave > 1 ? ` · ${current.wave}. na řadě` : ''}</div>`
+      <div class="faint small">${current.status === 'live' ? 'Hraješ teď' : myPos === 0 ? 'Jsi na řadě' : `${myPos + 1}. na řadě`} · ${matchLabel(current, t.top_cut, t.format)}${current.best_of > 1 ? ` · BO${current.best_of} (${current.p1_reg === myReg.id ? current.p1_wins : current.p2_wins}:${current.p1_reg === myReg.id ? current.p2_wins : current.p1_wins})` : ''}</div>`
   } else if (myReg.status === 'dropped') {
     arenaBlock = html`<div class="lbl">Z turnaje jsi odstoupil.</div>`
   } else if (t.status === 'registration') {
@@ -156,15 +161,33 @@ function tabMe(box, { d, reload }) {
   mount(box, html`
     <div class="pass ${called ? 'is-called' : ''}">
       <div class="pass-top">
-        <div class="pass-label">${isEv ? 'Přihláška na akci' : 'Vstupenka do turnaje'}</div>
+        <div class="pass-label">${isEv ? 'Přihláška na akci' : 'Můj Status'}</div>
         <div class="pass-nick">${myReg.nick}</div>
         ${beys.length ? html`<div class="pass-beys">${beys.map(b => html`<span>${b}</span>`)}</div>` : ''}
       </div>
       ${isEv ? '' : html`
       <div class="pass-tear"></div>
       <div class="pass-bottom">
-        <div class="pass-qr" aria-label="QR kód pro rozhodčího">${qrSvg(qrText)}</div>
         <div class="pass-arena">${arenaBlock}</div>
+        ${called ? html`<div class="pass-queue">
+          <div class="lbl">Pořadí v aréně</div>
+          <ol>${aq.map((m, i) => {
+            const mine = m.id === current.id, live = m.status === 'live'
+            return html`<li class="${mine ? 'mine' : ''} ${live ? 'live' : ''}">
+              <span class="pq-n">${i + 1}.</span>
+              <span class="pq-who">${nickOf(d, m.p1_reg)} <i>vs</i> ${nickOf(d, m.p2_reg)}</span>
+              ${live ? html`<span class="pq-sc num">${m.live_p1 != null ? `${m.live_p1}:${m.live_p2}` : 'hraje'}</span>` : ''}
+            </li>`
+          })}</ol>
+        </div>` : ''}
+      </div>
+      ${myStand ? html`<div class="pass-stand">
+        <span>Průběžné pořadí</span><b class="num">${myStand.rank}.</b>
+        <small>${myStand.main} HB · ${myStand.aux1} PB · ${myStand.aux2} PB2</small>
+      </div>` : ''}
+      <div class="pass-qrrow">
+        <div class="pass-qr" aria-label="QR kód pro rozhodčího">${qrSvg(qrText)}</div>
+        <div class="small muted">QR kód ukaž judgovi, když si tě bude chtít načíst. Kdo, s kým a kde hraje, najdeš nahoře.</div>
       </div>`}
     </div>
     <div class="row wrap" style="margin-top:12px">
@@ -471,71 +494,68 @@ function tabBracket(box, { d }) {
 }
 
 // ────────────────────────────────────────────────────────────────
-//  JUDGE – výběr arény a fronta zápasů
+//  JUDGE MENU – arény, kdo je řídí, výběr zápasu
+//  Judge patří jen k rozehranému zápasu (matches.judge_id): připojí se přes
+//  Rozhodovat, po odeslání výsledku / PASS JUDGE / uvolnění je volný.
 // ────────────────────────────────────────────────────────────────
 async function tabJudge(box, { d, reload }) {
   const { t } = d
   const me = state.user?.id
-  const ids = [...new Set([...d.judges.map(j => j.judge_id), ...d.matches.filter(m => m.judge_id && m.status === 'live').map(m => m.judge_id)])]
+  const manager = canManage(t)
+  const ids = [...new Set(d.matches.filter(m => m.judge_id && m.status === 'live').map(m => m.judge_id))]
   const nicks = ids.length ? await q(sb.from('profiles').select('id,nick').in('id', ids)) : []
   const nickMap = new Map(nicks.map(n => [n.id, n.nick]))
   const arenas = Array.from({ length: t.arena_count }, (_, i) => i + 1)
-  const queue = (a) => d.matches.filter(m => m.arena === a && m.status !== 'done' && m.p1_reg && m.p2_reg)
-    .sort((x, y) => (y.status === 'live') - (x.status === 'live') || (x.wave || 0) - (y.wave || 0))
   const bbxst = (m) => `${cfg.bbxstUrl}?match=${m.id}&t=${t.id}`
-  // moje arény první
-  const order = arenas.slice().sort((a, b) =>
-    (d.judges.some(j => j.arena === b && j.judge_id === me)) - (d.judges.some(j => j.arena === a && j.judge_id === me)) || a - b)
+  const mineLive = (a) => queueOf(d, a).some(m => m.status === 'live' && m.judge_id === me)
+  // arény, kde právě judguju, první
+  const order = arenas.slice().sort((a, b) => mineLive(b) - mineLive(a) || a - b)
+  const myMatch = d.myReg && d.matches.find(m => m.status !== 'done' && (m.p1_reg === d.myReg.id || m.p2_reg === d.myReg.id))
 
   mount(box, html`
-    <p class="muted">Klepni na arénu, u které rozhoduješ. BBXST se otevře v judge módu s načtenými hráči.</p>
+    <p class="muted">Vyber zápas, který budeš řídit – BBXST se otevře v judge módu s načtenými hráči. Po odeslání výsledku jsi zase volný.</p>
+    ${myMatch && d.busy.has(d.myReg.id) ? html`<div class="notice warn small">Judguješ a sám máš zápas na aréně ${myMatch.arena} – dokud řídíš jiný zápas, posouvá se tvůj o místo níž.</div>` : ''}
     <div class="stack" style="margin-top:12px">
       ${order.map(a => {
-        const j = d.judges.find(x => x.arena === a)
-        const mineA = j && j.judge_id === me
-        const qa = queue(a), cur = qa[0]
+        const qa = queueOf(d, a), cur = qa[0]
         const live = cur?.status === 'live', free = live && !cur.judge_id
-        const other = live && cur.judge_id && cur.judge_id !== me
-        return html`<div class="card arena-card ${mineA ? 'mine' : ''} ${live ? 'live' : ''} ${free ? 'free' : ''}">
+        const mine = live && cur.judge_id === me
+        const other = live && cur.judge_id && !mine
+        const judgeNick = live && cur.judge_id ? nickMap.get(cur.judge_id) || '?' : null
+        const playsHere = d.myReg && cur && (cur.p1_reg === d.myReg.id || cur.p2_reg === d.myReg.id)
+        return html`<div class="card arena-card ${mine ? 'mine' : ''} ${live ? 'live' : ''} ${free ? 'free' : ''}">
           <div class="arena-no num">${a}</div>
           <div class="grow" style="min-width:0">
-            <div class="small muted">${j ? (mineA ? 'Tvoje aréna' : `Judge: ${nickMap.get(j.judge_id) || '?'}`) : 'Volná aréna'}${qa.length > 1 ? ` · další ${qa.length - 1}` : ''}</div>
+            <div class="small muted">${mine ? 'Řídíš ty' : judgeNick ? `Judge: ${judgeNick}` : free ? 'Bez judge' : 'Volná aréna'}${qa.length > 1 ? ` · čeká ${qa.length - 1}` : ''}</div>
             ${cur ? html`
               <div class="ellipsis" style="font-weight:600;font-size:17px"><span style="color:#b9d4ff">${nickOf(d, cur.p1_reg)}</span> <span class="faint">vs</span> <span style="color:#ffc2cd">${nickOf(d, cur.p2_reg)}</span></div>
-              <div class="small faint ellipsis">${matchLabel(cur, t.top_cut, t.format)}${cur.best_of > 1 ? ` · BO${cur.best_of} (${cur.p1_wins}:${cur.p2_wins})` : ''}${free ? '' : live ? ` · hraje se${cur.judge_id && cur.judge_id !== j?.judge_id ? ` · řídí ${nickMap.get(cur.judge_id) || '?'}` : ''}` : ' · na řadě'}</div>
-              ${free ? html`<div class="small arena-free">Předáno – čeká na judge</div>` : ''}`
+              <div class="small faint ellipsis">${matchLabel(cur, t.top_cut, t.format)}${cur.best_of > 1 ? ` · BO${cur.best_of} (${cur.p1_wins}:${cur.p2_wins})` : ''}${live ? (free ? '' : ' · hraje se') : ' · na řadě'}</div>
+              ${free ? html`<div class="small arena-free">Rozehráno – čeká na judge</div>` : ''}`
               : html`<div class="faint">Teď tu nic nečeká</div>`}
           </div>
           ${live && cur.live_p1 != null ? html`<div class="arena-sc num">${cur.live_p1}<i>:</i>${cur.live_p2}</div>` : ''}
           <div class="arena-actions">
-            ${cur ? html`<button class="btn primary sm" data-go="${a}">${other ? 'Převzít' : free ? 'Navázat' : 'Rozhodovat'}</button>` : !j ? html`<button class="btn sm" data-claim="${a}">Zabrat</button>` : ''}
-            ${mineA ? html`<button class="btn ghost sm" data-release="${a}">Uvolnit</button>` : ''}
+            ${cur && !playsHere ? html`<button class="btn primary sm" data-go="${cur.id}">${mine ? 'Pokračovat' : other ? 'Převzít' : free ? 'Navázat' : 'Rozhodovat'}</button>` : ''}
+            ${live && cur.judge_id && (mine || manager) ? html`<button class="btn ghost sm" data-release="${cur.id}">${mine ? 'Uvolnit' : 'Uvolnit judge'}</button>` : ''}
           </div>
         </div>`
       })}
     </div>`)
 
-  const claim = async (a) => {
-    if (d.judges.some(j => j.arena === a)) return
-    try { await q(sb.from('arena_judges').insert({ tournament_id: t.id, arena: a })) }
-    catch (err) { if (!/duplicate|arena_judges_pkey/.test(err.message)) throw err }
-  }
-  on(box, 'click', '[data-go]', async (e, b) => {
-    const a = Number(b.dataset.go)
-    const cur = queue(a)[0]
-    if (!cur) return
-    await busy(b, async () => {
-      try { await claim(a) } catch (err) { toast(errMsg(err), 'err') }
-      location.href = bbxst(cur)
-    })
-  })
-  on(box, 'click', '[data-claim]', async (e, b) => {
-    try { await claim(Number(b.dataset.claim)); reload() }
-    catch (err) { toast(errMsg(err), 'err'); reload() }
+  on(box, 'click', '[data-go]', (e, b) => {
+    const m = d.matches.find(x => x.id === b.dataset.go)
+    if (m) location.href = bbxst(m)
   })
   on(box, 'click', '[data-release]', async (e, b) => {
-    try { await q(sb.from('arena_judges').delete().eq('tournament_id', t.id).eq('arena', Number(b.dataset.release))); reload() }
-    catch (err) { toast(errMsg(err), 'err') }
+    const m = d.matches.find(x => x.id === b.dataset.release)
+    if (!m) return
+    const own = m.judge_id === me
+    if (!await confirmBox(own ? 'Uvolnit se z tohoto zápasu? Skóre zůstane a zápas převezme jiný judge.'
+      : `Uvolnit judge ${nickMap.get(m.judge_id) || ''} ze zápasu ${nickOf(d, m.p1_reg)} vs ${nickOf(d, m.p2_reg)}? Rozehrané skóre zůstane.`, { ok: 'Uvolnit' })) return
+    await busy(b, async () => {
+      try { await rpc('pass_match', { p_match: m.id }); toast('Uvolněno – zápas čeká na judge.', 'ok'); reload() }
+      catch (err) { toast(errMsg(err), 'err') }
+    })
   })
 }
 
@@ -550,22 +570,26 @@ export async function renderTV(main, [id]) {
 
   const draw = () => {
     const { t } = d
-    const active = d.matches.filter(m => m.status !== 'done' && m.p1_reg && m.p2_reg && m.arena)
-      .sort((a, b) => a.arena - b.arena || (b.status === 'live') - (a.status === 'live') || (a.wave || 0) - (b.wave || 0))
-    const firstPerArena = new Set()
+    const arenas = Array.from({ length: t.arena_count }, (_, i) => i + 1).map(a => ({ a, q: queueOf(d, a) }))
+    const anyOpen = arenas.some(x => x.q.length)
     const phase = t.status === 'swiss' ? `${phaseName(t)} · kolo ${t.current_round}/${t.swiss_rounds}` : t.status === 'topcut' ? (t.top_cut === 2 ? 'Finále' : `Top ${t.top_cut}`) : t.status === 'finished' ? 'Konec turnaje' : 'Registrace'
     let body
-    if (active.length) {
-      body = html`<div class="tv-grid">${active.map(m => {
-        const next = firstPerArena.has(m.arena); firstPerArena.add(m.arena)
-        return html`<div class="tv-card ${m.status === 'live' ? 'live' : ''} ${next ? 'next' : ''}">
-          <div class="ar"><small>aréna</small>${m.arena}</div>
-          <div class="n l">${nickOf(d, m.p1_reg)}</div>
-          ${m.live_p1 != null
-            ? html`<div class="sc"><b>${m.live_p1}<i>:</i>${m.live_p2}</b>${m.best_of > 1 ? html`<small>hra ${m.p1_wins + m.p2_wins + 1} · ${m.p1_wins}:${m.p2_wins}</small>` : ''}</div>`
-            : html`<div class="vs">${m.status === 'live' && m.best_of > 1 ? `${m.p1_wins}:${m.p2_wins}` : 'vs'}</div>`}
-          <div class="n r">${nickOf(d, m.p2_reg)}</div>
-        </div>`
+    if (anyOpen) {
+      body = html`<div class="tv-arenas">${arenas.map(({ a, q: qa }) => {
+        const [cur, ...rest] = qa
+        return html`<section class="tv-arena ${cur?.status === 'live' ? 'live' : ''} ${cur ? '' : 'idle'}">
+          <div class="tv-ano"><small>aréna</small>${a}</div>
+          <div class="tv-rows">
+            ${cur ? html`<div class="tv-now">
+              <span class="n l">${nickOf(d, cur.p1_reg)}</span>
+              ${cur.live_p1 != null
+                ? html`<span class="sc"><b>${cur.live_p1}<i>:</i>${cur.live_p2}</b>${cur.best_of > 1 ? html`<small>hra ${cur.p1_wins + cur.p2_wins + 1} · ${cur.p1_wins}:${cur.p2_wins}</small>` : ''}</span>`
+                : html`<span class="vs">${cur.status === 'live' ? (cur.best_of > 1 ? `${cur.p1_wins}:${cur.p2_wins}` : 'hraje') : 'na řadě'}</span>`}
+              <span class="n r">${nickOf(d, cur.p2_reg)}</span>
+            </div>` : html`<div class="tv-free">volno</div>`}
+            ${rest.map((m, i) => html`<div class="tv-next"><span class="i">${i + 2}.</span><span class="n l">${nickOf(d, m.p1_reg)}</span><span class="vs">vs</span><span class="n r">${nickOf(d, m.p2_reg)}</span></div>`)}
+          </div>
+        </section>`
       })}</div>`
     } else {
       const st = standingsFor(d).slice(0, 8)

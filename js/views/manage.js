@@ -4,7 +4,7 @@
 // ════════════════════════════════════════════════════════════════
 import { sb, rpc, q, errMsg, state } from '../supa.js'
 import { html, mount, on, formData, toast, modal, busy, confirmBox, plural } from '../ui.js'
-import { pairSwissRound, pairRoundRobin, roundRobinRounds, makeRng, buildDoubleElim, computePlacements, DEFAULT_BO, matchLabel, phaseName, FORMATS } from '../core.js'
+import { pairSwissRound, pairRoundRobin, roundRobinRounds, makeRng, buildDoubleElim, computePlacements, DEFAULT_BO, matchLabel, phaseName, FORMATS, arenaQueue } from '../core.js'
 import { standingsFor, nickOf } from './tournament.js'
 import { loadParts, deckEditor, bindDeckEditor } from '../parts.js'
 
@@ -71,12 +71,23 @@ export function renderManage(box, { d, reload }) {
 
   // ── rozehrané zápasy ───────────────────────────
   if (open.length) {
+    // pořadí jako na arénách (rozehraný první, hráč-judge o místo níž); bez arény na konec
+    const arenaNos = Array.from({ length: t.arena_count }, (_, i) => i + 1)
+    const queues = arenaNos.map(a => arenaQueue(d.matches, a, d.busy))
+    const ordered = [...queues.flat(), ...open.filter(m => !m.arena || m.arena > t.arena_count)]
+    const posOf = new Map(queues.flatMap(qa => qa.map((m, i) => [m.id, i + 1])))
+    const idle = arenaNos.filter((a, i) => !queues[i].length)
+    const crowded = arenaNos.filter((a, i) => queues[i].length >= 2 && queues[i].some(m => m.status === 'pending'))
     sections.push(html`<h2>Rozehrané a čekající zápasy</h2>
-      <div class="list">${open.sort((a, b) => (a.arena || 99) - (b.arena || 99) || (a.wave || 0) - (b.wave || 0)).map(m => html`
+      ${idle.length && crowded.length ? html`<div class="card row wrap" style="margin-bottom:10px;align-items:center">
+        <div class="grow small"><b>Volné arény: ${idle.join(', ')}.</b> Na aréně ${crowded.join(', ')} čeká víc zápasů.</div>
+        <button class="btn sm primary" data-act="rebalance">Obsadit volné arény</button>
+      </div>` : ''}
+      <div class="list">${ordered.map(m => html`
         <div class="li">
           <div class="grow">
             <div class="ellipsis" style="font-weight:600">${nickOf(d, m.p1_reg)} <span class="faint">vs</span> ${nickOf(d, m.p2_reg)}</div>
-            <div class="small faint">${matchLabel(m, t.top_cut, t.format)}${m.best_of > 1 ? ` · BO${m.best_of} (${m.p1_wins}:${m.p2_wins})` : ''}${m.status === 'live' ? ' · hraje se' : ''}</div>
+            <div class="small faint">${matchLabel(m, t.top_cut, t.format)}${m.best_of > 1 ? ` · BO${m.best_of} (${m.p1_wins}:${m.p2_wins})` : ''}${m.status === 'live' ? (m.judge_id ? ' · hraje se' : ' · rozehráno, bez judge') : posOf.get(m.id) ? ` · ${posOf.get(m.id)}. na aréně` : ''}${[m.p1_reg, m.p2_reg].some(r => d.busy.has(r) && d.busy.get(r) !== m.id) ? ' · hráč teď judguje' : ''}</div>
           </div>
           <select class="input" style="width:auto;min-height:36px;padding:4px 8px" data-arena="${m.id}" aria-label="Aréna">
             ${Array.from({ length: t.arena_count }, (_, i) => i + 1).map(a => html`<option value="${a}" ${a === m.arena ? 'selected' : ''}>A${a}</option>`)}
@@ -149,6 +160,12 @@ export function renderManage(box, { d, reload }) {
   })
   on(box, 'click', '[data-act=walkin]', (e, b) => busy(b, () => walkinModal(d, reload)))
   on(box, 'change', '[data-arena]', (e, s) => act(() => q(sb.from('matches').update({ arena: Number(s.value) }).eq('id', s.dataset.arena)), 'Aréna změněna.'))
+  on(box, 'click', '[data-act=rebalance]', (e, b) => busy(b, async () => {
+    try {
+      const n = await rpc('rebalance_arenas', { p_tournament: t.id })
+      toast(n ? `Přesunuto ${n === 1 ? '1 zápas' : n < 5 ? `${n} zápasy` : `${n} zápasů`} na volné arény.` : 'Není co přesouvat.', 'ok'); reload()
+    } catch (err) { toast(errMsg(err), 'err') }
+  }))
   on(box, 'click', '[data-result]', (e, b) => resultModal(d, d.matches.find(m => m.id === b.dataset.result), reload))
   on(box, 'click', '[data-reset]', async (e, b) => {
     if (!await confirmBox('Vrátit zápas? Výsledek se smaže a hraje se znovu.', { ok: 'Vrátit', danger: true })) return
