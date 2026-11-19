@@ -1,11 +1,11 @@
 // BBXU service worker – aplikace se načte i při slabém signálu v hale.
 // Data (turnaje, výsledky) jdou vždy živě ze Supabase, cachuje se jen „obal“ aplikace.
-const VERSION = 'bbxu-v10'
+const VERSION = 'bbxu-v11'
 const SHELL = [
   './', './index.html', './bbxst.html', './manifest.json', './css/bbxu.css',
   './js/config.js', './js/app.js', './js/core.js', './js/supa.js', './js/ui.js',
   './js/parts.js', './js/views/home.js', './js/views/tournament.js', './js/views/manage.js', './js/views/players.js',
-  './js/views/profile.js', './js/views/chat.js', './js/views/auth.js',
+  './js/views/profile.js', './js/views/chat.js', './js/views/auth.js', './js/views/meta.js',
   './vendor/supabase.js', './vendor/qrcode.js', './vendor/html5-qrcode.min.js',
   './icons/icon-192.png', './icons/icon-512.png', './icons/favicon-32.png',
 ]

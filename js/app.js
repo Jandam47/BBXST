@@ -8,6 +8,7 @@ import * as Tournament from './views/tournament.js'
 import * as Players from './views/players.js'
 import * as Profile from './views/profile.js'
 import * as Chat from './views/chat.js'
+import * as Meta from './views/meta.js'
 import * as Auth from './views/auth.js'
 
 const cfg = window.BBX_CONFIG
@@ -19,6 +20,7 @@ const routes = [
   [/^\/t\/([0-9a-f-]{36})\/tv$/, Tournament.renderTV, 'home'],
   [/^\/t\/([0-9a-f-]{36})(?:\/([a-z]+))?$/, Tournament.render, 'home'],
   [/^\/players$/, Players.render, 'players'],
+  [/^\/meta$/, Meta.render, 'meta'],
   [/^\/p\/([0-9a-f-]{36})$/, Profile.render, 'me'],
   [/^\/me$/, Profile.renderMe, 'me'],
   [/^\/chat(?:\/([a-z]+))?$/, Chat.render, 'chat'],

@@ -2,7 +2,7 @@
 // Spuštění: node tests/db.test.mjs  (potřebuje lokální Postgres se stubem Supabase)
 import pg from 'pg'
 import assert from 'node:assert/strict'
-import { pairSwissRound, computeStandings, buildDoubleElim, computePlacements, makeRng } from '../js/core.js'
+import { pairSwissRound, computeStandings, buildDoubleElim, computePlacements, makeRng, pairRoundRobin } from '../js/core.js'
 
 const db = new pg.Client({ host: '/tmp/pg', port: 5499, user: 'postgres', database: 'bbx' })
 await db.connect()
@@ -292,6 +292,69 @@ assert.ok(stats.record.wins + stats.record.losses > 0)
 const list = await as(null, 'select * from players_list()')
 assert.ok(list.length >= 12 && !list.some(p => p.nick === null))
 step('statistiky hráče (historie, beyblady, rating) a seznam hráčů')
+
+// ── vyhodnocení turnaje, meta, statistiky beyů ─────────────────────
+const [{ r: rep }] = await as(guest2, 'select tournament_report($1) as r', [t.id])
+assert.ok(rep.battles > 20 && rep.points > 0)
+assert.deepEqual(Object.keys(rep.parts).sort(), ['bit', 'blade', 'ratchet'])
+assert.ok(rep.parts.blade.map(x => x.name).includes('Wizard Arc'), 'CX blade = lock chip + main blade')
+assert.ok(rep.parts.ratchet.every(x => ['3-60', '4-55'].includes(x.name)), 'Hells Nether má integrovaný ratchet')
+assert.equal(rep.builds.length, 3)
+assert.ok(rep.builds[0].points >= rep.builds[1].points && rep.builds[0].players.length >= 1 && rep.builds[0].players[0].nick)
+await fails(players[0], 'select tournament_report($1)', [t2.id], /po skončení/)
+const [{ r: metaB }] = await as(guest2, 'select meta_ranking($1, $2) as r', ['build', 1])
+assert.ok(metaB.length >= 3)
+assert.equal(metaB.reduce((a, x) => a + x.wins, 0), metaB.reduce((a, x) => a + x.losses, 0), 'výhry = prohry')
+assert.ok(metaB.every(x => x.win_rate >= 0 && x.win_rate <= 100 && x.battles >= x.wins + x.losses))
+assert.ok(metaB[0].win_rate >= metaB[metaB.length - 1].win_rate)
+const [{ r: metaBit }] = await as(guest2, 'select meta_ranking($1, $2) as r', ['bit', 1])
+assert.deepEqual(metaBit.map(x => x.name).sort(), ['Ball', 'Flat', 'Low Orb'])
+assert.equal((await as(guest2, 'select meta_ranking($1, $2) as r', ['build', 100000]))[0].r.length, 0)
+await fails(guest2, 'select meta_ranking($1)', ['xyz'], /Neznámý/)
+const [{ s: pbs }] = await as(guest2, 'select player_bey_stats($1) as s', [someone.id])
+assert.ok(pbs.build.length === 3 && pbs.blade.length === 3 && pbs.bit.length === 3)
+assert.equal(pbs.build.reduce((a, x) => a + x.battles, 0), pbs.bit.reduce((a, x) => a + x.battles, 0))
+await fails(guest2, 'select bbx_battles()', [], /permission/)
+step('vyhodnocení turnaje (díly, top buildy), meta žebříček, statistiky beyů na profilu')
+
+// ── formáty: deathmatch + díly se nesmí opakovat ───────────────────
+const [dm] = await as(org, `insert into tournaments (name, format, unique_parts, arena_count) values ('Deathmatch Cup', 'deathmatch', true, 2) returning *`)
+const DUPE = [DECK[0], { ...DECK[1], ratchet: '3-60' }, DECK[2]]
+await fails(players[0], `insert into registrations (tournament_id, nick, deck) values ($1,'x',$2)`, [dm.id, JSON.stringify(DUPE)], /3-60.*víckrát/)
+const UNIQ = [DECK[0], DECK[1], DECK[2]]
+for (const p of players.slice(0, 5)) await as(p, `insert into registrations (tournament_id, nick, deck) values ($1,'x',$2)`, [dm.id, JSON.stringify(UNIQ)])
+// pravidlo zapnuté až po registraci → start to odhalí
+const [loose] = await as(org, `insert into tournaments (name, format) values ('Volný deck', 'swiss') returning id`)
+await as(players[5], `insert into registrations (tournament_id, nick, deck) values ($1,'x',$2)`, [loose.id, JSON.stringify(DUPE)])
+await as(players[6], `insert into registrations (tournament_id, nick, deck) values ($1,'x',$2)`, [loose.id, deck()])
+await as(org, 'update tournaments set unique_parts = true where id = $1', [loose.id])
+await fails(org, 'select start_tournament($1)', [loose.id], /Opakované díly.*Hrac6/)
+await as(org, 'select start_tournament($1)', [dm.id])
+let [dmt] = await as(null, 'select * from tournaments where id = $1', [dm.id])
+assert.equal(dmt.swiss_rounds, 5, '5 hráčů = 5 kol')
+await fails(org, `update tournaments set format = 'swiss' where id = $1`, [dm.id], /formát/)
+// hráč 5 po 2. kole odstoupí → jeho soupeři mají volný los (víc volných losů v kole)
+const met = new Set()
+for (let r = 1; r <= 5; r++) {
+  if (r === 3) await as(org, `update registrations set status = 'dropped' where id = (select id from registrations where tournament_id = $1 and user_id = $2)`, [dm.id, players[4].id])
+  const ps = await as(org, 'select * from tournament_players($1)', [dm.id])
+  const { pairs, byes } = pairRoundRobin({ players: ps, round: r, salt: dm.id })
+  await as(org, 'select create_swiss_round($1, $2, $3)', [dm.id, r, JSON.stringify([...pairs.map(([a, b]) => ({ p1: a, p2: b })), ...byes.map(b => ({ p1: b, p2: null }))])])
+  for (const [a, b] of pairs) { const k = [a, b].sort().join(); assert.ok(!met.has(k), 'odveta'); met.add(k) }
+  for (const m of await as(null, "select id from matches where tournament_id = $1 and status <> 'done'", [dm.id])) await playMatch(m.id)
+}
+assert.ok((await as(null, "select count(*)::int c from matches where tournament_id = $1 and is_bye and round >= 3 group by round order by c desc limit 1", [dm.id]))[0].c >= 1)
+await fails(org, 'select create_swiss_round($1, 6, $2)', [dm.id, '[]'], /Všechna/)
+// finále top 2 = jeden zápas BO3
+const dps = await as(org, 'select * from tournament_players($1)', [dm.id])
+const dst = computeStandings(dps.filter(p => p.status === 'active'), await as(null, 'select * from matches where tournament_id = $1', [dm.id]))
+await as(org, 'select create_topcut($1, 2, $2, $3, $4)', [dm.id, JSON.stringify({ gf: 3 }), JSON.stringify(dst.slice(0, 2).map((s, i) => ({ reg: s.id, seed: i + 1 }))), JSON.stringify(buildDoubleElim(2, { gf: 3 }))])
+const fin = await as(null, "select * from matches where tournament_id = $1 and stage <> 'swiss'", [dm.id])
+assert.equal(fin.length, 1); assert.equal(fin[0].key, 'GF'); assert.equal(fin[0].best_of, 3)
+await playMatch(fin[0].id)
+const [{ j: fm }] = await as(judge, 'select judge_get_match($1) as j', [fin[0].id])
+assert.equal(fm.format, 'deathmatch')
+step('formáty: deathmatch (každý s každým, odstoupení, finále top 2 BO3), díly se v decku neopakují')
 
 // ── chat ───────────────────────────────────────────────────────────
 await as(players[0], "insert into chat_messages (room_id, body, nick) values ('volny', 'Ahoj!', 'Podvrh')")

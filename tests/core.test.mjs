@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { computeStandings, pairSwissRound, buildDoubleElim, seedOrder, computePlacements, makeRng,
-         matchLabel, parseQrPayload, qrPayload } from '../js/core.js'
+         matchLabel, parseQrPayload, qrPayload, pairRoundRobin, roundRobinRounds } from '../js/core.js'
 
 let pass = 0
 const t = (name, fn) => { fn(); pass++; console.log('✓', name) }
@@ -182,6 +182,39 @@ t('konečné umístění top 4 + zbytek dle swissu', () => {
   assert.deepEqual(pl.slice(0, 4).map(x => x.place), [1, 2, 3, 4])
   assert.deepEqual(new Set(pl.slice(0, 4).map(x => x.reg)), new Set(top.map(s => s.id)))
   assert.equal(pl[4].reg, st[4].id)
+})
+
+t('deathmatch: každý s každým právě jednou (2–30 hráčů), odstoupení = volný los', () => {
+  for (let n = 2; n <= 30; n++) {
+    const players = mk(n), R = roundRobinRounds(n), met = new Map(), byes = new Map()
+    for (let r = 1; r <= R; r++) {
+      const { pairs, byes: b } = pairRoundRobin({ players, round: r, salt: 'T' })
+      const seen = new Set()
+      for (const [x, y] of pairs) {
+        assert(!seen.has(x) && !seen.has(y) && x !== y); seen.add(x); seen.add(y)
+        const k = [x, y].sort().join('|'); met.set(k, (met.get(k) || 0) + 1)
+      }
+      for (const x of b) { assert(!seen.has(x)); seen.add(x); byes.set(x, (byes.get(x) || 0) + 1) }
+      assert.equal(seen.size, n, `n=${n} kolo ${r}: všichni`)
+      assert.equal(b.length, n % 2, 'volný los jen při lichém počtu')
+    }
+    assert.equal(met.size, n * (n - 1) / 2, `n=${n}: všechny dvojice`)
+    assert([...met.values()].every(v => v === 1), `n=${n}: žádná odveta`)
+    if (n % 2) assert([...byes.values()].every(v => v === 1) && byes.size === n, `n=${n}: každý 1 volný los`)
+  }
+  // hráč odstoupí po 2. kole: rozpis ostatních se nezmění, jeho soupeři mají volný los
+  const ps = mk(8)
+  const before = pairRoundRobin({ players: ps, round: 3, salt: 'T' })
+  ps[0].status = 'dropped'
+  const after = pairRoundRobin({ players: ps, round: 3, salt: 'T' })
+  assert.equal(after.pairs.length, 3); assert.equal(after.byes.length, 1)
+  assert(after.pairs.every(p => before.pairs.some(q => q.join() === p.join())))
+})
+
+t('popisky: deathmatch a finále top 2', () => {
+  assert.equal(matchLabel({ stage: 'swiss', round: 3 }, 0, 'deathmatch'), 'Deathmatch · kolo 3')
+  assert.equal(matchLabel({ stage: 'gf' }, 2), 'Finále')
+  assert.equal(matchLabel({ stage: 'gf' }, 8), 'Grand finále')
 })
 
 t('QR payload', () => {

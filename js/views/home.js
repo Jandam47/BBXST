@@ -3,7 +3,7 @@
 // ════════════════════════════════════════════════════════════════
 import { sb, state, rpc, q, errMsg, isLoggedIn, canManage } from '../supa.js'
 import { html, mount, on, formData, toast, busy, statusPill, fmtDate, fmtTime, toLocalInput, fromLocalInput, plural } from '../ui.js'
-import { DEFAULT_BO } from '../core.js'
+import { DEFAULT_BO, FORMATS } from '../core.js'
 
 export async function renderList(main, _p, ctx) {
   const all = await rpc('tournament_list')
@@ -86,7 +86,8 @@ export async function renderEditor(main, [kindArg, id]) {
     return
   }
   let t = { kind: kindArg === 'event' ? 'event' : 'tournament', name: '', description: '', location: '', starts_at: null,
-            swiss_rounds: 4, top_cut: 8, arena_count: 4, win_score: 7, bo_config: DEFAULT_BO, max_players: null }
+            swiss_rounds: 4, top_cut: 8, arena_count: 4, win_score: 7, bo_config: DEFAULT_BO, max_players: null,
+            format: 'swiss', unique_parts: true }
   if (id) {
     t = await q(sb.from('tournaments').select('*').eq('id', id).single())
     if (!canManage(t)) { mount(main, html`<div class="notice err">Tenhle turnaj nemůžeš upravovat.</div>`); return }
@@ -112,14 +113,22 @@ export async function renderEditor(main, [kindArg, id]) {
       </div>
       ${isEv ? '' : html`
       <div class="card stack">
-        <h3>Swiss</h3>
+        <h3>Formát</h3>
+        <div class="formats">
+          ${FORMATS.map(f => html`<label class="format-opt">
+            <input type="radio" name="format" value="${f.key}" ${t.format === f.key ? 'checked' : ''} ${started ? 'disabled' : ''}>
+            <span><b>${f.label}</b><small>${f.desc}</small></span></label>`)}
+        </div>
+        <label class="check"><input type="checkbox" name="unique_parts" ${t.unique_parts ? 'checked' : ''} ${started ? 'disabled' : ''}> Žádný díl se v decku nesmí opakovat</label>
+        <p class="hint" style="margin-top:-6px">Hlídá blade, ratchet, bit i díly CX (lock chip, main, over a assist blade).</p>
         <div class="grid2">
-          <label class="f"><span>Počet kol</span><input class="input" type="number" min="1" max="15" name="swiss_rounds" value="${t.swiss_rounds}" ${started ? 'disabled' : ''} required></label>
+          <label class="f" id="f-rounds" ${t.format === 'deathmatch' ? 'hidden' : ''}><span>Počet kol swiss</span><input class="input" type="number" min="1" max="15" name="swiss_rounds" value="${t.swiss_rounds}" ${started ? 'disabled' : ''}></label>
           <label class="f"><span>Body na výhru</span><input class="input" type="number" min="1" max="99" name="win_score" value="${t.win_score}" ${started ? 'disabled' : ''} required></label>
         </div>
+        <p class="hint" id="dm-hint" ${t.format === 'deathmatch' ? '' : 'hidden'}>Počet kol se dopočítá při startu (8 hráčů = 7 kol).</p>
         <label class="f"><span>Počet arén</span><input class="input" type="number" min="1" max="64" name="arena_count" value="${t.arena_count}" required></label>
       </div>
-      <div class="card stack">
+      <div class="card stack" id="tc-card" ${t.format === 'deathmatch' ? 'hidden' : ''}>
         <h3>Top cut</h3>
         <div class="grid2">
           <label class="f"><span>Velikost</span>
@@ -139,6 +148,10 @@ export async function renderEditor(main, [kindArg, id]) {
     </form>`)
 
   on(main, 'change', '#top-preset', (e, el) => { main.querySelector('#top-custom').hidden = el.value !== 'custom' })
+  on(main, 'change', '[name=format]', (e, el) => {
+    const dm = el.value === 'deathmatch'
+    main.querySelector('#f-rounds').hidden = dm; main.querySelector('#dm-hint').hidden = !dm; main.querySelector('#tc-card').hidden = dm
+  })
   on(main, 'submit', '#f-t', async (e, f) => {
     e.preventDefault()
     const d = formData(f)
@@ -153,7 +166,9 @@ export async function renderEditor(main, [kindArg, id]) {
         top_cut: d.top_preset === 'custom' ? Number(d.top_custom) : Number(d.top_preset),
         bo_config: { gf: d.bo_gf ? 3 : 1, lbf: d.bo_lbf ? 3 : 1, lbsf: d.bo_lbsf ? 3 : 1, wbf: d.bo_wbf ? 3 : 1, default: 1 },
       })
-      if (!started) Object.assign(row, { swiss_rounds: Number(d.swiss_rounds), win_score: Number(d.win_score) })
+      if (!started) Object.assign(row, { swiss_rounds: Math.max(1, Number(d.swiss_rounds) || 1), win_score: Number(d.win_score),
+                                         format: d.format || 'swiss', unique_parts: !!d.unique_parts })
+      if (row.format === 'deathmatch' && !started) Object.assign(row, { top_cut: 0 })
       if (row.top_cut === 1 || row.top_cut < 0) return toast('Top cut musí mít aspoň 2 hráče, nebo 0.', 'err')
     } else {
       Object.assign(row, { swiss_rounds: 1, top_cut: 0 })

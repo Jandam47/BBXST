@@ -17,7 +17,7 @@ Komunikuj **česky**, celé UI je česky.
 - `js/ui.js` – šablony `html\`\`` (vše escapuje, `raw()` jen pro důvěryhodné HTML), `modal`, `toast`, QR.
 - `js/parts.js` – katalog dílů (`bey_parts`), našeptávač, editor decku.
 - `js/config.js` – **obsahuje Adamovy živé klíče Supabase. Nikdy ho neměň ani nepřepisuj.**
-- `supabase/schema.sql`, `02-parts.sql`, `03-live-score.sql`, `04-security-hardening.sql`, `05-judge-handover.sql` – databáze (spuštěné v produkci, nové soubory
+- `supabase/schema.sql`, `02-parts.sql`, `03-live-score.sql`, `04-security-hardening.sql`, `05-judge-handover.sql`, `06-formats-stats.sql` – databáze (spuštěné v produkci, nové soubory
   spouští Adam). Živé skóre: BBXST v judge módu posílá po každém bodu `live_score` → `matches.live_p1/p2`
   (TV rozpis, vstupenka, seznamy); trigger `bbx_clear_live` ho maže po uložení hry.
   Rozehraná hra: BBXST posílá s `live_score` i `p_state` → `matches.live_state` (souboje v orientaci p1/p2,
@@ -27,6 +27,10 @@ Komunikuj **česky**, celé UI je česky.
   při načteném zápasu) volá `pass_match` (uvolní zápas i arénu, skóre zůstane), ZRUŠIT volá
   `pass_match(…, true)` (zahodí hru). Body ani výsledek nepošle judge, kterému zápas někdo převzal
   (`bbx_check_match_judge`, trigger na `games`); organizátor turnaje smí vždy.
+- Statistiky (06): `bbx_battles()` rozloží každý zapsaný souboj (`points`) na dva řádky (bey, díly z decku,
+  výsledek, body). Nad tím `tournament_report` (záložka Vyhodnocení), `meta_ranking` (stránka `#/meta`,
+  `js/views/meta.js`, jen skončené turnaje, bez testovacích hráčů „T-…“ bez účtu) a `player_bey_stats` (profil).
+  Blade u CX = lock chip + main blade. Souboje bez beyů (ruční výsledek) se nepočítají.
 - `vendor/` – supabase-js, qrcode-generator, html5-qrcode (lokálně, kvůli slabé síti v hale).
 - `sw.js` – service worker (síť první, cache jako záloha).
 
@@ -52,6 +56,13 @@ Komunikuj **česky**, celé UI je česky.
 - Role: hráč < judge < organizátor < admin < hlavní admin (vyšší zahrnuje nižší). Admin přiděluje
   judge/organizátora, hlavní admin i admina. Organizátor řídí jen své turnaje, admin všechny.
 - Host bez účtu = anonymní přihlášení Supabase; účet si může založit později a registrace se převedou.
+- Formáty (`tournaments.format`): **Klasika 3v3** (`swiss`) a **Deathmatch** (`deathmatch` = každý s každým 1×,
+  `pairRoundRobin` v core.js, kruhová metoda s pevným pořadím podle hashe; počet kol nastaví `start_tournament`
+  na n−1 / n). Deathmatch používá status i stage `swiss` – v UI se popisuje přes `phaseName(t)`. Po dohrání:
+  ukončit podle tabulky, top cut, nebo finále top 2 (= `create_topcut` s velikostí 2, jeden zápas GF BO3).
+  Když v deathmatchi někdo odstoupí, jeho soupeř má v tom kole volný los (víc volných losů v kole je OK).
+- `tournaments.unique_parts`: žádný díl (ani CX lock chip / main / over / assist) se v decku neopakuje –
+  hlídá registrační trigger (`bbx_deck_dupe`) a `start_tournament`.
 - Swiss: počet kol se zadává při založení. 1. kolo náhodně. Další kola vítězové s vítězi (skupiny podle HB);
   lichou skupinu doplní nejlepší hráč z nižší skupiny podle PB/PB2 (shoda = náhoda); odvety se vynechávají.
 - Volný los (bye): nejhůř umístěný, kdo ho ještě neměl; počítá se jako výhra 7:0.
@@ -68,15 +79,15 @@ Potřebují lokální PostgreSQL 16, Node a pro UI Python Playwright + Chrome a 
 - `node tests/core.test.mjs` – logika (párování 4–64 hráčů, pavouk 2–32 s byes, umístění).
 - `tests/reset_db.sh && node tests/db.test.mjs` – celý turnaj proti DB se stubem Supabase (role, RLS, RPC).
 - `tests/ui-up.sh && python3 tests/ui_smoke.py && python3 tests/bbxst_judge.py && python3 tests/test_tools.py` – proklik v Chrome
-  (`tests/judge_handover.py` zvlášť po čerstvém `ui-up.sh`: obnova skóre, převzetí, PASS JUDGE, ZRUŠIT)
+  (`tests/judge_handover.py` a `tests/formats_stats.py` každý zvlášť po čerstvém `ui-up.sh`: převzetí judge;
+  deathmatch přes testovací nástroje až po finále, vyhodnocení, meta, profil)
   (poslední: zkušební turnaj 16 hráčů přes testovací nástroje až po ukončení).
 Když měníš SQL, přidej nový soubor i do `tests/reset_db.sh`. Po změně logiky nebo DB pusť testy.
 
 ## Testovací nástroje
-V Řízení turnaje (jen admin): přidání N testovacích hráčů bez účtu (nick „T-…“, náhodný deck) a náhodné
-dohrání otevřených zápasů. Jen přes existující RPC (`add_walkin`, `submit_game`), bez změn DB.
+V Řízení turnaje (jen admin): přidání N testovacích hráčů bez účtu (nick „T-…“, náhodný deck bez opakovaných
+dílů) a náhodné dohrání otevřených zápasů včetně soubojů s beyi (kvůli vyhodnocení). Jen přes existující RPC (`add_walkin`, `submit_game`), bez změn DB.
 
 ## Zatím chybí / nápady
 - Push notifikace při zavřené aplikaci (Edge Function + Web Push) – teď jen když je BBXU otevřené.
-- Volitelné pravidlo „žádný díl se v decku neopakuje“.
 - Převod starých dat z Google Sheets.

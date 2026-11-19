@@ -1766,7 +1766,7 @@ function renderJudgeBar() {
   tag.onclick = m ? passJudge : backToBBXU
   if (m) {
     const lw = judge.leftSlot === 1 ? m.p1_wins : m.p2_wins, rw = judge.leftSlot === 1 ? m.p2_wins : m.p1_wins
-    const label = m.stage === "swiss" ? `Swiss · kolo ${m.round}` : m.stage === "gf" ? "Grand finále" : m.stage === "wb" ? `Winners · kolo ${m.round}` : `Losers · kolo ${m.round}`
+    const label = m.stage === "swiss" ? `${m.format === "deathmatch" ? "Deathmatch" : "Swiss"} · kolo ${m.round}` : m.stage === "gf" ? (m.top_cut === 2 ? "Finále" : "Grand finále") : m.stage === "wb" ? `Winners · kolo ${m.round}` : `Losers · kolo ${m.round}`
     info.textContent = [m.tournament_name, label, m.arena ? `aréna ${m.arena}` : "",
       m.best_of > 1 ? `BO${m.best_of} · hra ${lw + rw + 1} · ${lw}:${rw}` : ""].filter(Boolean).join(" · ")
     info.title = info.textContent
@@ -1995,7 +1995,7 @@ async function openManualMatch(pre = {}) {
         <div id="mQ">${queue.length ? queue.map((m, i) => `
           <div class="jMatch ${i === sel ? "sel" : ""}" data-i="${i}">
             <span class="n1">${esc(m.p1.nick)}</span> vs <span class="n2">${esc(m.p2.nick)}</span>
-            <div class="meta">${m.stage === "swiss" ? "Swiss · kolo " + m.round : esc(m.key)}${m.best_of > 1 ? ` · BO${m.best_of} (${m.p1_wins}:${m.p2_wins})` : ""}${m.status === "live" ? (m.judge_id ? " · hraje se" : " · volné místo") + (m.live_p1 != null ? ` ${m.live_p1}:${m.live_p2}` : "") + (m.judge_nick ? ` · řídí ${esc(m.judge_nick)}` : "") : i === 0 ? " · na řadě" : ""}</div>
+            <div class="meta">${m.stage === "swiss" ? (m.format === "deathmatch" ? "Deathmatch" : "Swiss") + " · kolo " + m.round : m.stage === "gf" ? (m.top_cut === 2 ? "Finále" : "Grand finále") : esc(m.key)}${m.best_of > 1 ? ` · BO${m.best_of} (${m.p1_wins}:${m.p2_wins})` : ""}${m.status === "live" ? (m.judge_id ? " · hraje se" : " · volné místo") + (m.live_p1 != null ? ` ${m.live_p1}:${m.live_p2}` : "") + (m.judge_nick ? ` · řídí ${esc(m.judge_nick)}` : "") : i === 0 ? " · na řadě" : ""}</div>
           </div>`).join("") : `<p>Na téhle aréně teď nic nečeká.</p>`}</div>
         <div class="jRow"><button class="qr-btn cancel" id="mBack">◂ ARÉNY</button>
           <button class="qr-btn confirm" id="mOk" ${queue.length ? "" : "disabled"}>POTVRDIT ZÁPAS</button></div>`)

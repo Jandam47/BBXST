@@ -151,6 +151,41 @@ export function pairSwissRound({ players, matches, round, rng = Math.random, win
 // ────────────────────────────────────────────────────────────────────
 //  TOP CUT – double elimination
 // ────────────────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────────────
+//  DEATHMATCH – každý s každým 1× (kruhová metoda)
+//  Pořadí hráčů je pevné (hash id + salt) a počítá se ze všech registrací,
+//  takže se rozpis nezmění, ani když někdo odstoupí – jeho soupeř má
+//  v tom kole volný los.
+// ────────────────────────────────────────────────────────────────────
+export const roundRobinRounds = (n) => (n % 2 ? n : n - 1)
+
+export function pairRoundRobin({ players, round, salt = '' }) {
+  const ids = players.map(p => p.id)
+    .sort((a, b) => hashNum(salt + a) - hashNum(salt + b) || (a < b ? -1 : 1))
+  const active = new Set(players.filter(p => (p.status || 'active') === 'active').map(p => p.id))
+  const arr = ids.length % 2 ? [...ids, null] : ids.slice()
+  const N = arr.length, R = Math.max(1, N - 1)
+  const r = (((round - 1) % R) + R) % R
+  const rest = arr.slice(1)
+  const order = [arr[0], ...rest.slice(R - r), ...rest.slice(0, R - r)]
+  const pairs = [], byes = []
+  for (let i = 0; i < N / 2; i++) {
+    let a = order[i], b = order[N - 1 - i]
+    if (a && !active.has(a)) a = null
+    if (b && !active.has(b)) b = null
+    if (a && b) pairs.push(i % 2 ? [b, a] : [a, b])
+    else if (a || b) byes.push(a || b)
+  }
+  return { pairs, byes }
+}
+
+// název první fáze podle formátu
+export const phaseName = (t) => (t?.format === 'deathmatch' ? 'Deathmatch' : 'Swiss')
+export const FORMATS = [
+  { key: 'swiss', label: 'Klasika 3v3', desc: 'Swiss na zadaný počet kol, pak top cut s loser bracketem.' },
+  { key: 'deathmatch', label: 'Deathmatch', desc: 'Každý s každým jednou. Pak se rozhodne: ukončit, top cut, nebo finále top 2.' },
+]
+
 export const DEFAULT_BO = { gf: 3, lbf: 3, lbsf: 3, wbf: 1, default: 1 }
 
 export function nextPow2(n) { let p = 1; while (p < n) p *= 2; return p }
@@ -207,9 +242,9 @@ export function buildDoubleElim(topN, bo = DEFAULT_BO) {
 }
 
 // lidský popis zápasu
-export function matchLabel(m, topN) {
-  if (m.stage === 'swiss') return `Swiss · kolo ${m.round}`
-  if (m.stage === 'gf') return 'Grand finále'
+export function matchLabel(m, topN, format) {
+  if (m.stage === 'swiss') return `${format === 'deathmatch' ? 'Deathmatch' : 'Swiss'} · kolo ${m.round}`
+  if (m.stage === 'gf') return topN === 2 ? 'Finále' : 'Grand finále'
   const N = nextPow2(Math.max(2, topN || 2)); const k = Math.log2(N)
   if (m.stage === 'wb') {
     if (m.round === k) return 'Finále winners'

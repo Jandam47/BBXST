@@ -3,7 +3,7 @@
 // ════════════════════════════════════════════════════════════════
 import { sb, state, rpc, q, errMsg, canManage, ensureSession, refreshMe, askNotify } from '../supa.js'
 import { html, mount, on, formData, toast, modal, busy, confirmBox, qrSvg, qrPng, statusPill, fmtDate, fmtTime } from '../ui.js'
-import { computeStandings, matchLabel, qrPayload, nextPow2 } from '../core.js'
+import { computeStandings, matchLabel, qrPayload, nextPow2, phaseName } from '../core.js'
 import { renderManage } from './manage.js'
 import { loadParts, deckEditor, bindDeckEditor } from '../parts.js'
 
@@ -40,8 +40,9 @@ function tabsFor(d) {
   const { t } = d
   const tabs = [['me', d.myReg ? 'Moje vstupenka' : t.kind === 'event' ? 'Přihlásit se' : 'Registrace']]
   tabs.push(['players', `Hráči (${d.players.filter(p => p.status === 'active').length})`])
-  if (t.kind === 'tournament' && t.status !== 'registration' && d.matches.some(m => m.stage === 'swiss')) tabs.push(['swiss', 'Swiss'])
-  if (d.matches.some(m => m.stage !== 'swiss')) tabs.push(['bracket', 'Top cut'])
+  if (t.kind === 'tournament' && t.status !== 'registration' && d.matches.some(m => m.stage === 'swiss')) tabs.push(['swiss', phaseName(t)])
+  if (d.matches.some(m => m.stage !== 'swiss')) tabs.push(['bracket', t.top_cut === 2 ? 'Finále' : 'Top cut'])
+  if (t.kind === 'tournament' && (t.status === 'finished' || (canManage(t) && running(t)))) tabs.push(['report', 'Vyhodnocení'])
   if (t.kind === 'tournament' && running(t) && (state.level >= 1 || canManage(t))) tabs.push(['judge', 'Judge'])
   if (canManage(t)) tabs.push(['manage', 'Řízení'])
   return tabs
@@ -54,6 +55,7 @@ export async function render(main, [id, tabArg]) {
   const pickDefault = () => {
     if (d.myReg) return 'me'
     if (canManage(d.t) && d.t.status !== 'finished') return 'manage'
+    if (d.t.status === 'finished' && d.t.kind === 'tournament') return 'report'
     if (d.t.status === 'topcut' || (d.t.status === 'finished' && d.matches.some(m => m.stage !== 'swiss'))) return 'bracket'
     if (d.t.status === 'swiss' || d.t.status === 'finished') return d.t.kind === 'tournament' ? 'swiss' : 'players'
     return 'me'
@@ -73,7 +75,7 @@ export async function render(main, [id, tabArg]) {
         <div class="meta">
           ${t.starts_at ? html`<span>🗓 ${fmtDate(t.starts_at)}, ${fmtTime(t.starts_at)}${t.ends_at ? `–${fmtTime(t.ends_at)}` : ''}</span>` : ''}
           ${t.location ? html`<span>📍 ${t.location}</span>` : ''}
-          ${t.kind === 'tournament' ? html`<span>⚔ ${t.swiss_rounds} kol swiss${t.top_cut ? `, top ${t.top_cut}` : ''}</span>` : html`<span>Akce</span>`}
+          ${t.kind === 'tournament' ? html`<span>⚔ ${t.format === 'deathmatch' ? `Deathmatch${t.status !== 'registration' ? ` (${t.swiss_rounds} kol)` : ''}` : `${t.swiss_rounds} kol swiss`}${t.top_cut ? (t.top_cut === 2 ? ', finále' : `, top ${t.top_cut}`) : ''}${t.unique_parts ? ' · díly se neopakují' : ''}</span>` : html`<span>Akce</span>`}
           ${t.status === 'swiss' ? html`<span style="color:var(--bolt)">Kolo ${t.current_round} z ${t.swiss_rounds}</span>` : ''}
         </div>
         ${t.description ? html`<p class="desc">${t.description}</p>` : ''}
@@ -82,7 +84,7 @@ export async function render(main, [id, tabArg]) {
       <section id="tab"></section>`)
     const box = main.querySelector('#tab')
     const ctx = { d, reload, draw }
-    ;({ me: tabMe, players: tabPlayers, swiss: tabSwiss, bracket: tabBracket, judge: tabJudge, manage: renderManage }[tab] || tabMe)(box, ctx)
+    ;({ me: tabMe, players: tabPlayers, swiss: tabSwiss, bracket: tabBracket, judge: tabJudge, manage: renderManage, report: tabReport }[tab] || tabMe)(box, ctx)
   }
 
   // po odchodu z pohledu (jiná záložka / stránka) už nic nepřekreslovat
@@ -138,7 +140,7 @@ function tabMe(box, { d, reload }) {
       <div class="big">${current.arena}</div>
       <div class="vs">proti ${opp}</div>
       ${current.live_p1 != null ? html`<div class="pass-live">Stav ${current.p1_reg === myReg.id ? current.live_p1 : current.live_p2} : ${current.p1_reg === myReg.id ? current.live_p2 : current.live_p1}</div>` : ''}
-      <div class="faint small">${matchLabel(current, t.top_cut)}${current.best_of > 1 ? ` · BO${current.best_of} (${current.p1_reg === myReg.id ? current.p1_wins : current.p2_wins}:${current.p1_reg === myReg.id ? current.p2_wins : current.p1_wins})` : ''}${current.wave > 1 ? ` · ${current.wave}. na řadě` : ''}</div>`
+      <div class="faint small">${matchLabel(current, t.top_cut, t.format)}${current.best_of > 1 ? ` · BO${current.best_of} (${current.p1_reg === myReg.id ? current.p1_wins : current.p2_wins}:${current.p1_reg === myReg.id ? current.p2_wins : current.p1_wins})` : ''}${current.wave > 1 ? ` · ${current.wave}. na řadě` : ''}</div>`
   } else if (myReg.status === 'dropped') {
     arenaBlock = html`<div class="lbl">Z turnaje jsi odstoupil.</div>`
   } else if (t.status === 'registration') {
@@ -208,6 +210,7 @@ async function regForm(box, d, reload, existing) {
         ${nickLocked ? html`<div class="hint">Nick z tvého účtu.</div>` : ''}</label>
       ${isEv ? '' : html`
         ${deckEditor(v.deck)}
+        ${t.unique_parts ? html`<div class="notice warn small">V tomhle turnaji se žádný díl nesmí v decku opakovat – ani blade, ratchet, bit, ani díly CX.</div>` : ''}
         <p class="hint">Piš a vyber díl z nabídky – jde to i zkratkou (GF, HN…). Každý beyblade musí být jiný. Do startu turnaje můžeš registraci kdykoliv upravit.</p>`}
       <div class="row">
         ${existing ? html`<button type="button" class="btn grow" data-act="cancel">Zpět</button>` : ''}
@@ -280,7 +283,7 @@ export function matchRow(d, m, meReg) {
       <div class="side l ${w1 ? 'win' : done && !m.is_bye ? 'lose' : ''}"><div class="nick">${p1}</div></div>
       <div class="score">${score}</div>
       <div class="side r ${w2 ? 'win' : done && !m.is_bye ? 'lose' : ''}"><div class="nick">${p2}</div></div>
-      <div class="info"><span>${matchLabel(m, d.t.top_cut)}${m.best_of > 1 ? ` · BO${m.best_of}${!done && started ? ` (hry ${m.p1_wins}:${m.p2_wins})` : ''}` : ''}</span>
+      <div class="info"><span>${matchLabel(m, d.t.top_cut, d.t.format)}${m.best_of > 1 ? ` · BO${m.best_of}${!done && started ? ` (hry ${m.p1_wins}:${m.p2_wins})` : ''}` : ''}</span>
         <span>${m.status === 'live' ? html`<span class="pill live" style="font-size:11px;padding:1px 8px">hraje se</span>` : ''}
         ${m.arena && !done ? `aréna ${m.arena}${m.wave > 1 ? ` (${m.wave}. na řadě)` : ''}` : ''}</span></div>
     </div>`
@@ -371,12 +374,56 @@ function tabSwiss(box, { d }) {
             <td>${s.rank}</td><td>${s.nick}</td><td><b>${s.main}</b></td><td>${s.aux1}</td><td>${s.aux2}</td><td>${s.wins}–${s.losses}</td></tr>`)}</tbody>
       </table>
     </div>
-    <p class="hint">Pořadí: hlavní body → pomocné body → druhé pomocné → vzájemný zápas → los.${cut ? ` Žlutá čára = hranice top ${cut}.` : ''}</p>
+    <p class="hint">${t.format === 'deathmatch' ? 'Každý s každým. ' : ''}Pořadí: hlavní body → pomocné body → druhé pomocné → vzájemný zápas → los.${cut ? ` Žlutá čára = hranice ${cut === 2 ? 'finále' : `top ${cut}`}.` : ''}</p>
     ${rounds.map(r => html`
       <h2>Kolo ${r}</h2>
       <div class="list">${d.matches.filter(m => m.stage === 'swiss' && m.round === r)
         .sort((a, b) => (a.is_bye - b.is_bye) || (a.status === 'done') - (b.status === 'done') || a.pos - b.pos)
         .map(m => matchRow(d, m, myReg?.id))}</div>`)}`)
+}
+
+// ────────────────────────────────────────────────────────────────
+//  VYHODNOCENÍ – nejhranější díly a nejúspěšnější buildy
+// ────────────────────────────────────────────────────────────────
+async function tabReport(box, { d }) {
+  const { t } = d
+  mount(box, html`<div class="spinner" aria-label="Počítám vyhodnocení"></div>`)
+  let r
+  try { r = await rpc('tournament_report', { p_tournament: t.id }) }
+  catch (e) { mount(box, html`<div class="notice err">${errMsg(e)}</div>`); return }
+  if (!r.battles) {
+    mount(box, html`<div class="notice">Turnaj nemá zapsané souboje s beyi (výsledky se zadávaly ručně), takže není z čeho dělat vyhodnocení.</div>`)
+    return
+  }
+  const kinds = [['blade', 'Blade'], ['ratchet', 'Ratchet'], ['bit', 'Bit']]
+  const who = (p) => p.user_id ? html`<a href="#/p/${p.user_id}">${p.nick}</a>` : p.nick
+  mount(box, html`
+    ${t.status !== 'finished' ? html`<div class="notice small">Průběžný náhled pro organizátora – hráči vyhodnocení uvidí po ukončení turnaje.</div>` : ''}
+    <p class="muted" style="margin-top:4px">${r.battles} soubojů · ${r.points} bodů</p>
+    <h2>Nejhranější díly</h2>
+    <div class="rep-parts">${kinds.map(([k, label]) => {
+      const items = r.parts[k] || []
+      const [top, ...rest] = items
+      return html`<div class="card rep-part">
+        <div class="rep-kind">${label}</div>
+        ${top ? html`<div class="rep-top">${top.name}</div>
+          <div class="small muted">${top.battles} soubojů · ${top.players === 1 ? '1 hráč' : `${top.players} hráči`}</div>
+          ${rest.length ? html`<ol class="rep-rest" start="2">${rest.map(x => html`<li><span class="ellipsis">${x.name}</span><span class="faint">${x.battles}</span></li>`)}</ol>` : ''}`
+          : html`<div class="faint">—</div>`}
+      </div>`
+    })}</div>
+    <h2>Top 3 buildy podle bodů</h2>
+    <div class="stack">${r.builds.map((b, i) => html`
+      <div class="card rep-build">
+        <div class="rep-rank r${i + 1}">${i + 1}</div>
+        <div class="grow" style="min-width:0">
+          <div class="rep-name">${b.bey}</div>
+          <div class="small muted">${b.battles} soubojů · ${b.wins} výher (${Math.round(100 * b.wins / b.battles)} %)</div>
+          <div class="rep-players">${b.players.map(p => html`<span class="chip">${who(p)} <b>${p.points}</b></span>`)}</div>
+        </div>
+        <div class="rep-pts"><b>${b.points}</b><small>bodů</small></div>
+      </div>`)}</div>
+    <p class="hint">Body = co build nasbíral v soubojích (Spin 1, Over/Burst 2, X-treme 3). Počítají se jen souboje zapsané judgem v BBXST.</p>`)
 }
 
 // ────────────────────────────────────────────────────────────────
@@ -415,7 +462,7 @@ function tabBracket(box, { d }) {
     <h2 style="margin-top:0">Winners</h2>
     <div class="bracket-wrap"><div class="bracket">
       ${wbR.map(r => col(matchLabel({ stage: 'wb', round: r }, N), br.filter(m => m.stage === 'wb' && m.round === r)))}
-      ${col('Grand finále', br.filter(m => m.stage === 'gf'))}
+      ${col(t.top_cut === 2 ? 'Finále' : 'Grand finále', br.filter(m => m.stage === 'gf'))}
     </div></div>
     ${lbR.length ? html`<h2>Losers</h2>
     <div class="bracket-wrap"><div class="bracket">
@@ -455,7 +502,7 @@ async function tabJudge(box, { d, reload }) {
             <div class="small muted">${j ? (mineA ? 'Tvoje aréna' : `Judge: ${nickMap.get(j.judge_id) || '?'}`) : 'Volná aréna'}${qa.length > 1 ? ` · další ${qa.length - 1}` : ''}</div>
             ${cur ? html`
               <div class="ellipsis" style="font-weight:600;font-size:17px"><span style="color:#b9d4ff">${nickOf(d, cur.p1_reg)}</span> <span class="faint">vs</span> <span style="color:#ffc2cd">${nickOf(d, cur.p2_reg)}</span></div>
-              <div class="small faint ellipsis">${matchLabel(cur, t.top_cut)}${cur.best_of > 1 ? ` · BO${cur.best_of} (${cur.p1_wins}:${cur.p2_wins})` : ''}${free ? '' : live ? ` · hraje se${cur.judge_id && cur.judge_id !== j?.judge_id ? ` · řídí ${nickMap.get(cur.judge_id) || '?'}` : ''}` : ' · na řadě'}</div>
+              <div class="small faint ellipsis">${matchLabel(cur, t.top_cut, t.format)}${cur.best_of > 1 ? ` · BO${cur.best_of} (${cur.p1_wins}:${cur.p2_wins})` : ''}${free ? '' : live ? ` · hraje se${cur.judge_id && cur.judge_id !== j?.judge_id ? ` · řídí ${nickMap.get(cur.judge_id) || '?'}` : ''}` : ' · na řadě'}</div>
               ${free ? html`<div class="small arena-free">Předáno – čeká na judge</div>` : ''}`
               : html`<div class="faint">Teď tu nic nečeká</div>`}
           </div>
@@ -506,7 +553,7 @@ export async function renderTV(main, [id]) {
     const active = d.matches.filter(m => m.status !== 'done' && m.p1_reg && m.p2_reg && m.arena)
       .sort((a, b) => a.arena - b.arena || (b.status === 'live') - (a.status === 'live') || (a.wave || 0) - (b.wave || 0))
     const firstPerArena = new Set()
-    const phase = t.status === 'swiss' ? `Swiss · kolo ${t.current_round}/${t.swiss_rounds}` : t.status === 'topcut' ? `Top ${t.top_cut}` : t.status === 'finished' ? 'Konec turnaje' : 'Registrace'
+    const phase = t.status === 'swiss' ? `${phaseName(t)} · kolo ${t.current_round}/${t.swiss_rounds}` : t.status === 'topcut' ? (t.top_cut === 2 ? 'Finále' : `Top ${t.top_cut}`) : t.status === 'finished' ? 'Konec turnaje' : 'Registrace'
     let body
     if (active.length) {
       body = html`<div class="tv-grid">${active.map(m => {

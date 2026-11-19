@@ -38,10 +38,26 @@ function sparkline(points) {
     <circle cx="${last[0]}" cy="${last[1]}" r="4" fill="#ffd21f"/></svg>`)
 }
 
+const BEY_KINDS = [['build', 'Buildy'], ['blade', 'Blady'], ['ratchet', 'Ratchety'], ['bit', 'Bity']]
+function beyList(rows = []) {
+  if (!rows.length) return html`<div class="empty">Nic tu není.</div>`
+  return html`<div class="list meta-list">${rows.map(r => html`
+    <div class="li meta-row">
+      <div class="grow" style="min-width:0">
+        <div class="meta-name">${r.name}</div>
+        <div class="meta-bar" role="img" aria-label="${r.wins} výher, ${r.draws} remíz, ${r.losses} proher">
+          <i class="w" style="width:${(100 * r.wins / r.battles).toFixed(1)}%"></i><i class="d" style="width:${(100 * r.draws / r.battles).toFixed(1)}%"></i></div>
+        <div class="small muted">${r.battles} soubojů · ${r.wins}–${r.draws ? `${r.draws}–` : ''}${r.losses} · ${r.points} bodů</div>
+      </div>
+      <div class="meta-wr num"><b>${Math.round(r.win_rate)}</b><small>%</small></div>
+    </div>`)}</div>`
+}
+
 export async function render(main, [id], ctx) {
-  const [p, stats] = await Promise.all([
+  const [p, stats, bs] = await Promise.all([
     q(sb.from('profiles').select('*').eq('id', id).maybeSingle()),
     rpc('player_stats', { p_user: id }),
+    rpc('player_bey_stats', { p_user: id }).catch(() => ({})),
   ])
   if (ctx && !ctx.isCurrent()) return
   if (!p || !p.nick) { mount(main, html`<div class="empty">${p && id === state.user?.id ? html`<button class="btn primary" onclick="location.reload()">Dokonči profil</button>` : 'Profil nenalezen.'}</div>`); return }
@@ -99,12 +115,12 @@ export async function render(main, [id], ctx) {
         </div>
       </a>`)}</div>` : html`<div class="empty">Zatím žádný odehraný turnaj.</div>`}
 
-    ${stats.beys.length ? html`<h2>Beyblady</h2>
-    <div class="card" style="padding:4px 10px;overflow-x:auto"><table class="standings beys">
-      <thead><tr><th></th><th>Beyblade</th><th>Souboje</th><th>Výhry</th><th>Body</th><th>Úspěšnost</th></tr></thead>
-      <tbody>${stats.beys.map(b => html`<tr><td></td><td>${b.bey}</td><td>${b.battles}</td><td>${b.wins}</td><td>${b.points}</td>
-        <td>${b.battles ? Math.round(b.wins / b.battles * 100) : 0} %</td></tr>`)}</tbody></table></div>
-    <p class="hint">Z ukončených turnajů, kde rozhodčí zapisoval souboje v BBXST.</p>` : ''}
+    ${bs.build?.length ? html`<h2>Beyblady</h2>
+    <div class="seg" id="bk" role="tablist">
+      ${BEY_KINDS.map(([k, l], i) => html`<button type="button" data-k="${k}" class="${i ? '' : 'on'}" role="tab">${l}</button>`)}
+    </div>
+    <div id="bl" style="margin-top:10px">${beyList(bs.build)}</div>
+    <p class="hint">${own ? 'Tvoje statistika včetně rozehraných turnajů. Ostatní vidí jen skončené turnaje.' : 'Ze skončených turnajů, kde judge zapisoval souboje v BBXST.'} Zelená = výhry, šedá = remízy.</p>` : ''}
 
     ${stats.recent.length ? html`<h2>Poslední zápasy</h2>
     <div class="list">${stats.recent.map(m => html`
@@ -119,6 +135,10 @@ export async function render(main, [id], ctx) {
 
     ${events.length ? html`<h2>Akce</h2><div class="list">${events.map(t => html`<a class="li" href="#/t/${t.id}"><span class="grow">${t.name}</span><span class="small faint">${fmtDate(t.starts_at)}</span></a>`)}</div>` : ''}`)
 
+  on(main, 'click', '#bk [data-k]', (e, b) => {
+    main.querySelectorAll('#bk button').forEach(x => x.classList.toggle('on', x === b))
+    mount(main.querySelector('#bl'), beyList(bs[b.dataset.k]))
+  })
   on(main, 'change', '[data-role]', async (e, cb) => {
     const L = Number(cb.dataset.level)
     const target = cb.checked ? cb.dataset.role : ROLES.find(x => x.level === L - 1).key
