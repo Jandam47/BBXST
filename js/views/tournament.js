@@ -595,7 +595,7 @@ export async function renderTV(main, [id]) {
       body = html`<div class="tv-arenas ${arenas.length === 1 ? 'one' : ''}">${arenas.map(({ a, q: qa }) => {
         const [cur, ...rest] = qa
         return html`<section class="tv-arena ${cur?.status === 'live' ? 'live' : ''} ${cur ? '' : 'idle'}">
-          <div class="tv-ano"><small>aréna</small>${a}</div>
+          <div class="tv-ano" aria-label="aréna ${a}">${a}</div>
           <div class="tv-rows">
             ${cur ? html`<div class="tv-now">
               <span class="n l">${nickOf(d, cur.p1_reg)}</span>
