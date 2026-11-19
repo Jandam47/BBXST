@@ -46,7 +46,7 @@ Komunikuj **česky**, celé UI je česky.
 - `sw.js` – service worker (síť první, cache jako záloha).
 - Vzhled: cyberpunk (černé pozadí s mřížkou, azurová `--cyan` + purpurová `--magenta`, žlutá `--bolt` jen pro
   aktivní věci a hlavní akce; hráč vlevo `.p1c`, vpravo `.p2c`; HUD rohy na kartách). Neonové ikony v `js/icons.js`.
-  Logo BBX Unity = `icons/bbxunity.webp` (velké: přihlášení, úvod pro hosty), v záhlaví jen nápis
+  Logo BBX Unity = `icons/bbxunity.webp` (velké jen na přihlášení), v záhlaví jen nápis
   `icons/bbxunity-wordmark.webp`, ikony aplikace `icons/bbxu-*.png`.
   `icons/icon-*.png` a `favicon-32.png` patří BBXST – neměnit.
 
