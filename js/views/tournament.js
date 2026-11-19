@@ -91,7 +91,7 @@ export async function render(main, [id, tabArg]) {
         <div class="meta">
           ${t.starts_at ? html`<span>🗓 ${fmtDate(t.starts_at)}, ${fmtTime(t.starts_at)}${t.ends_at ? `–${fmtTime(t.ends_at)}` : ''}</span>` : ''}
           ${t.location ? html`<span>📍 ${t.location}</span>` : ''}
-          ${t.kind === 'tournament' ? html`<span>⚔ ${t.format === 'deathmatch' ? `Deathmatch${t.status !== 'registration' ? ` (${t.swiss_rounds} kol)` : ''}` : `${t.swiss_rounds} kol swiss`}${t.top_cut ? (t.top_cut === 2 ? ', finále' : `, top ${t.top_cut}`) : ''}${t.unique_parts ? ' · díly se neopakují' : ''}</span>` : html`<span>Akce</span>`}
+          ${t.kind === 'tournament' ? html`<span>⚔ ${t.format === 'deathmatch' ? `Deathmatch${t.status !== 'registration' ? ` (${t.swiss_rounds} kol)` : ''}` : `${t.swiss_rounds} kol swiss`}${t.top_cut ? (t.top_cut === 2 ? ', finále' : `, top ${t.top_cut}`) : ''}${t.unique_parts ? ' · díly se neopakují' : ''}${t.rated === false ? ' · bez ratingu' : ''}</span>` : html`<span>Akce</span>`}
           ${t.status === 'swiss' ? html`<span style="color:var(--bolt)">Kolo ${t.current_round} z ${t.swiss_rounds}</span>` : ''}
         </div>
         ${t.description ? html`<p class="desc">${t.description}</p>` : ''}
