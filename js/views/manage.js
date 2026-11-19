@@ -336,8 +336,8 @@ function resultModal(d, m, reload) {
     <p class="muted small">${matchLabel(m, t.top_cut, t.format)}${m.best_of > 1 ? ` · BO${m.best_of}, zatím ${m.p1_wins}:${m.p2_wins}` : ''}. Vítěz má ${t.win_score} bodů.</p>
     <form class="stack" id="f-res" style="margin-top:12px">
       <div class="grid2">
-        <label class="f"><span style="color:#b9d4ff">${p1}</span><input class="input num" name="s1" type="number" min="0" max="${t.win_score}" required inputmode="numeric"></label>
-        <label class="f"><span style="color:#ffc2cd">${p2}</span><input class="input num" name="s2" type="number" min="0" max="${t.win_score}" required inputmode="numeric"></label>
+        <label class="f"><span class="p1c">${p1}</span><input class="input num" name="s1" type="number" min="0" max="${t.win_score}" required inputmode="numeric"></label>
+        <label class="f"><span class="p2c">${p2}</span><input class="input num" name="s2" type="number" min="0" max="${t.win_score}" required inputmode="numeric"></label>
       </div>
       <button class="btn primary block">Uložit výsledek</button>
     </form>`, {

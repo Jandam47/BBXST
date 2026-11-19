@@ -1,4 +1,4 @@
-# BBXU – Beyblade X turnaje
+# BBXU (BBX Unity) – Beyblade X turnaje
 
 Jedno rozhraní na všechno: turnaje a akce, registrace s QR vstupenkou, swiss + top cut
 s loser bracketem, judge mód v BBXST, profily se statistikami, seznam hráčů a chat.

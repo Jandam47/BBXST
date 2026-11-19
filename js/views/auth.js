@@ -20,7 +20,7 @@ export async function render(main, [mode]) {
   mount(main, html`
     <div class="auth">
       <div class="auth-hero">
-        <span class="brand-mark">BBX<b>U</b></span>
+        <img class="logo-hero" src="icons/bbxunity.webp" alt="BBX Unity" width="600" height="503">
         <p>Turnaje, registrace a výsledky Beyblade X na jednom místě.</p>
       </div>
       ${guestNote}

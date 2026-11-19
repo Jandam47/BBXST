@@ -56,6 +56,7 @@ export async function renderList(main, _p, ctx) {
 
   mount(main, html`
     ${callHtml}
+    ${!state.user || state.isAnon ? html`<img class="logo-hero" src="icons/bbxunity.webp" alt="BBX Unity" width="600" height="503">` : ''}
     <div class="row between wrap" style="gap:12px">
       <h1>Turnaje a akce</h1>
       ${state.level >= 2 ? html`<div class="row"><a class="btn sm" href="#/new/event">+ Akce</a><a class="btn primary sm" href="#/new">+ Turnaj</a></div>` : ''}

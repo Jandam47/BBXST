@@ -3,13 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>BBXU</title>
+<title>BBXU – BBX Unity</title>
 <meta name="description" content="Turnaje, registrace a výsledky Beyblade X.">
 <meta name="theme-color" content="#0a1030">
 <link rel="manifest" href="manifest.json">
-<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
-<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
-<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/bbxu-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/bbxu-192.png">
+<link rel="apple-touch-icon" href="icons/bbxu-apple.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -22,7 +22,7 @@
 </head>
 <body>
   <header class="topbar">
-    <a class="brand" href="#/"><span class="brand-mark">BBX<b>U</b></span><span class="brand-sub">Interface application</span></a>
+    <a class="brand" href="#/" aria-label="BBX Unity – úvod"><img class="brand-logo" src="icons/bbxunity-wordmark.webp" alt="BBX Unity" width="480" height="101"></a>
     <span class="spacer"></span>
     <span id="me-slot"></span>
   </header>
@@ -30,10 +30,10 @@
   <main id="main"><div class="spinner" aria-label="Načítám"></div></main>
 
   <nav class="tabbar" aria-label="Hlavní menu">
-    <a href="#/" data-tab="home"><span class="ico">🏆</span>Turnaje</a>
-    <a href="#/players" data-tab="players"><span class="ico">👥</span>Hráči</a>
-    <a href="#/meta" data-tab="meta"><span class="ico">📊</span>Meta</a>
-    <a href="#/chat" data-tab="chat"><span class="ico">💬</span>Chat</a>
+    <a href="#/" data-tab="home"><span class="ico"><svg class="nicon" viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path class="i1" d="M7 4h10v4a5 5 0 0 1-10 0V4z"/><path class="i2" d="M7 6H4.5a2.5 2.5 0 0 0 2.6 3.4M17 6h2.5a2.5 2.5 0 0 1-2.6 3.4"/> <path class="i1" d="M12 13v3M8.5 20h7M9.5 20l.6-4h3.8l.6 4"/><path class="i2" d="m12 5.6.7 1.4 1.5.2-1.1 1 .3 1.5-1.4-.7-1.4.7.3-1.5-1.1-1 1.5-.2z"/></svg></span>Turnaje</a>
+    <a href="#/players" data-tab="players"><span class="ico"><svg class="nicon" viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle class="i1" cx="9" cy="8" r="3.2"/><path class="i1" d="M3.5 19.5c0-3.3 2.5-5.5 5.5-5.5s5.5 2.2 5.5 5.5"/> <circle class="i2" cx="16.5" cy="9" r="2.6"/><path class="i2" d="M15.6 14.1c2.6-.3 5 1.6 5 5"/></svg></span>Hráči</a>
+    <a href="#/meta" data-tab="meta"><span class="ico"><svg class="nicon" viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path class="i1" d="M3.5 20.5h17M5.5 20.5v-4M9.5 20.5v-6M13.5 20.5v-3.5M17.5 20.5v-8"/> <path class="i2" d="m4.5 11 4.2-3.2 3.6 2.4 5.7-5.7M15.5 4.5h2.5V7"/></svg></span>Meta</a>
+    <a href="#/chat" data-tab="chat"><span class="ico"><svg class="nicon" viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path class="i1" d="M5 4.5h14a1.5 1.5 0 0 1 1.5 1.5v9a1.5 1.5 0 0 1-1.5 1.5h-8l-4.5 3.5v-3.5H5A1.5 1.5 0 0 1 3.5 15V6A1.5 1.5 0 0 1 5 4.5z"/> <path class="i2" d="M8.5 10.5h.01M12 10.5h.01M15.5 10.5h.01" stroke-width="2.6"/></svg></span>Chat</a>
     <a href="bbxst.html" class="tab-bbxst" title="BBXST – score tracker"><img class="ico-img" src="icons/icon-192.png" alt="" width="24" height="24">BBXST</a>
   </nav>
 

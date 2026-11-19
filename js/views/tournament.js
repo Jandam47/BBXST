@@ -2,9 +2,10 @@
 //  Detail turnaje / akce: můj status, hráči, swiss, pavouk, judge menu, TV
 // ════════════════════════════════════════════════════════════════
 import { sb, state, rpc, q, errMsg, canManage, ensureSession, refreshMe, askNotify } from '../supa.js'
-import { html, mount, on, formData, toast, modal, busy, confirmBox, qrSvg, qrPng, statusPill, fmtDate, fmtTime, pauseLeft, fmtLeft } from '../ui.js'
+import { html, raw, mount, on, formData, toast, modal, busy, confirmBox, qrSvg, qrPng, statusPill, fmtDate, fmtTime, pauseLeft, fmtLeft } from '../ui.js'
 import { computeStandings, matchLabel, qrPayload, nextPow2, phaseName, arenaQueue, busyRegs } from '../core.js'
 import { renderManage } from './manage.js'
+import { icon } from '../icons.js'
 import { loadParts, deckEditor, bindDeckEditor } from '../parts.js'
 
 const cfg = window.BBX_CONFIG
@@ -47,15 +48,15 @@ const nickOf = (d, reg) => d.pmap.get(reg)?.nick || '?'
 function tabsFor(d) {
   const { t } = d
   // [klíč, popisek, ikona]
-  const tabs = [['me', d.myReg ? 'Můj Status' : t.kind === 'event' ? 'Přihlásit se' : 'Registrace', d.myReg ? '🎫' : '✍️']]
+  const tabs = [['me', d.myReg ? 'Můj Status' : t.kind === 'event' ? 'Přihlásit se' : 'Registrace', d.myReg ? 'ticket' : 'pen']]
   // po startu je seznam hráčů v tabulce swissu / deathmatche, záložka Hráči se už neukazuje
   const hasTable = t.kind === 'tournament' && t.status !== 'registration' && d.matches.some(m => m.stage === 'swiss')
-  if (!hasTable) tabs.push(['players', `Hráči (${d.players.filter(p => p.status === 'active').length})`, '👥'])
-  if (hasTable) tabs.push(['swiss', phaseName(t), '📋'])
-  if (d.matches.some(m => m.stage !== 'swiss')) tabs.push(['bracket', t.top_cut === 2 ? 'Finále' : 'Top cut', '🏆'])
-  if (t.kind === 'tournament' && (t.status === 'finished' || (canManage(t) && running(t)))) tabs.push(['report', 'Vyhodnocení', '📊'])
-  if (t.kind === 'tournament' && running(t) && (state.level >= 1 || canManage(t))) tabs.push(['judge', 'Judge menu', '⚖️'])
-  if (canManage(t)) tabs.push(['manage', 'Řízení', '⚙️'])
+  if (!hasTable) tabs.push(['players', `Hráči (${d.players.filter(p => p.status === 'active').length})`, 'users'])
+  if (hasTable) tabs.push(['swiss', phaseName(t), 'board'])
+  if (d.matches.some(m => m.stage !== 'swiss')) tabs.push(['bracket', t.top_cut === 2 ? 'Finále' : 'Top cut', 'bracket'])
+  if (t.kind === 'tournament' && (t.status === 'finished' || (canManage(t) && running(t)))) tabs.push(['report', 'Vyhodnocení', 'bars'])
+  if (t.kind === 'tournament' && running(t) && (state.level >= 1 || canManage(t))) tabs.push(['judge', 'Judge menu', 'scale'])
+  if (canManage(t)) tabs.push(['manage', 'Řízení', 'gear'])
   return tabs
 }
 
@@ -80,7 +81,7 @@ export async function render(main, [id, tabArg]) {
     mount(main, html`
       <header class="t-head">
         <div class="row between wrap">${statusPill(t)}
-          ${t.kind === 'tournament' && t.status !== 'registration' ? html`<a class="btn sm ghost" href="#/t/${t.id}/tv">📺 TV rozpis</a>` : ''}</div>
+          ${t.kind === 'tournament' && t.status !== 'registration' ? html`<a class="btn sm ghost btn-ico" href="#/t/${t.id}/tv">${raw(icon('tv'))}TV rozpis</a>` : ''}</div>
         <h1 style="margin-top:10px">${t.name}</h1>
         <div class="meta">
           ${t.starts_at ? html`<span>🗓 ${fmtDate(t.starts_at)}, ${fmtTime(t.starts_at)}${t.ends_at ? `–${fmtTime(t.ends_at)}` : ''}</span>` : ''}
@@ -91,7 +92,7 @@ export async function render(main, [id, tabArg]) {
         ${t.description ? html`<p class="desc">${t.description}</p>` : ''}
       </header>
       ${pauseBanner(t)}
-      <nav class="tabs t-nav" role="tablist" aria-label="Turnaj">${tabs.map(([k, l, ico]) => html`<a href="#/t/${t.id}/${k}" class="${k === tab ? 'on' : ''}" role="tab" aria-selected="${k === tab}"><span class="ico" aria-hidden="true">${ico}</span><span class="lb">${l}</span></a>`)}</nav>
+      <nav class="tabs t-nav" role="tablist" aria-label="Turnaj">${tabs.map(([k, l, ico]) => html`<a href="#/t/${t.id}/${k}" class="${k === tab ? 'on' : ''}" role="tab" aria-selected="${k === tab}"><span class="ico" aria-hidden="true">${raw(icon(ico))}</span><span class="lb">${l}</span></a>`)}</nav>
       <section id="tab"></section>`)
     const box = main.querySelector('#tab')
     const ctx = { d, reload, draw }
@@ -541,7 +542,7 @@ async function tabJudge(box, { d, reload }) {
           <div class="grow" style="min-width:0">
             <div class="small muted">${mine ? 'Řídíš ty' : judgeNick ? `Judge: ${judgeNick}` : free ? 'Bez judge' : 'Volná aréna'}${qa.length > 1 ? ` · čeká ${qa.length - 1}` : ''}</div>
             ${cur ? html`
-              <div class="ellipsis" style="font-weight:600;font-size:17px"><span style="color:#b9d4ff">${nickOf(d, cur.p1_reg)}</span> <span class="faint">vs</span> <span style="color:#ffc2cd">${nickOf(d, cur.p2_reg)}</span></div>
+              <div class="ellipsis" style="font-weight:600;font-size:17px"><span class="p1c">${nickOf(d, cur.p1_reg)}</span> <span class="faint">vs</span> <span class="p2c">${nickOf(d, cur.p2_reg)}</span></div>
               <div class="small faint ellipsis">${matchLabel(cur, t.top_cut, t.format)}${cur.best_of > 1 ? ` · BO${cur.best_of} (${cur.p1_wins}:${cur.p2_wins})` : ''}${live ? (free ? '' : ' · hraje se') : ' · na řadě'}</div>
               ${free ? html`<div class="small arena-free">Rozehráno – čeká na judge</div>` : ''}`
               : html`<div class="faint">Teď tu nic nečeká</div>`}

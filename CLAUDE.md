@@ -1,4 +1,4 @@
-# BBXU – pokyny pro Claude
+# BBXU (BBX Unity) – pokyny pro Claude
 
 Turnajová platforma pro Beyblade X (komunita Pardubice). Autor a hlavní admin: Adam (Jandam47).
 Komunikuj **česky**, celé UI je česky.
@@ -44,6 +44,11 @@ Komunikuj **česky**, celé UI je česky.
   Blade u CX = lock chip + main blade. Souboje bez beyů (ruční výsledek) se nepočítají.
 - `vendor/` – supabase-js, qrcode-generator, html5-qrcode (lokálně, kvůli slabé síti v hale).
 - `sw.js` – service worker (síť první, cache jako záloha).
+- Vzhled: cyberpunk (černé pozadí s mřížkou, azurová `--cyan` + purpurová `--magenta`, žlutá `--bolt` jen pro
+  aktivní věci a hlavní akce; hráč vlevo `.p1c`, vpravo `.p2c`; HUD rohy na kartách). Neonové ikony v `js/icons.js`.
+  Logo BBX Unity = `icons/bbxunity.webp` (velké: přihlášení, úvod pro hosty), v záhlaví jen nápis
+  `icons/bbxunity-wordmark.webp`, ikony aplikace `icons/bbxu-*.png`.
+  `icons/icon-*.png` a `favicon-32.png` patří BBXST – neměnit.
 
 ## Pravidla pro změny
 - **Databáze:** nikdy neupravuj `schema.sql` / `02-parts.sql` jako způsob změny běžící DB. Každá změna = nový

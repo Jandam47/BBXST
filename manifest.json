@@ -1,17 +1,30 @@
 {
-  "name": "BBXU – Beyblade X",
+  "name": "BBX Unity",
   "short_name": "BBXU",
-  "description": "Turnaje, registrace a výsledky Beyblade X.",
+  "description": "BBX Unity – turnaje, registrace a výsledky Beyblade X.",
   "start_url": "./index.html#/",
   "scope": "./",
   "display": "standalone",
   "orientation": "any",
-  "background_color": "#0a1030",
-  "theme_color": "#0a1030",
+  "background_color": "#03050b",
+  "theme_color": "#03050b",
   "lang": "cs",
   "icons": [
-    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
-    { "src": "icons/icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    {
+      "src": "icons/bbxu-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icons/bbxu-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "icons/bbxu-512-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
   ]
 }
