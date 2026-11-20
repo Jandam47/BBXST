@@ -16,7 +16,9 @@ Komunikuj **česky**, celé UI je česky.
   `training_matches` + polling 4 s). S načteným soupeřem je tlačítko SETUP: mód 3v3/3v1/1v3/1v1 (v DB z pohledu
   p1/p2), body na hru číslo nebo ∞ (změna = nová hra), tournament mode (`settings.tourney`: bey se v sadě
   neopakuje jako v judge módu, sada = počet beyů hráče), sestavy z decků obou hráčů nebo nový bey z dílů
-  (podržení beye v setupu = úprava jeho dílů, předvyplněné).
+  (podržení beye v setupu = úprava jeho dílů, předvyplněné; ratchet se vybírá na kolečku – vnitřní kruh zuby
+  0–9 + M, vnější výška 50–85, jen existující kombinace z `bey_parts`; Turbo / Operate = bit s ratchetem).
+  Tahací RESET = nová hra (`training_new_game`, 16): skóre i zahrané beye od nuly, souboje zůstanou v historii.
   ⇄ prohodí strany jen na tomhle telefonu (`localStorage.bbxst_training_left`).
   Odkaz z BBXU: `bbxst.html?training=<id>`; rozehraný trénink se obnoví z `localStorage.bbxst_training`.
   Design BBXST se nemění – Adam ho chce zachovat.
@@ -28,7 +30,7 @@ Komunikuj **česky**, celé UI je česky.
   (zdroj kyoganken.sakura.ne.jp/beyx/weight1.htm), Hasbro názvy jsou v `aliases`. Nové díly = nový SQL soubor
   s `insert … on conflict do update` (viz `07-parts-update.sql`); web se kvůli dílům nasazovat nemusí.
 - `js/config.js` – **obsahuje Adamovy živé klíče Supabase. Nikdy ho neměň ani nepřepisuj.**
-- `supabase/schema.sql`, `02-parts.sql`, `03-live-score.sql`, `04-security-hardening.sql`, `05-judge-handover.sql`, `06-formats-stats.sql`, `07-parts-update.sql`, `08-judge-per-match.sql`, `09-pause.sql`, `10-fashion.sql`, `11-finishes.sql`, `12-rated.sql`, `13-communities.sql`, `14-training-extras.sql`, `15-training-bots.sql` – databáze (spuštěné v produkci, nové soubory
+- `supabase/schema.sql`, `02-parts.sql`, `03-live-score.sql`, `04-security-hardening.sql`, `05-judge-handover.sql`, `06-formats-stats.sql`, `07-parts-update.sql`, `08-judge-per-match.sql`, `09-pause.sql`, `10-fashion.sql`, `11-finishes.sql`, `12-rated.sql`, `13-communities.sql`, `14-training-extras.sql`, `15-training-bots.sql`, `16-training-reset.sql` – databáze (spuštěné v produkci, nové soubory
   spouští Adam). Živé skóre: BBXST v judge módu posílá po každém bodu `live_score` → `matches.live_p1/p2`
   (TV rozpis, vstupenka, seznamy); trigger `bbx_clear_live` ho maže po uložení hry.
   Rozehraná hra: BBXST posílá s `live_score` i `p_state` → `matches.live_state` (souboje v orientaci p1/p2,

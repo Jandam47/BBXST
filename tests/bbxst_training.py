@@ -170,10 +170,28 @@ with sync_playwright() as p:
     assert 'UPRAVIT BEY' in a.inner_text('#trSetup .trTitle')
     assert a.input_value('#nbBlade') == 'Hells Scythe' and a.input_value('#nbRatchet') == '4-60' and a.input_value('#nbBit') == 'Taper'
     # vlastní našeptávač: rozbalovací seznam ▾ a filtrování psaním (i zkratka / malá písmena)
-    a.click('.nbF[data-k=ratchet] .nbDrop'); a.wait_for_selector('.nbF[data-k=ratchet] .nbSug:not(.hidden) .nbOpt')
-    assert a.locator('.nbF[data-k=ratchet] .nbOpt').count() > 5
-    assert a.locator('.nbF[data-k=ratchet] .nbOpt.on').inner_text() == '4-60'
-    a.click('.nbF[data-k=ratchet] .nbDrop'); a.wait_for_selector('.nbF[data-k=ratchet] .nbSug', state='hidden')
+    # ratchet na kolečku: vnitřní kruh zuby, vnější výška
+    a.click('#nbRatchet'); a.wait_for_selector('#trWheel:not(.hidden) .twDial')
+    assert a.inner_text('.twCenter b') == '4-60'
+    assert a.locator('.twK.h[data-h="75"]').is_disabled(), '75 žádný ratchet nemá'
+    a.click('.twK.t[data-t="3"]')                      # 3-60 existuje → hned vybráno
+    a.wait_for_selector('#trWheel', state='hidden')
+    assert a.input_value('#nbRatchet') == '3-60'
+    a.click('#nbRatchet'); a.wait_for_selector('#trWheel:not(.hidden)')
+    a.click('.twK.h[data-h="85"]')                     # 3-85 existuje
+    a.wait_for_selector('#trWheel', state='hidden'); assert a.input_value('#nbRatchet') == '3-85'
+    a.click('#nbRatchet'); a.wait_for_selector('#trWheel:not(.hidden)')
+    a.click('.twK.t[data-t="M"]')                      # výška 85 zůstane → M-85
+    a.wait_for_selector('#trWheel', state='hidden'); assert a.input_value('#nbRatchet') == 'M-85'
+    a.click('#nbRatchet'); a.wait_for_selector('#trWheel:not(.hidden)')
+    a.click('.twK.t[data-t="8"]'); a.wait_for_timeout(150)  # 8-85 není → výška se zruší, nabídne 70 / 80
+    assert a.locator('.twK.h:not([disabled])').all_inner_texts() == ['70', '80']
+    a.screenshot(path=OUT + '163_bbxst_ratchet_wheel.png')
+    a.click('.twSpecial[data-sp="Turbo"]'); a.wait_for_selector('#trWheel', state='hidden')
+    assert a.input_value('#nbRatchet') == '' and a.input_value('#nbBit') == 'Turbo'
+    a.click('#nbRatchet'); a.wait_for_selector('#trWheel:not(.hidden)')
+    a.click('.twK.t[data-t="4"]'); a.click('.twK.h[data-h="60"]'); a.wait_for_selector('#trWheel', state='hidden')
+    assert a.input_value('#nbRatchet') == '4-60' and a.input_value('#nbBit') == '', 'normální ratchet zruší Turbo'
     a.click('#nbBit'); a.fill('#nbBit', 'bal')
     a.wait_for_selector('.nbF[data-k=bit] .nbSug:not(.hidden) .nbOpt')
     opts = a.locator('.nbF[data-k=bit] .nbOpt').all_inner_texts()
@@ -181,12 +199,23 @@ with sync_playwright() as p:
     a.screenshot(path=OUT + '159_bbxst_part_suggest.png')
     a.locator('.nbF[data-k=bit] .nbOpt').first.click()
     assert a.input_value('#nbBit') == 'Ball'
-    a.fill('#nbRatchet', '4-60')
     a.screenshot(path=OUT + '158_bbxst_edit_bey.png')
     a.click('#nbOk'); a.wait_for_selector('.trSlot:has-text("upraveno")')
     a.click('#trSave'); a.wait_for_selector('#trSetup', state='hidden')
     st = json.loads(sql(f"select settings from training_matches where id = '{mid}'"))
     assert any(x['name'] == 'Hells Scythe 4-60B' for x in st['lineup']['p1']), st['lineup']['p1']
+
+    # ── RESET = nová hra (skóre i zahrané beye od nuly, souboje v historii zůstanou) ──
+    g0 = int(sql(f"select max(game_no) from training_battles where match_id = '{mid}'"))
+    n0 = int(sql(f"select count(*) from training_battles where match_id = '{mid}'"))
+    score(a, 1, 1)
+    drag(a, '#resetBtn', 140, -40); a.wait_for_selector('#jYes'); a.click('#jYes'); a.wait_for_timeout(900)
+    assert board(a) == '0:0', board(a)
+    assert a.evaluate('cycleUsed(1).length') == 0 and a.evaluate('judge.battles.length') == 0
+    c.wait_for_timeout(4500); assert board(c) == '0:0', 'druhý telefon taky'
+    score(a, 1, 1)
+    assert int(sql(f"select max(game_no) from training_battles where match_id = '{mid}'")) == g0 + 1
+    assert int(sql(f"select count(*) from training_battles where match_id = '{mid}'")) == n0 + 2, 'historie zůstane'
 
     # ── ukončení souboje ──
     drag(a, '#trainBtn', 140, -40); a.wait_for_selector('#trSetup:not(.hidden)')

@@ -684,6 +684,31 @@ body.training.has-tmatch .trainBar .drawBtn { display: block; }
 .trOpt.on { color: #00160e; background: var(--green); border-color: var(--green); box-shadow: 0 0 18px rgba(0,255,157,0.45); }
 .trSlot { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
 .trSlot.holding { border-color: rgba(0,255,170,.8); box-shadow: 0 0 14px rgba(0,255,170,.35); transition: box-shadow .5s, border-color .5s; }
+/* kolečko ratchetů: vnitřní kruh zuby, vnější výška (jako nastavení času) */
+#trWheel { z-index: 207; flex-direction: row; justify-content: center; align-items: center; gap: clamp(10px, 3vw, 36px); }
+#trWheel > :first-child, #trWheel > :last-child { margin: 0; }
+.twSide { display: flex; flex-direction: column; gap: 10px; align-items: stretch; min-width: 130px; }
+.twSide .trTitle { margin-bottom: 4px; }
+.twSpecial { font-family: 'Orbitron', monospace; font-size: 13px; letter-spacing: 2px; color: #ffd84a; background: rgba(255,216,74,0.06);
+  border: 1px solid rgba(255,216,74,0.45); border-radius: 12px; padding: 10px 12px; cursor: pointer; }
+.twSpecial small { display: block; font-family: 'Rajdhani', sans-serif; font-size: 12px; letter-spacing: 0; color: rgba(255,255,255,0.55); margin-top: 2px; }
+.twSpecial.on { background: #ffd84a; color: #111; box-shadow: 0 0 18px rgba(255,216,74,0.45); }
+.twSpecial.on small { color: rgba(0,0,0,0.6); }
+.twDial { position: relative; width: min(88vh, 70vw, 440px); aspect-ratio: 1; flex: none; border-radius: 50%;
+  background: radial-gradient(circle, rgba(0,229,255,0.07) 0 34%, transparent 34.5% 61%, rgba(255,43,214,0.06) 61.5% 100%);
+  box-shadow: inset 0 0 0 1px rgba(255,43,214,0.3), 0 0 40px rgba(0,229,255,0.06); }
+.twDial::before { content: ""; position: absolute; inset: 19%; border-radius: 50%; border: 1px dashed rgba(0,229,255,0.35); }
+.twK { position: absolute; transform: translate(-50%, -50%); width: 15%; aspect-ratio: 1; border-radius: 50%; cursor: pointer;
+  font-family: 'Orbitron', monospace; font-weight: 700; font-size: clamp(13px, 3.4vh, 19px); display: flex; align-items: center; justify-content: center;
+  background: #07111a; transition: background .12s, color .12s, box-shadow .12s; }
+.twK.t { color: #00e5ff; border: 1px solid rgba(0,229,255,0.5); width: 12.5%; }
+.twK.h { color: #ff2bd6; border: 1px solid rgba(255,43,214,0.5); width: 14%; }
+.twK.on { background: #00ffaa; color: #021; border-color: #00ffaa; box-shadow: 0 0 16px rgba(0,255,170,0.6); }
+.twK:disabled { opacity: 0.18; cursor: default; }
+.twCenter { position: absolute; inset: 36%; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  border: 1px solid rgba(255,255,255,0.12); background: #050b11; }
+.twCenter b { font-family: 'Orbitron', monospace; font-size: clamp(18px, 6vh, 30px); color: white; letter-spacing: 1px; }
+.twCenter small { font-family: 'Orbitron', monospace; font-size: 8px; letter-spacing: 1.5px; color: rgba(200,240,255,0.5); margin-top: 4px; text-align: center; }
 .trHint { font-size: 11px; color: rgba(255,255,255,.55); }
 .trWin { font-family: 'Orbitron', monospace; font-size: 22px; color: white; min-width: 52px; text-align: center; }
 .trCols { display: flex; gap: clamp(10px, 3vw, 30px); }
@@ -1011,6 +1036,7 @@ body.judge.has-match.can-swap .swapBtn, body.training.has-tmatch.can-swap .swapB
 </div>
 <div class="trOverlay hidden" id="trCircle"></div>
 <div class="trOverlay hidden" id="trSetup"></div>
+<div class="trOverlay hidden" id="trWheel"></div>
 
 <!-- VÝBĚR BEYŮ -->
 <div class="pickOverlay hidden" id="pickOverlay">
@@ -1251,7 +1277,7 @@ function showOverlay(text, cls) {
    – oba mají 0     → odhlásí i naskenované hráče
 ══════════════════════════════════════════════ */
 function resetScore() {
-  if (trainingMode) return showOverlay("V TRÉNINKU POUŽIJ REVERT", "xtreme")
+  if (trainingMode) return trReset()
   const clearPlayers = score1 === 0 && score2 === 0
 
   score1 = score2 = 0
@@ -2588,6 +2614,23 @@ async function trUndo() {
   catch (e) { jAlert(isNetErr(e) ? "Bez připojení nejde vrátit souboj." : esc(e.message)) }
 }
 
+// RESET v tréninku = nová hra: skóre i zahrané beye od nuly, odehrané souboje zůstanou v historii
+async function trReset() {
+  if (!trActive()) return
+  const c = trCompute()
+  if (!c.battles.length && !c.a && !c.b) return showOverlay("0 : 0", "win")
+  if (!await jConfirm("Vynulovat skóre i zahrané beye a začít <b>novou hru</b>?<br><small>Odehrané souboje zůstanou v historii tréninku.</small>", "NOVÁ HRA")) return
+  try {
+    await trFlush()
+    if (tr.pending.length) throw new Error("offline")
+    tr.match = await rpc("training_new_game", { p_match: tr.match.id })
+    tr.lastWin = ""
+    firstScoreUsed = false
+    document.querySelectorAll(".arrowGroup").forEach(a => a.classList.remove("hidden"))
+    trRender(); showOverlay("NOVÁ HRA", "win"); startCooldown()
+  } catch (e) { jAlert(isNetErr(e) || e.message === "offline" ? "Bez připojení nejde začít novou hru – zkus to znovu, až bude signál." : esc(e.message)) }
+}
+
 function trPrimary() { trActive() ? trOpenSetup() : trOpenCircle() }
 function trBackToBBXU() { location.href = BBXU_URL + (tr.match?.tournament_id || tr.info?.tournament?.id ? `#/t/${tr.match?.tournament_id || tr.info.tournament.id}` : "#/") }
 
@@ -2720,11 +2763,68 @@ function trChooseBey(slot, i) {
   document.getElementById("trChNew").onclick = () => trNewBey(slot, i)
 }
 
+// kolečko ratchetů: vnitřní kruh = počet zubů, vnější = výška; Turbo / Operate = ratchet v bitu
+const TW_TEETH = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "M"]
+const TW_HEIGHTS = ["50", "55", "60", "65", "70", "75", "80", "85"]
+const TW_SPECIAL = [["Turbo", "Tr"], ["Operate", "Op"]]
+function trRatchetWheel(cur, curBit, onPick) {
+  const box = document.getElementById("trWheel")
+  const have = new Set(tr.parts.filter(p => p.category === "ratchet").map(p => p.name))
+  const specials = TW_SPECIAL.filter(([n]) => tr.parts.some(p => p.category === "bit" && p.name === n))
+  const m = /^([0-9M])-(\d+)$/.exec(cur || "")
+  let t = m?.[1] ?? null, h = m?.[2] ?? null
+  const done = (val) => { box.classList.add("hidden"); onPick(val) }
+  const at = (i, n, r) => { const a = -Math.PI / 2 + (2 * Math.PI * i) / n; return `left:${50 + r * Math.cos(a)}%;top:${50 + r * Math.sin(a)}%` }
+  const draw = () => {
+    const ok = t && h && have.has(`${t}-${h}`)
+    box.innerHTML = `<div class="twSide"><div class="trTitle">RATCHET</div>
+        ${specials.map(([n, ab]) => `<button class="twSpecial ${curBit === n ? "on" : ""}" data-sp="${n}">${n.toUpperCase()}<small>${ab} · ratchet je v bitu</small></button>`).join("")}</div>
+      <div class="twDial">
+        ${TW_HEIGHTS.map((v, i) => `<button class="twK h ${v === h ? "on" : ""}" style="${at(i, TW_HEIGHTS.length, 43)}" data-h="${v}"
+            ${[...have].some(x => x.endsWith("-" + v) && (!t || x === `${t}-${v}`)) ? "" : "disabled"}>${v}</button>`).join("")}
+        ${TW_TEETH.map((v, i) => `<button class="twK t ${v === t ? "on" : ""}" style="${at(i, TW_TEETH.length, 26.5)}" data-t="${v}"
+            ${[...have].some(x => x.startsWith(v + "-")) ? "" : "disabled"}>${v}</button>`).join("")}
+        <div class="twCenter"><b>${t ?? "?"}-${h ?? "??"}</b><small>${ok ? "ZUBY · VÝŠKA" : t ? "VYBER VÝŠKU" : "VYBER ZUBY"}</small></div>
+      </div>
+      <div class="twSide"><button class="qr-btn confirm" id="twOk" ${ok ? "" : "disabled"}>POUŽÍT</button><button class="qr-btn cancel" id="twBack">ZPĚT</button></div>`
+    box.querySelectorAll("[data-t]").forEach(b => b.onclick = () => {
+      t = b.dataset.t
+      if (h && !have.has(`${t}-${h}`)) h = null
+      if (h) return done({ ratchet: `${t}-${h}` })     // výška už vybraná → hotovo
+      draw()
+    })
+    box.querySelectorAll("[data-h]").forEach(b => b.onclick = () => {
+      h = b.dataset.h
+      if (t && have.has(`${t}-${h}`)) return done({ ratchet: `${t}-${h}` })
+      t = null; draw()
+    })
+    box.querySelectorAll("[data-sp]").forEach(b => b.onclick = () => done({ ratchet: "", bit: b.dataset.sp }))
+    document.getElementById("twOk").onclick = () => ok && done({ ratchet: `${t}-${h}` })
+    document.getElementById("twBack").onclick = () => box.classList.add("hidden")
+  }
+  draw()
+  box.classList.remove("hidden")
+}
+
 // našeptávač dílů (vlastní seznam – <datalist> na mobilu nefunguje spolehlivě)
 const trNorm = (x) => String(x ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[\s-]+/g, "")
 function trSuggest(f) {
   const input = f.querySelector("input"), list = f.querySelector(".nbSug"), drop = f.querySelector(".nbDrop")
   const cats = f.dataset.cats.split(",")
+  if (f.dataset.k === "ratchet") {                 // ratchet se vybírá na kolečku
+    const bit = document.getElementById("nbBit")
+    input.readOnly = true; input.setAttribute("inputmode", "none")
+    const hint = () => { input.placeholder = TW_SPECIAL.some(([n]) => n === bit.value.trim()) ? `v bitu (${bit.value.trim()})` : "vyber na kolečku" }
+    const open = () => trRatchetWheel(input.value.trim(), bit.value.trim(), (v) => {
+      input.value = v.ratchet
+      if (v.bit) bit.value = v.bit
+      else if (TW_SPECIAL.some(([n]) => n === bit.value.trim())) bit.value = ""   // normální ratchet → pryč s Turbo / Operate
+      hint()
+    })
+    input.addEventListener("click", open); drop.onclick = open
+    bit.addEventListener("change", hint); hint()
+    return
+  }
   const items = tr.parts.filter(p => cats.includes(p.category)).sort((a, b) => a.name.localeCompare(b.name, "cs"))
   const keys = (p) => [p.name, p.abbr, ...(p.aliases || [])].filter(Boolean).map(trNorm)
   const hide = () => list.classList.add("hidden")
@@ -2739,7 +2839,7 @@ function trSuggest(f) {
       b.textContent = p.name
       if (p.abbr && p.category === "bit") { const sm = document.createElement("small"); sm.textContent = " " + p.abbr; b.appendChild(sm) }
       b.addEventListener("pointerdown", e => e.preventDefault())      // input neztratí fokus
-      b.onclick = () => { input.value = p.name; hide(); input.blur() }
+      b.onclick = () => { input.value = p.name; hide(); input.blur(); input.dispatchEvent(new Event("change")) }
       return b
     }))
     if (!hits.length) { const d = document.createElement("div"); d.className = "nbNone"; d.textContent = "Žádný díl – zkus jiný název"; list.appendChild(d) }
