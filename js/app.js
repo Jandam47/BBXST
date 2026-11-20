@@ -167,7 +167,7 @@ function watchTraining() {
         const n = await nick(m.p1_reg)
         toast(html`<a href="#/t/${m.tournament_id}/me"><b>${n}</b> tě vyzývá na trénink – potvrď výzvu.</a>`, 'call', 10000)
         systemNotify(`${n} tě vyzývá na souboj`, 'Komunitní trénink', 'tr-' + m.id); navigator.vibrate?.([200, 100, 200])
-      } else if (m.status === 'active' && mine.has(m.p1_reg)) {
+      } else if (m.status === 'active' && eventType === 'UPDATE' && mine.has(m.p1_reg)) {   // INSERT active = bot
         const n = await nick(m.p2_reg)
         toast(html`<a href="bbxst.html?training=${m.id}"><b>${n}</b> přijal výzvu – otevřít BBXST.</a>`, 'call', 10000)
         systemNotify(`${n} přijal výzvu`, 'Otevři BBXST v training módu', 'tr-' + m.id)

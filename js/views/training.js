@@ -30,6 +30,7 @@ export async function render(main, [id, tabArg]) {
   let combosScope = 'me'
   let histScope = 'me'
 
+  const isArchive = () => ['finished', 'canceled'].includes(d.t.status)
   const tabsFor = () => {
     const open = d.t.status === 'registration'
     const tabs = []
@@ -37,7 +38,7 @@ export async function render(main, [id, tabArg]) {
     if (d.myReg || !open) tabs.push(['history', 'Historie', 'bars'])
     tabs.push(['combos', 'Comba', 'scale'])
     tabs.push(['players', `Hráči (${d.b.players.length})`, 'users'])
-    if (d.b.is_lead) tabs.push(['manage', 'Řízení', 'gear'])
+    if (d.b.is_lead && !isArchive()) tabs.push(['manage', 'Řízení', 'gear'])
     return tabs
   }
 
@@ -45,10 +46,14 @@ export async function render(main, [id, tabArg]) {
     const { t, b } = d
     const tabs = tabsFor()
     if (!tabs.some(([k]) => k === tab)) tab = tabs[0][0]
+    const arch = isArchive()
+    const back = b.community ? `#/c/${b.community.id}` : '#/'
     mount(main, html`
-      <header class="t-head">
-        <div class="row between wrap">${statusPill(t)}
-          <a class="btn sm ghost btn-ico" href="${bbxstUrl()}">${raw(icon('bars'))}BBXST</a></div>
+      <header class="t-head ${arch ? 'tr-archive' : ''}">
+        <div class="row between wrap">
+          <a class="btn sm ghost tr-back" href="${back}">← ${b.community ? b.community.name : 'Zpět'}</a>
+          ${arch ? html`<span class="tr-stamp">Archiv</span>` : html`<span class="row" style="gap:8px">${statusPill(t)}
+            <a class="btn sm ghost btn-ico" href="${bbxstUrl()}">${raw(icon('bars'))}BBXST</a></span>`}</div>
         <h1 style="margin-top:10px">${t.name}</h1>
         <div class="meta">
           ${b.community ? html`<a class="tr-comm" href="#/c/${b.community.id}">👥 ${b.community.name}</a>` : ''}
@@ -58,6 +63,8 @@ export async function render(main, [id, tabArg]) {
           <span>Komunitní trénink · bez ratingu</span>
         </div>
         ${t.description ? html`<p class="desc">${t.description}</p>` : ''}
+        ${arch ? html`<p class="tr-archive-note">${t.status === 'canceled' ? 'Trénink byl zrušen.' : 'Trénink skončil.'}
+          Tohle je jeho historie – jen ke čtení, nic se tu už nemění.</p>` : ''}
       </header>
       <nav class="tabs t-nav" role="tablist" aria-label="Trénink">${tabs.map(([k, l, ico]) => html`<a href="#/t/${t.id}/${k}" class="${k === tab ? 'on' : ''}" role="tab" aria-selected="${k === tab}"><span class="ico" aria-hidden="true">${raw(icon(ico))}</span><span class="lb">${l}</span></a>`)}</nav>
       <section id="tab"></section>`)
@@ -155,18 +162,23 @@ export async function render(main, [id, tabArg]) {
     const busyWith = new Set(b.matches.filter(m => ['pending', 'active'].includes(m.status)).map(m => m.opp_reg))
     const others = b.players.filter(p => p.reg !== myReg?.id)
     if (!others.length) return html`<div class="empty">Zatím tu nikdo další není.</div>`
-    return html`<div class="list">${others.map(p => html`<div class="li">
-      <span class="av">${p.avatar || '👤'}</span>
-      <div class="grow" style="min-width:0"><a class="ellipsis" href="#/p/${p.user_id}" style="font-weight:600">${p.nick}</a>
-        <div class="small faint">${p.guest ? 'host komunity · ' : ''}${p.has_deck ? 'má deck' : 'bez decku'}</div></div>
+    return html`<div class="list">${others.map(p => html`<div class="li ${p.bot ? 'tr-bot' : ''}">
+      <span class="av">${p.bot ? '🤖' : p.avatar || '👤'}</span>
+      <div class="grow" style="min-width:0">${p.bot ? html`<b class="ellipsis">${p.nick}</b>` : html`<a class="ellipsis" href="#/p/${p.user_id}" style="font-weight:600">${p.nick}</a>`}
+        <div class="small faint">${p.bot ? 'bot · výzvu přijme hned, sestavu mu nastavíš v BBXST' : html`${p.guest ? 'host komunity · ' : ''}${p.has_deck ? 'má deck' : 'bez decku'}`}</div></div>
       ${challenge && myReg && t.status === 'registration' ? (busyWith.has(p.reg)
-        ? html`<span class="pill">rozehráno</span>`
-        : html`<button class="btn sm primary" data-challenge="${p.reg}">Vyzvat</button>`) : ''}
+        ? (p.bot ? html`<a class="btn sm" href="${bbxstUrl(b.matches.find(m => m.opp_reg === p.reg && ['pending', 'active'].includes(m.status))?.id)}">Pokračovat</a>`
+                 : html`<span class="pill">rozehráno</span>`)
+        : html`<button class="btn sm primary" data-challenge="${p.reg}" data-bot="${p.bot ? '1' : ''}">${p.bot ? 'Hrát' : 'Vyzvat'}</button>`) : ''}
     </div>`)}</div>`
   }
   function bindPlayers(box) {
     on(box, 'click', '[data-challenge]', (e, btn) => busy(btn, async () => {
-      try { await rpc('training_challenge', { p_tournament: d.t.id, p_opponent: btn.dataset.challenge }); toast('Výzva odeslána – čeká na potvrzení.', 'ok'); await reload() }
+      try {
+        const mid = await rpc('training_challenge', { p_tournament: d.t.id, p_opponent: btn.dataset.challenge })
+        if (btn.dataset.bot) { location.href = bbxstUrl(mid); return }        // bot přijímá hned
+        toast('Výzva odeslána – čeká na potvrzení.', 'ok'); await reload()
+      }
       catch (err) { toast(errMsg(err), 'err') }
     }))
   }
@@ -274,7 +286,7 @@ export async function render(main, [id, tabArg]) {
         <span class="faint num" style="width:22px;text-align:right">${i + 1}.</span>
         <div class="grow" style="min-width:0">
           <div class="meta-name">${r.bey}</div>
-          ${scope === 'all' ? html`<div class="small tr-owner">hraje <a href="#/p/${r.user_id}">${r.nick}</a></div>` : ''}
+          ${scope === 'all' ? html`<div class="small tr-owner">hraje ${r.user_id ? html`<a href="#/p/${r.user_id}">${r.nick}</a>` : html`<b>🤖 ${r.nick}</b>`}</div>` : ''}
           <div class="meta-bar" role="img" aria-label="${r.wins} výher, ${r.draws} remíz, ${r.losses} proher">
             <i class="w" style="width:${(100 * r.wins / r.battles).toFixed(1)}%"></i><i class="d" style="width:${(100 * r.draws / r.battles).toFixed(1)}%"></i></div>
           <div class="small muted">${r.battles} soubojů · ${r.wins}–${r.draws ? `${r.draws}–` : ''}${r.losses} · +${r.points} / −${r.points_lost}</div>
@@ -294,6 +306,14 @@ export async function render(main, [id, tabArg]) {
         <input class="input" type="search" id="inv-q" placeholder="Hledat nick" aria-label="Hledat hráče">
         <div id="inv-l"></div>
         ${b.invites?.length ? html`<p class="small muted">Pozvaní (zatím se nepřidali): ${b.invites.map(i => i.nick).join(', ')}</p>` : ''}
+      </div>
+      <div class="card stack">
+        <h3>Boti</h3>
+        <p class="small muted">Pro trénink bez soupeře. Bota může vyzvat kdokoliv z tréninku, výzvu přijme hned a sestavu mu hráč nastaví v BBXST.</p>
+        <form class="row" id="f-bot"><input class="input grow" name="name" maxlength="20" placeholder="BOT" aria-label="Jméno bota">
+          <button class="btn primary">🤖 Vytvořit bota</button></form>
+        ${b.players.some(p => p.bot) ? html`<div class="list">${b.players.filter(p => p.bot).map(p => html`<div class="li"><span class="av">🤖</span>
+          <div class="grow">${p.nick}</div><button class="btn sm danger" data-unbot="${p.reg}">Odebrat</button></div>`)}</div>` : ''}
       </div>` : ''}
       <div class="card stack"><h3>Trénink</h3>
         <div class="row wrap">
@@ -321,6 +341,17 @@ export async function render(main, [id, tabArg]) {
       try { await rpc('training_invite', { p_tournament: t.id, p_user: btn.dataset.inv }); toast('Pozvánka odeslána.', 'ok'); btn.replaceWith(Object.assign(document.createElement('span'), { className: 'pill', textContent: 'pozván' })); d = await load(id) }
       catch (err) { toast(errMsg(err), 'err') }
     }))
+    on(box, 'submit', '#f-bot', async (e, f) => {
+      e.preventDefault()
+      busy(f.querySelector('button'), async () => {
+        try { await rpc('training_bot_create', { p_tournament: t.id, p_name: f.name.value.trim() || null }); toast('Bot je na tréninku.', 'ok'); await reload() }
+        catch (err) { toast(errMsg(err), 'err') }
+      })
+    })
+    on(box, 'click', '[data-unbot]', async (e, btn) => {
+      if (!await confirmBox('Odebrat bota? Jeho odehrané souboje zůstanou v historii.', { ok: 'Odebrat', danger: true })) return
+      busy(btn, async () => { try { await rpc('training_bot_remove', { p_reg: btn.dataset.unbot }); await reload() } catch (err) { toast(errMsg(err), 'err') } })
+    })
     on(box, 'click', '[data-act=edit]', () => editForm())
     on(box, 'click', '[data-act=finish]', async (e, btn) => {
       if (!await confirmBox('Ukončit trénink? Rozehrané souboje se uzavřou.', { ok: 'Ukončit' })) return

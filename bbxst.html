@@ -670,6 +670,7 @@ body.training.has-tmatch .trainBar .drawBtn { display: block; }
   border: 1px solid #1a3a4a; box-shadow: 0 0 16px rgba(0,255,255,0.12); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .trP small { display: block; font-family: 'Orbitron', monospace; font-size: 8px; letter-spacing: 1.5px; margin-top: 2px; opacity: .8; }
 .trP.active { border-color: var(--green); color: var(--green); box-shadow: 0 0 22px rgba(0,255,157,0.35); }
+.trP.bot { border-style: dashed; }
 .trP.incoming { border-color: var(--gold); color: var(--gold); box-shadow: 0 0 22px rgba(255,215,0,0.35); animation: trPulse 1.2s ease-in-out infinite; }
 .trP.outgoing { opacity: .7; border-style: dashed; }
 @keyframes trPulse { 50% { box-shadow: 0 0 36px rgba(255,215,0,0.6); } }
@@ -1888,6 +1889,7 @@ function cycleUsed(side) {
   if (trainingMode) {
     // tournament mode: bey se v sadě neopakuje (sada = tolik soubojů, kolik má hráč beyů)
     if (!tr.match?.settings?.tourney) return []
+    if (trCompute().over) return []                  // hra dohraná → další souboj je nová hra, sada od nuly
     const n = (judge.sides[side]?.beys || []).filter(Boolean).length
     if (n < 2) return []
     const start = judge.battles.length - (judge.battles.length % n)
@@ -2554,9 +2556,6 @@ async function trCommit(battle) {
     if (battle.pts === 3) q.push(["XTREME FINISH", "xtreme"])
     if (after.over && !before.over) { const lw = (battle.slot === 1); q.push([`${lw ? player1Name : player2Name} WINS`, "win"]); tr.lastWin = `${tr.match.id}:${after.no}` }
   }
-  if (!after.over && (tr.match.settings?.mode || "3v3") === "3v3" && after.battles.length % 3 === 0 && after.battles.length) {
-    q.push(["OTOČ ARÉNU", "rotate"]); if (vibrateEnabled) navigator.vibrate?.([120, 80, 120])
-  }
   if (q.length) showOverlaySequence(q)
   if (battle.slot !== 0) startCooldown()
   await trFlush()
@@ -2608,7 +2607,7 @@ async function trOpenCircle() {
         const m = ms.find(z => z.opp_reg === p.reg)
         const cls = !m ? "" : m.status === "active" ? "active" : m.incoming ? "incoming" : "outgoing"
         const tag = !m ? "" : m.status === "active" ? "POKRAČOVAT" : m.incoming ? "VYZVAL TĚ" : "ČEKÁ"
-        return `<button class="trP ${cls}" style="left:${x}%;top:${y}%" data-reg="${p.reg}">${esc(p.nick)}${tag ? `<small>${tag}</small>` : ""}</button>`
+        return `<button class="trP ${cls} ${p.bot ? "bot" : ""}" style="left:${x}%;top:${y}%" data-reg="${p.reg}">${p.bot ? "🤖 " : ""}${esc(p.nick)}${tag ? `<small>${tag}</small>` : p.bot ? "<small>BOT</small>" : ""}</button>`
       }).join("")}
     </div>
     ${ps.length ? "" : `<div class="trSub">Na tréninku zatím nikdo další není.</div>`}

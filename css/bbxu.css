@@ -967,3 +967,12 @@ body.tv { background-color: #000; }
 .tr-past .tr-date b { display: block; font-family: var(--display); font-size: 18px; color: var(--cyan); }
 .tr-past .tr-date small { font-size: 10px; color: var(--muted, #9ab); text-transform: uppercase; }
 .tr-b .grow.ellipsis { white-space: normal; overflow-wrap: anywhere; line-height: 1.3; }
+
+/* archiv komunitního tréninku – jen ke čtení */
+.tr-back { padding-left: 10px; max-width: 70%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tr-stamp { font-family: var(--display); font-size: 12px; letter-spacing: 3px; text-transform: uppercase; color: var(--muted, #9ab);
+  border: 1px dashed currentColor; padding: 4px 10px; transform: rotate(-3deg); }
+.t-head.tr-archive h1 { color: #c9d6e0; text-shadow: none; }
+.tr-archive-note { margin-top: 10px; padding: 8px 12px; border-left: 3px solid var(--muted, #9ab); background: rgba(255,255,255,.03);
+  font-size: 14px; color: var(--muted, #9ab); }
+.li.tr-bot b { font-weight: 700; color: var(--cyan); }

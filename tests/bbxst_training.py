@@ -139,6 +139,20 @@ with sync_playwright() as p:
     score(a, 1, 1)                                  # nová sada – zase všechny tři
     assert sql(f"select p1_bey from training_battles where match_id = '{mid}' order by seq desc limit 1") == 'Dran Sword 3-60F'
 
+    # ── tournament mode: po výhře se výběr beyů resetuje (nová hra) ──
+    a.evaluate(f"async () => {{ await rpc('training_setup', {{ p_match: '{mid}', p_settings: {{ win: 2 }} }}); await trRefresh() }}")
+    a.wait_for_timeout(600)
+    score(a, 1, 1)
+    assert a.evaluate('cycleUsed(1).length') == 1
+    score(a, 1, 1)                                  # 2:0 → dohráno
+    a.wait_for_timeout(600)
+    assert a.evaluate('trCompute().over') is True
+    assert a.evaluate('cycleUsed(1).length') == 0, 'po výhře se sada resetuje'
+    score(a, 1, 1)                                  # nová hra – zase první bey
+    assert sql(f"select p1_bey from training_battles where match_id = '{mid}' order by seq desc limit 1") == 'Dran Sword 3-60F'
+    a.evaluate(f"async () => {{ await rpc('training_setup', {{ p_match: '{mid}', p_settings: {{ win: null }} }}); await trRefresh() }}")
+    a.wait_for_timeout(600)
+
     # ── prohození stran (⇄) ──
     a.wait_for_selector('#swapBtn', state='visible')
     a.click('#swapBtn'); a.wait_for_timeout(400)
