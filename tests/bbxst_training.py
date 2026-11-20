@@ -155,7 +155,19 @@ with sync_playwright() as p:
     a.wait_for_selector('#nbBlade')
     assert 'UPRAVIT BEY' in a.inner_text('#trSetup .trTitle')
     assert a.input_value('#nbBlade') == 'Hells Scythe' and a.input_value('#nbRatchet') == '4-60' and a.input_value('#nbBit') == 'Taper'
-    a.fill('#nbBit', 'Ball')
+    # vlastní našeptávač: rozbalovací seznam ▾ a filtrování psaním (i zkratka / malá písmena)
+    a.click('.nbF[data-k=ratchet] .nbDrop'); a.wait_for_selector('.nbF[data-k=ratchet] .nbSug:not(.hidden) .nbOpt')
+    assert a.locator('.nbF[data-k=ratchet] .nbOpt').count() > 5
+    assert a.locator('.nbF[data-k=ratchet] .nbOpt.on').inner_text() == '4-60'
+    a.click('.nbF[data-k=ratchet] .nbDrop'); a.wait_for_selector('.nbF[data-k=ratchet] .nbSug', state='hidden')
+    a.click('#nbBit'); a.fill('#nbBit', 'bal')
+    a.wait_for_selector('.nbF[data-k=bit] .nbSug:not(.hidden) .nbOpt')
+    opts = a.locator('.nbF[data-k=bit] .nbOpt').all_inner_texts()
+    assert opts and opts[0].startswith('Ball'), opts
+    a.screenshot(path=OUT + '159_bbxst_part_suggest.png')
+    a.locator('.nbF[data-k=bit] .nbOpt').first.click()
+    assert a.input_value('#nbBit') == 'Ball'
+    a.fill('#nbRatchet', '4-60')
     a.screenshot(path=OUT + '158_bbxst_edit_bey.png')
     a.click('#nbOk'); a.wait_for_selector('.trSlot:has-text("upraveno")')
     a.click('#trSave'); a.wait_for_selector('#trSetup', state='hidden')

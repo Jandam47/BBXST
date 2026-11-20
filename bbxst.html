@@ -695,8 +695,22 @@ body.training.has-tmatch .trainBar .drawBtn { display: block; }
 .trSlot.empty { color: rgba(200,240,255,0.4); border-style: dashed; }
 .trList { display: flex; flex-direction: column; gap: 8px; width: min(560px, 100%); max-height: 56vh; overflow: auto; }
 .trNew { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; width: min(620px, 100%); }
-.trNew label { display: flex; flex-direction: column; gap: 4px; font-family: 'Orbitron', monospace; font-size: 9px; letter-spacing: 1.5px; color: rgba(200,240,255,0.6); }
-.trNew input { font-family: 'Rajdhani', sans-serif; font-size: 18px; font-weight: 600; padding: 10px; border-radius: 10px; background: #0a1520; color: white; border: 1px solid #1a3a4a; }
+.trNew label, .trNew .nbF { display: flex; flex-direction: column; gap: 4px; font-family: 'Orbitron', monospace; font-size: 9px; letter-spacing: 1.5px; color: rgba(200,240,255,0.6); }
+.trNew input { font-family: 'Rajdhani', sans-serif; font-size: 18px; font-weight: 600; padding: 10px 44px 10px 10px; border-radius: 10px; background: #0a1520; color: white; border: 1px solid #1a3a4a; width: 100%; box-sizing: border-box; }
+.trNew input:focus { outline: none; border-color: rgba(0,255,170,.7); }
+.nbF { display: flex; flex-direction: column; gap: 4px; font-family: 'Orbitron', monospace; font-size: 9px; letter-spacing: 1.5px; color: rgba(200,240,255,0.6); min-width: 0; }
+.nbIn { position: relative; }
+.nbDrop { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); width: 38px; height: 38px; border: 0; border-radius: 8px;
+  background: transparent; color: rgba(0,229,255,.85); font-size: 18px; cursor: pointer; }
+.nbSug { position: relative; max-height: 168px; overflow-y: auto; display: flex; flex-direction: column; background: #07111a; border: 1px solid rgba(0,229,255,.35);
+  border-radius: 10px; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
+.nbSug.hidden { display: none; }
+.nbOpt { text-align: left; font-family: 'Rajdhani', sans-serif; font-size: 17px; font-weight: 600; color: white; background: none; border: 0;
+  border-bottom: 1px solid rgba(255,255,255,.06); padding: 9px 12px; cursor: pointer; letter-spacing: 0; }
+.nbOpt small { color: rgba(200,240,255,.5); font-size: 13px; }
+.nbOpt.on { color: #00ffaa; }
+.nbOpt:active { background: rgba(0,229,255,.15); }
+.nbNone { padding: 10px 12px; font-family: 'Rajdhani', sans-serif; font-size: 15px; color: rgba(255,255,255,.5); letter-spacing: 0; }
 .trNew .full { grid-column: 1 / -1; }
 .trNew [hidden] { display: none; }
 
@@ -2707,6 +2721,42 @@ function trChooseBey(slot, i) {
   document.getElementById("trChNew").onclick = () => trNewBey(slot, i)
 }
 
+// našeptávač dílů (vlastní seznam – <datalist> na mobilu nefunguje spolehlivě)
+const trNorm = (x) => String(x ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[\s-]+/g, "")
+function trSuggest(f) {
+  const input = f.querySelector("input"), list = f.querySelector(".nbSug"), drop = f.querySelector(".nbDrop")
+  const cats = f.dataset.cats.split(",")
+  const items = tr.parts.filter(p => cats.includes(p.category)).sort((a, b) => a.name.localeCompare(b.name, "cs"))
+  const keys = (p) => [p.name, p.abbr, ...(p.aliases || [])].filter(Boolean).map(trNorm)
+  const hide = () => list.classList.add("hidden")
+  const show = (all) => {
+    const q = trNorm(input.value)
+    const exact = items.some(p => trNorm(p.name) === q)
+    let hits = all || !q || exact ? items : items.filter(p => keys(p).some(k => k.includes(q)))
+    if (!all && q && !exact) hits = [...hits.filter(p => keys(p).some(k => k.startsWith(q))), ...hits.filter(p => !keys(p).some(k => k.startsWith(q)))]
+    list.replaceChildren(...hits.slice(0, 80).map(p => {
+      const b = document.createElement("button")
+      b.type = "button"; b.className = "nbOpt" + (trNorm(p.name) === q ? " on" : "")
+      b.textContent = p.name
+      if (p.abbr && p.category === "bit") { const sm = document.createElement("small"); sm.textContent = " " + p.abbr; b.appendChild(sm) }
+      b.addEventListener("pointerdown", e => e.preventDefault())      // input neztratí fokus
+      b.onclick = () => { input.value = p.name; hide(); input.blur() }
+      return b
+    }))
+    if (!hits.length) { const d = document.createElement("div"); d.className = "nbNone"; d.textContent = "Žádný díl – zkus jiný název"; list.appendChild(d) }
+    list.classList.remove("hidden")
+    list.scrollTop = 0
+    const on = list.querySelector(".on")
+    if (on) list.scrollTop = on.offsetTop - list.clientHeight / 2 + on.offsetHeight / 2
+  }
+  input.addEventListener("focus", () => { show(false); setTimeout(() => f.scrollIntoView({ block: "start", behavior: "smooth" }), 250) })
+  input.addEventListener("input", () => show(false))
+  input.addEventListener("blur", () => setTimeout(hide, 150))
+  input.addEventListener("keydown", e => { if (e.key === "Enter") { const first = list.querySelector(".nbOpt"); if (first && !list.classList.contains("hidden")) { e.preventDefault(); first.click() } } })
+  drop.addEventListener("pointerdown", e => e.preventDefault())
+  drop.onclick = () => list.classList.contains("hidden") ? show(true) : hide()
+}
+
 async function trNewBey(slot, i, preset) {
   const box = document.getElementById("trSetup")
   if (!tr.parts) {
@@ -2716,7 +2766,11 @@ async function trNewBey(slot, i, preset) {
       tr.parts = data
     } catch (err) { return jAlert("Seznam dílů se nepodařilo načíst: " + esc(err.message)) }
   }
-  const dl = (id, cats) => `<datalist id="${id}">${tr.parts.filter(p => cats.includes(p.category)).map(p => `<option value="${esc(p.name)}">`).join("")}</datalist>`
+  const fld = (k, label, cats, hide, cls = "") => `<div class="nbF ${cls}" ${hide ? "hidden" : ""} data-k="${k}" data-cats="${cats.join(",")}">
+      <span>${label}</span>
+      <div class="nbIn"><input id="${ids[k]}" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="next">
+        <button type="button" class="nbDrop" tabindex="-1" aria-label="Seznam dílů">▾</button></div>
+      <div class="nbSug hidden"></div></div>`
   // úprava existujícího beye (podržení slotu): díly předvyplněné
   let type = preset?.type === "cx" ? "cx" : "bx"
   const ids = { blade: "nbBlade", lock: "nbLock", main: "nbMain", over: "nbOver", assist: "nbAssist", ratchet: "nbRatchet", bit: "nbBit" }
@@ -2727,25 +2781,36 @@ async function trNewBey(slot, i, preset) {
     box.innerHTML = `<div class="trTitle">${preset ? `UPRAVIT BEY ${i + 1} · ${esc((slot === 1 ? tr.match.p1 : tr.match.p2).nick)}` : "NOVÝ BEY"}</div>
       <div class="trRow">${["bx", "cx"].map(t => `<button class="trOpt ${t === type ? "on" : ""}" data-t="${t}">${t === "bx" ? "BX / UX" : "CX"}</button>`).join("")}</div>
       <div class="trNew">
-        <label class="full" ${type === "cx" ? "hidden" : ""}>BLADE<input list="dlBlade" id="nbBlade" autocomplete="off"></label>
-        <label ${type === "bx" ? "hidden" : ""}>LOCK CHIP<input list="dlLock" id="nbLock" autocomplete="off"></label>
-        <label ${type === "bx" ? "hidden" : ""}>MAIN / METAL BLADE<input list="dlMain" id="nbMain" autocomplete="off"></label>
-        <label ${type === "bx" ? "hidden" : ""}>OVER BLADE (jen metal)<input list="dlOver" id="nbOver" autocomplete="off"></label>
-        <label ${type === "bx" ? "hidden" : ""}>ASSIST BLADE<input list="dlAssist" id="nbAssist" autocomplete="off"></label>
-        <label>RATCHET<input list="dlRatchet" id="nbRatchet" autocomplete="off"></label>
-        <label>BIT<input list="dlBit" id="nbBit" autocomplete="off"></label>
+        ${fld("blade", "BLADE", ["blade"], type === "cx", "full")}
+        ${fld("lock", "LOCK CHIP", ["lock_chip"], type === "bx")}
+        ${fld("main", "MAIN / METAL BLADE", ["main_blade", "metal_blade"], type === "bx")}
+        ${fld("over", "OVER BLADE (jen metal)", ["over_blade"], type === "bx")}
+        ${fld("assist", "ASSIST BLADE", ["assist_blade"], type === "bx")}
+        ${fld("ratchet", "RATCHET", ["ratchet"], false)}
+        ${fld("bit", "BIT", ["bit"], false)}
       </div>
-      ${dl("dlBlade", ["blade"])}${dl("dlLock", ["lock_chip"])}${dl("dlMain", ["main_blade", "metal_blade"])}${dl("dlOver", ["over_blade"])}
-      ${dl("dlAssist", ["assist_blade"])}${dl("dlRatchet", ["ratchet"])}${dl("dlBit", ["bit"])}
       <div class="trBtns"><button class="qr-btn cancel" id="nbBack">ZPĚT</button><button class="qr-btn confirm" id="nbOk">POUŽÍT</button></div>
       <div class="trSub">Název se ověří při uložení setupu.</div>`
     for (const k in ids) document.getElementById(ids[k]).value = vals[k]
+    box.querySelectorAll(".nbF").forEach(trSuggest)
     box.querySelectorAll("[data-t]").forEach(b => b.onclick = () => { keep(); type = b.dataset.t; draw() })
     document.getElementById("nbBack").onclick = () => preset ? trDrawSetup() : trChooseBey(slot, i)
     document.getElementById("nbOk").onclick = () => {
-      const v = (id) => document.getElementById(id).value.trim()
-      const el = type === "bx" ? { type: "bx", blade: v("nbBlade"), ratchet: v("nbRatchet"), bit: v("nbBit") }
+      // díly ze seznamu → oficiální název (zkratka i Hasbro jméno projdou)
+      const CATS = { nbBlade: ["blade"], nbLock: ["lock_chip"], nbMain: ["main_blade", "metal_blade"], nbOver: ["over_blade"],
+                     nbAssist: ["assist_blade"], nbRatchet: ["ratchet"], nbBit: ["bit"] }
+      const v = (id) => {
+        const raw = document.getElementById(id).value.trim(), q = trNorm(raw)
+        if (!q) return ""
+        const p = tr.parts.find(x => CATS[id].includes(x.category) && [x.name, x.abbr, ...(x.aliases || [])].filter(Boolean).some(k => trNorm(k) === q))
+        if (!p) throw new Error(`Díl „${raw}“ v seznamu není.`)
+        return p.name
+      }
+      let el
+      try {
+        el = type === "bx" ? { type: "bx", blade: v("nbBlade"), ratchet: v("nbRatchet"), bit: v("nbBit") }
         : { type: "cx", lock: v("nbLock"), main: v("nbMain"), over: v("nbOver"), assist: v("nbAssist"), ratchet: v("nbRatchet"), bit: v("nbBit") }
+      } catch (err) { return jAlert(esc(err.message)) }
       if (type === "bx" ? !el.blade || !el.bit : !el.lock || !el.main || !el.assist || !el.bit) return jAlert("Doplň díly ze seznamu.")
       const label = type === "bx" ? `${el.blade} ${el.ratchet}${el.bit}` : `${el.lock} ${el.main} ${el.ratchet}${el.bit}`
       tr.edit.lineup[slot][i] = { ...el, name: label + (preset ? " (upraveno)" : " (nový)") }
