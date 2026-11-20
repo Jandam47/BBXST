@@ -7,6 +7,7 @@ import { rpc, state, errMsg, isLoggedIn } from '../supa.js'
 import { html, mount, on, formData, toast, modal, busy, confirmBox, fmtDate, fmtTime, toLocalInput, fromLocalInput, plural } from '../ui.js'
 import { REGIONS } from '../core.js'
 
+const fmtMonth = (d) => new Date(d).toLocaleDateString('cs-CZ', { month: 'short', year: '2-digit' })
 export const COMM_ROLE = { leader: 'Community leader', sub: 'Sub-community leader', member: 'Člen' }
 
 // přepínač Hráči | Komunity (sdílí ho i seznam hráčů)
@@ -148,12 +149,21 @@ export async function renderDetail(main, [id], ctx) {
 
       ${c.status === 'approved' ? html`
       <h2>Tréninky</h2>
-      ${open.length || past.length ? html`<div class="list">${[...open, ...past.slice(0, 10)].map(t => html`
+      ${open.length ? html`<div class="list">${open.map(t => html`
         <a class="li" href="#/t/${t.id}">
           <div class="grow" style="min-width:0"><div class="ellipsis" style="font-weight:600">${t.name}</div>
             <div class="small faint">${t.starts_at ? `${fmtDate(t.starts_at)}, ${fmtTime(t.starts_at)}` : 'bez termínu'}${t.location ? ` · ${t.location}` : ''} · ${plural(Number(t.players), 'hráč', 'hráči', 'hráčů')}</div></div>
-          <span class="pill ${t.status === 'registration' ? 'live' : ''}">${t.status === 'registration' ? 'otevřený' : 'skončil'}</span></a>`)}</div>`
-        : html`<div class="empty">Zatím žádný trénink.${d.is_lead ? ' Založ první tlačítkem nahoře.' : ''}</div>`}
+          <span class="pill live">otevřený</span></a>`)}</div>`
+        : html`<div class="empty">Teď neběží žádný trénink.${d.is_lead ? ' Založ ho tlačítkem nahoře.' : ''}</div>`}
+
+      <h2>Historie tréninků</h2>
+      ${past.length ? html`<div class="list">${past.map(t => { const when = t.finished_at || t.starts_at || t.created_at
+        return html`<a class="li tr-past" href="#/t/${t.id}/history">
+          <div class="tr-date"><b>${new Date(when).getDate()}.</b><small>${fmtMonth(when)}</small></div>
+          <div class="grow" style="min-width:0"><div class="ellipsis" style="font-weight:600">${t.name}</div>
+            <div class="small faint">${fmtDate(when)}${t.location ? ` · ${t.location}` : ''} · ${plural(Number(t.players), 'hráč', 'hráči', 'hráčů')} · ${plural(Number(t.battles), 'souboj', 'souboje', 'soubojů')}</div></div>
+          <span class="faint" aria-hidden="true">›</span></a>` })}</div>`
+        : html`<div class="empty">Skončené tréninky se uloží sem – s historií soubojů a comby.</div>`}
       <p class="small" style="margin-top:8px"><a href="#/meta?c=${c.id}">Meta komunity z tréninků →</a></p>` : ''}
 
       <h2>Členové</h2>

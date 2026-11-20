@@ -941,7 +941,7 @@ body.tv { background-color: #000; }
 .tr-wait { display: flex; gap: 10px; align-items: center; justify-content: space-between; margin-bottom: 12px; color: var(--muted); }
 .tr-hist summary { cursor: pointer; list-style: none; }
 .tr-hist summary::-webkit-details-marker { display: none; }
-.tr-battles { display: grid; gap: 4px; margin-top: 10px; }
+.tr-battles { display: grid; grid-template-columns: minmax(0, 1fr); gap: 4px; margin-top: 10px; }
 .tr-game { font-family: var(--display); font-size: 12px; color: var(--muted); letter-spacing: .5px; margin-top: 6px; }
 .tr-b { display: flex; gap: 8px; align-items: center; font-size: 14px; padding: 4px 8px; border-left: 3px solid var(--line); background: rgba(255,255,255,.02); }
 .tr-b.w { border-left-color: var(--ok); } .tr-b.l { border-left-color: var(--red); }
@@ -954,6 +954,16 @@ body.tv { background-color: #000; }
 .comm-mem .li-acts { display: flex; gap: 6px; flex-wrap: wrap; }
 .comm-mem .li-acts:empty { display: none; }
 @media (max-width: 520px) { .comm-mem .li-acts { flex-basis: 100%; padding-left: 52px; } }
-.tr-b .grow { min-width: 0; }
+.tr-b .grow { flex: 1 1 auto; min-width: 0; }
 .tr-b .fin-chip { flex: none; }
 .tr-hist { min-width: 0; overflow: hidden; }
+
+/* historie celého tréninku: kdo bod získal (vlevo p1 / vpravo p2) */
+.tr-b.a { border-left-color: var(--cyan); } .tr-b.b { border-left-color: var(--magenta); }
+.tr-b.a .tr-res { color: var(--cyan); } .tr-b.b .tr-res { color: var(--magenta); }
+.tr-owner { color: var(--muted, #9ab); margin-top: 1px; }
+.tr-owner a { color: var(--cyan); font-weight: 600; }
+.tr-past .tr-date { flex: none; width: 48px; text-align: center; border: 1px solid var(--line); padding: 4px 0; line-height: 1.1; }
+.tr-past .tr-date b { display: block; font-family: var(--display); font-size: 18px; color: var(--cyan); }
+.tr-past .tr-date small { font-size: 10px; color: var(--muted, #9ab); text-transform: uppercase; }
+.tr-b .grow.ellipsis { white-space: normal; overflow-wrap: anywhere; line-height: 1.3; }

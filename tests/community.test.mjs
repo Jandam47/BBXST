@@ -137,6 +137,11 @@ st = await one(pl[0], 'training_undo', [mid])
 assert.deepEqual(st.game, { no: 1, s1: 5, s2: 2 })
 // neomezeně
 await as(pl[0], 'select training_setup($1,$2)', [mid, JSON.stringify({ win: null })])
+{ const g0 = (await one(pl[0], 'training_state', [mid])).game.no
+  const ts = await one(pl[0], 'training_setup', [mid, JSON.stringify({ tourney: true })])
+  assert.equal(ts.tourney, true); assert.equal(ts.win, null)
+  assert.equal((await one(pl[1], 'training_state', [mid])).game.no, g0, 'tournament mode nezačíná novou hru')
+  assert.equal((await one(pl[1], 'training_setup', [mid, JSON.stringify({ win: null })])).tourney, true, 'zůstane zapnutý') }
 st = await as(pl[0], `select training_battle($1, gen_random_uuid(), 1, 3, 'xtreme', 0, 0) as r`, [mid]).then(r => r[0].r)
 assert.deepEqual(st.game, { no: 2, s1: 3, s2: 0 })
 st = await as(pl[0], `select training_battle($1, gen_random_uuid(), 1, 3, 'xtreme', 0, 0) as r`, [mid]).then(r => r[0].r)
@@ -174,6 +179,19 @@ await as(pl[0], `select finish_tournament($1, '[]')`, [tid])           // zástu
 assert.equal(await one(pl[2], 'my_training'), null)
 await as(pl[1], `insert into registrations (tournament_id, nick) values ($1,'x')`, [tid2])  // teď už může na jiný
 step('dvojici ukončí hráč, trénink leader/zástupce; pak jde hráč na další trénink')
+
+// ── po skončení: historie celého tréninku, comba podle majitele, historie v komunitě ──
+const hAll = await one(null, 'training_history', [tid, 'all'])
+assert.equal(hAll.scope, 'all'); assert.ok(hAll.totals.battles > 0 && hAll.matches[0].p1 && hAll.matches[0].p2)
+assert.equal(hAll.totals.battles, hAll.matches.reduce((n, m) => n + m.battles.length, 0))
+const ownC = await one(null, 'training_combos', [tid, 'all'])
+assert.ok(ownC.every(r => r.nick && r.user_id), 'combo má majitele')
+const keys = ownC.map(r => r.bey + '|' + r.user_id)
+assert.equal(new Set(keys).size, keys.length, 'stejný bey u dvou hráčů = dva řádky')
+const det = await one(pl[0], 'community_detail', [cid])
+const past = det.trainings.find(t => t.id === tid)
+assert.equal(past.status, 'finished'); assert.ok(past.finished_at && past.battles > 0)
+step('skončený trénink: historie celého tréninku, comba podle majitele, historie tréninků v komunitě')
 
 // ── zamítnutí ─────────────────────────────────────────────────────
 const cid2 = await one(org, 'community_create', ['Druhá ' + sfx])

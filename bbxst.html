@@ -681,6 +681,9 @@ body.training.has-tmatch .trainBar .drawBtn { display: block; }
 .trOpt { font-family: 'Orbitron', monospace; font-size: 12px; letter-spacing: 1px; padding: 8px 14px; border-radius: 10px; cursor: pointer;
   background: #0a1520; color: var(--cyan); border: 1px solid #1a3a4a; }
 .trOpt.on { color: #00160e; background: var(--green); border-color: var(--green); box-shadow: 0 0 18px rgba(0,255,157,0.45); }
+.trSlot { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+.trSlot.holding { border-color: rgba(0,255,170,.8); box-shadow: 0 0 14px rgba(0,255,170,.35); transition: box-shadow .5s, border-color .5s; }
+.trHint { font-size: 11px; color: rgba(255,255,255,.55); }
 .trWin { font-family: 'Orbitron', monospace; font-size: 22px; color: white; min-width: 52px; text-align: center; }
 .trCols { display: flex; gap: clamp(10px, 3vw, 30px); }
 .trCol { flex: 1; display: flex; flex-direction: column; gap: 6px; padding: 8px 10px; border-radius: 14px; border: 1px solid #0e2a3a; min-width: 0; }
@@ -728,7 +731,7 @@ body.training.has-tmatch .trainBar .drawBtn { display: block; }
   width: 64px; height: 44px; border-radius: 12px; cursor: pointer; align-items: center; justify-content: center;
   background: #0a1520; border: 1px solid rgba(255,215,0,0.4); box-shadow: 0 0 16px rgba(255,215,0,0.15); }
 .swapBtn svg { width: 40px; height: 24px; }
-body.judge.has-match.can-swap .swapBtn { display: flex; }
+body.judge.has-match.can-swap .swapBtn, body.training.has-tmatch.can-swap .swapBtn { display: flex; }
 .swapBtn:active { transform: translateX(-50%) scale(.92); }
 .judgeTag { cursor: pointer; }
 .rotate .overlay-text { color: var(--gold); text-shadow: 0 0 60px var(--gold); }
@@ -1868,7 +1871,14 @@ function renderJudgeBar() {
 
 /* ── hráči a jejich beyblady ── */
 function cycleUsed(side) {
-  if (trainingMode) return []
+  if (trainingMode) {
+    // tournament mode: bey se v sadě neopakuje (sada = tolik soubojů, kolik má hráč beyů)
+    if (!tr.match?.settings?.tourney) return []
+    const n = (judge.sides[side]?.beys || []).filter(Boolean).length
+    if (n < 2) return []
+    const start = judge.battles.length - (judge.battles.length % n)
+    return judge.battles.slice(start).map(b => b.beys[side]).filter(Boolean)
+  }
   const start = judge.battles.length - (judge.battles.length % 3)
   return judge.battles.slice(start).map(b => b.beys[side]).filter(Boolean)
 }
@@ -1988,7 +1998,7 @@ async function passJudge() {
 /* ── prohození stran před začátkem hry ── */
 function swapSides() {
   if (!canSwap()) return
-  if (trainingMode) { tr.leftSlot = 3 - tr.leftSlot; trRender(); if (vibrateEnabled) navigator.vibrate?.(30); return showOverlay(`${player1Name} ⇄ ${player2Name}`, "win") }
+  if (trainingMode) { tr.leftSlot = 3 - tr.leftSlot; trSaveLeft(); trRender(); if (vibrateEnabled) navigator.vibrate?.(30); return showOverlay(`${player1Name} ⇄ ${player2Name}`, "win") }
   judge.leftSlot = 3 - judge.leftSlot
   ;[judge.sides[1], judge.sides[2]] = [judge.sides[2], judge.sides[1]]
   ;[player1Name, player2Name] = [player2Name, player1Name]
@@ -2326,6 +2336,11 @@ window.addEventListener("online", flushJudgePending)
    body na hru číslo nebo ∞, sestavy jdou měnit v setupu.
 ══════════════════════════════════════════════ */
 const TR_KEY = "bbxst_training"
+const TR_LEFT = "bbxst_training_left"
+function trSaveLeft() { try { localStorage.setItem(TR_LEFT, `${tr.match?.id}:${tr.leftSlot}`) } catch (e) {} }
+function trSavedLeft(id) {
+  try { const [mid, slot] = String(localStorage.getItem(TR_LEFT) || "").split(":"); return mid === id ? Number(slot) || 0 : 0 } catch (e) { return 0 }
+}
 let trainingMode = false
 const tr = { info: null, match: null, leftSlot: 1, pending: [], ch: null, poll: null, waitPoll: null, lastWin: "", parts: null, edit: null }
 const trActive = () => trainingMode && tr.match?.status === "active"
@@ -2405,7 +2420,7 @@ async function trLoadMatch(id, quiet) {
   if (!trainingMode && !(await enterTraining(true))) return
   trUnload()
   tr.match = st
-  tr.leftSlot = st.me            // já vlevo
+  tr.leftSlot = trSavedLeft(id) || st.me     // já vlevo, pokud strany neprohodil
   try { localStorage.setItem(TR_KEY, id) } catch (e) {}
   if (sb) tr.ch = sb.channel("trm-" + id)
     .on("postgres_changes", { event: "UPDATE", schema: "public", table: "training_matches", filter: `id=eq.${id}` }, () => trRefresh())
@@ -2490,7 +2505,7 @@ function trRender(fromServer) {
   if (!firstScoreUsed && (score1 || score2)) { firstScoreUsed = true; document.querySelectorAll(".arrowGroup").forEach(a => a.classList.add("hidden")) }
   renderJudgePlayers()
   info.textContent = [st.tournament?.name, (st.settings?.mode || "3v3").replace("v", " v "), `hra ${c.no}`,
-    c.win == null ? "bez limitu" : `do ${c.win}`, c.over ? "dohráno" : ""].filter(Boolean).join(" · ")
+    c.win == null ? "bez limitu" : `do ${c.win}`, st.settings?.tourney ? "tournament" : "", c.over ? "dohráno" : ""].filter(Boolean).join(" · ")
   info.title = info.textContent
   // výhra soupeře zapsaná z druhého telefonu
   const key = `${st.id}:${c.no}`
@@ -2602,7 +2617,7 @@ async function trOpenCircle() {
 function trOpenSetup() {
   if (!trActive()) return trOpenCircle()
   const s = tr.match.settings || {}
-  tr.edit = { mode: s.mode || "3v3", win: s.win ?? null, lineup: { 1: [...lineupOf(1)], 2: [...lineupOf(2)] }, lastWin: s.win ?? 7 }
+  tr.edit = { mode: s.mode || "3v3", win: s.win ?? null, tourney: !!s.tourney, lineup: { 1: [...lineupOf(1)], 2: [...lineupOf(2)] }, lastWin: s.win ?? 7 }
   trDrawSetup()
   document.getElementById("trSetup").classList.remove("hidden")
 }
@@ -2622,13 +2637,15 @@ function trDrawSetup() {
     <div class="trRow"><span>MÓD</span>${["3v3", "3v1", "1v3", "1v1"].map(m => `<button class="trOpt ${m === uiMode ? "on" : ""}" data-mode="${m}">${m.replace("v", " v ")}</button>`).join("")}</div>
     <div class="trRow"><span>BODY</span><button class="trOpt" data-win="-1">−</button><b class="trWin">${e.win == null ? "∞" : e.win}</b><button class="trOpt" data-win="1">+</button>
       <button class="trOpt ${e.win == null ? "on" : ""}" data-inf>∞ NEOMEZENĚ</button></div>
+    <div class="trRow"><span>TURNAJ</span><button class="trOpt ${e.tourney ? "" : "on"}" data-tourney="0">VYP</button><button class="trOpt ${e.tourney ? "on" : ""}" data-tourney="1">TOURNAMENT MODE</button>
+      <small class="trHint">bey se v sadě neopakuje, jako v judge módu</small></div>
     <div class="trCols">${col(Ls, "left")}${col(Rs, "right")}</div>
     <div class="trBtns">
       <button class="qr-btn cancel" id="trEnd">UKONČIT SOUBOJ</button>
       <button class="qr-btn cancel" id="trBack">ZPĚT</button>
       <button class="qr-btn confirm" id="trSave">ULOŽIT</button>
     </div>
-    <div class="trSub">Změna módu nebo bodů začne novou hru. Sestavu měníš pro sebe i soupeře.</div>
+    <div class="trSub">Změna módu nebo bodů začne novou hru. Sestavu měníš pro sebe i soupeře. Podrž bey = upravit jeho díly.</div>
   </div>`
   box.querySelectorAll("[data-mode]").forEach(b => b.onclick = () => {
     const [l, r] = b.dataset.mode.split("v")
@@ -2638,8 +2655,23 @@ function trDrawSetup() {
     const cur = e.win == null ? e.lastWin : e.win
     e.win = Math.min(99, Math.max(1, cur + Number(b.dataset.win))); e.lastWin = e.win; trDrawSetup()
   })
+  box.querySelectorAll("[data-tourney]").forEach(b => b.onclick = () => { e.tourney = b.dataset.tourney === "1"; trDrawSetup() })
   box.querySelector("[data-inf]").onclick = () => { e.win = e.win == null ? e.lastWin : null; trDrawSetup() }
-  box.querySelectorAll("[data-slot]").forEach(b => b.onclick = () => trChooseBey(Number(b.dataset.slot), Number(b.dataset.i)))
+  // klepnutí = vybrat jiný bey, podržení = upravit díly tohohle beye
+  box.querySelectorAll("[data-slot]").forEach(b => {
+    const slot = Number(b.dataset.slot), i = Number(b.dataset.i)
+    let timer = null, held = false
+    const cancel = () => { clearTimeout(timer); timer = null; b.classList.remove("holding") }
+    b.addEventListener("pointerdown", () => {
+      held = false
+      if (!e.lineup[slot][i]) return
+      b.classList.add("holding")
+      timer = setTimeout(() => { held = true; cancel(); if (vibrateEnabled) navigator.vibrate?.(40); trNewBey(slot, i, e.lineup[slot][i]) }, 550)
+    })
+    b.addEventListener("pointerup", cancel); b.addEventListener("pointerleave", cancel); b.addEventListener("pointercancel", cancel)
+    b.addEventListener("contextmenu", ev => ev.preventDefault())
+    b.onclick = () => { if (held) { held = false; return } trChooseBey(slot, i) }
+  })
   document.getElementById("trBack").onclick = () => box.classList.add("hidden")
   document.getElementById("trEnd").onclick = async () => {
     if (!await jConfirm("Ukončit souboj? Zapsané souboje zůstanou v historii tréninku.", "UKONČIT")) return
@@ -2651,11 +2683,11 @@ function trDrawSetup() {
   document.getElementById("trSave").onclick = async () => {
     const clean = (l) => l.filter(Boolean).map(({ name, ...rest }) => rest)
     try {
-      const settings = await rpc("training_setup", { p_match: st.id, p_settings: { mode: e.mode, win: e.win, lineup: { p1: clean(e.lineup[1]), p2: clean(e.lineup[2]) } } })
+      const settings = await rpc("training_setup", { p_match: st.id, p_settings: { mode: e.mode, win: e.win, tourney: e.tourney, lineup: { p1: clean(e.lineup[1]), p2: clean(e.lineup[2]) } } })
       tr.match.settings = settings
       box.classList.add("hidden")
       await trRefresh()
-      showOverlay(`${(settings.mode || "").replace("v", " v ")} · ${settings.win == null ? "∞" : "DO " + settings.win}`, "win")
+      showOverlay(`${(settings.mode || "").replace("v", " v ")} · ${settings.win == null ? "∞" : "DO " + settings.win}${settings.tourney ? " · TOURNAMENT" : ""}`, "win")
     } catch (err) { jAlert(esc(err.message)) }
   }
 }
@@ -2675,7 +2707,7 @@ function trChooseBey(slot, i) {
   document.getElementById("trChNew").onclick = () => trNewBey(slot, i)
 }
 
-async function trNewBey(slot, i) {
+async function trNewBey(slot, i, preset) {
   const box = document.getElementById("trSetup")
   if (!tr.parts) {
     try {
@@ -2685,9 +2717,14 @@ async function trNewBey(slot, i) {
     } catch (err) { return jAlert("Seznam dílů se nepodařilo načíst: " + esc(err.message)) }
   }
   const dl = (id, cats) => `<datalist id="${id}">${tr.parts.filter(p => cats.includes(p.category)).map(p => `<option value="${esc(p.name)}">`).join("")}</datalist>`
-  let type = "bx"
+  // úprava existujícího beye (podržení slotu): díly předvyplněné
+  let type = preset?.type === "cx" ? "cx" : "bx"
+  const ids = { blade: "nbBlade", lock: "nbLock", main: "nbMain", over: "nbOver", assist: "nbAssist", ratchet: "nbRatchet", bit: "nbBit" }
+  const vals = {}
+  for (const k in ids) vals[k] = preset?.[k] || ""
+  const keep = () => { for (const k in ids) { const el = document.getElementById(ids[k]); if (el) vals[k] = el.value } }
   const draw = () => {
-    box.innerHTML = `<div class="trTitle">NOVÝ BEY</div>
+    box.innerHTML = `<div class="trTitle">${preset ? `UPRAVIT BEY ${i + 1} · ${esc((slot === 1 ? tr.match.p1 : tr.match.p2).nick)}` : "NOVÝ BEY"}</div>
       <div class="trRow">${["bx", "cx"].map(t => `<button class="trOpt ${t === type ? "on" : ""}" data-t="${t}">${t === "bx" ? "BX / UX" : "CX"}</button>`).join("")}</div>
       <div class="trNew">
         <label class="full" ${type === "cx" ? "hidden" : ""}>BLADE<input list="dlBlade" id="nbBlade" autocomplete="off"></label>
@@ -2702,15 +2739,16 @@ async function trNewBey(slot, i) {
       ${dl("dlAssist", ["assist_blade"])}${dl("dlRatchet", ["ratchet"])}${dl("dlBit", ["bit"])}
       <div class="trBtns"><button class="qr-btn cancel" id="nbBack">ZPĚT</button><button class="qr-btn confirm" id="nbOk">POUŽÍT</button></div>
       <div class="trSub">Název se ověří při uložení setupu.</div>`
-    box.querySelectorAll("[data-t]").forEach(b => b.onclick = () => { type = b.dataset.t; draw() })
-    document.getElementById("nbBack").onclick = () => trChooseBey(slot, i)
+    for (const k in ids) document.getElementById(ids[k]).value = vals[k]
+    box.querySelectorAll("[data-t]").forEach(b => b.onclick = () => { keep(); type = b.dataset.t; draw() })
+    document.getElementById("nbBack").onclick = () => preset ? trDrawSetup() : trChooseBey(slot, i)
     document.getElementById("nbOk").onclick = () => {
       const v = (id) => document.getElementById(id).value.trim()
       const el = type === "bx" ? { type: "bx", blade: v("nbBlade"), ratchet: v("nbRatchet"), bit: v("nbBit") }
         : { type: "cx", lock: v("nbLock"), main: v("nbMain"), over: v("nbOver"), assist: v("nbAssist"), ratchet: v("nbRatchet"), bit: v("nbBit") }
       if (type === "bx" ? !el.blade || !el.bit : !el.lock || !el.main || !el.assist || !el.bit) return jAlert("Doplň díly ze seznamu.")
       const label = type === "bx" ? `${el.blade} ${el.ratchet}${el.bit}` : `${el.lock} ${el.main} ${el.ratchet}${el.bit}`
-      tr.edit.lineup[slot][i] = { ...el, name: label + " (nový)" }
+      tr.edit.lineup[slot][i] = { ...el, name: label + (preset ? " (upraveno)" : " (nový)") }
       trDrawSetup()
     }
   }

@@ -28,11 +28,15 @@ export async function render(main, [id, tabArg]) {
   let d = await load(id)
   let tab = tabArg || 'me'
   let combosScope = 'me'
+  let histScope = 'me'
 
   const tabsFor = () => {
-    const tabs = [['me', d.myReg ? 'Trénink' : 'Přidat se', d.myReg ? 'ticket' : 'pen'], ['players', `Hráči (${d.b.players.length})`, 'users']]
-    if (d.myReg) tabs.push(['history', 'Historie', 'bars'])
+    const open = d.t.status === 'registration'
+    const tabs = []
+    if (open) tabs.push(['me', d.myReg ? 'Trénink' : 'Přidat se', d.myReg ? 'ticket' : 'pen'])
+    if (d.myReg || !open) tabs.push(['history', 'Historie', 'bars'])
     tabs.push(['combos', 'Comba', 'scale'])
+    tabs.push(['players', `Hráči (${d.b.players.length})`, 'users'])
     if (d.b.is_lead) tabs.push(['manage', 'Řízení', 'gear'])
     return tabs
   }
@@ -50,6 +54,7 @@ export async function render(main, [id, tabArg]) {
           ${b.community ? html`<a class="tr-comm" href="#/c/${b.community.id}">👥 ${b.community.name}</a>` : ''}
           ${t.starts_at ? html`<span>🗓 ${fmtDate(t.starts_at)}, ${fmtTime(t.starts_at)}</span>` : ''}
           ${t.location ? html`<span>📍 ${t.location}</span>` : ''}
+          ${t.status === 'finished' && t.finished_at ? html`<span>🏁 skončil ${fmtDate(t.finished_at)}</span>` : ''}
           <span>Komunitní trénink · bez ratingu</span>
         </div>
         ${t.description ? html`<p class="desc">${t.description}</p>` : ''}
@@ -201,12 +206,42 @@ export async function render(main, [id, tabArg]) {
 
   // ── HISTORIE ────────────────────────────────────────────────────
   async function tabHistory(box) {
-    mount(box, html`<div class="spinner" aria-label="Načítám"></div>`)
-    let h
-    try { h = await rpc('training_history', { p_tournament: id }) } catch (e) { return mount(box, html`<div class="notice err">${errMsg(e)}</div>`) }
-    const T = h.totals
-    if (!T || !T.battles) return mount(box, html`<div class="empty">Zatím žádné zapsané souboje. Vyzvi někoho a zapisujte v BBXST.</div>`)
+    const scope = d.myReg ? histScope : 'all'
     mount(box, html`
+      ${d.myReg ? html`<div class="seg" role="tablist">
+        <button type="button" data-hs="me" class="${scope === 'me' ? 'on' : ''}">Moje souboje</button>
+        <button type="button" data-hs="all" class="${scope === 'all' ? 'on' : ''}">Celý trénink</button></div>` : ''}
+      <div id="hl" style="margin-top:12px"><div class="spinner" aria-label="Načítám"></div></div>`)
+    on(box, 'click', '[data-hs]', (e, btn) => { histScope = btn.dataset.hs; tabHistory(box) })
+    const out = box.querySelector('#hl')
+    let h
+    try { h = await rpc('training_history', { p_tournament: id, p_scope: scope }) } catch (e) { return mount(out, html`<div class="notice err">${errMsg(e)}</div>`) }
+    const T = h.totals
+    if (!T || !T.battles) return mount(out, html`<div class="empty">${scope === 'me' && d.t.status === 'registration'
+      ? 'Zatím žádné zapsané souboje. Vyzvi někoho a zapisujte v BBXST.' : 'V tréninku nejsou žádné zapsané souboje.'}</div>`)
+    const battles = (m) => html`<div class="tr-battles">${m.battles.map((x, i) => html`
+          ${i === 0 || m.battles[i - 1].game !== x.game ? html`<div class="tr-game">Hra ${x.game}${x.mode ? ` · ${x.mode}` : ''}</div>` : ''}
+          <div class="tr-b ${scope === 'all' ? (x.result > 0 ? 'a' : x.result < 0 ? 'b' : 'd') : (x.result > 0 ? 'w' : x.result < 0 ? 'l' : 'd')}">
+            <span class="tr-res">${x.result === 0 ? '=' : scope === 'all' ? `+${x.pts}` : x.result > 0 ? `+${x.pts}` : `−${x.pts}`}</span>
+            <span class="grow ellipsis">${x.bey || '?'} <span class="faint">vs</span> ${x.opp_bey || '?'}</span>
+            ${x.finish ? html`<span class="fin-chip ${x.finish}">${x.finish}</span>` : ''}
+          </div>`)}</div>`
+    if (scope === 'all') return mount(out, html`
+      <div class="stats">
+        <div class="stat"><div class="v">${T.battles}</div><div class="k">soubojů</div></div>
+        <div class="stat"><div class="v">${T.matches}</div><div class="k">dvojic</div></div>
+        <div class="stat"><div class="v">${T.players}</div><div class="k">hráčů</div></div>
+        <div class="stat"><div class="v">${T.draws}</div><div class="k">remíz</div></div>
+      </div>
+      <div class="fin-line" style="margin-top:10px">${finishLine(T.given)}</div>
+      <h2>Všechny dvojice</h2>
+      <div class="stack">${h.matches.map(m => html`<details class="card tr-hist">
+        <summary><div class="row between" style="gap:8px"><b class="ellipsis"><span class="p1c">${m.p1}</span> <span class="faint">vs</span> <span class="p2c">${m.p2}</span></b>
+          <span class="num"><span class="p1c">${m.s1}</span> : <span class="p2c">${m.s2}</span></span></div>
+          <div class="small faint">${plural(m.battles.length, 'souboj', 'souboje', 'soubojů')} · ${m.w1}–${m.w2} · ${fmtDate(m.last)}, ${fmtTime(m.last)}</div></summary>
+        ${battles(m)}
+      </details>`)}</div>`)
+    mount(out, html`
       <div class="stats">
         <div class="stat"><div class="v">${T.battles}</div><div class="k">soubojů</div></div>
         <div class="stat"><div class="v">${T.wins}–${T.losses}</div><div class="k">V–P${T.draws ? ` (${T.draws} R)` : ''}</div></div>
@@ -219,13 +254,7 @@ export async function render(main, [id, tabArg]) {
         <summary><div class="row between" style="gap:8px"><b>proti ${m.opponent}</b>
           <span class="num"><span class="ok-t">+${m.points}</span> / <span class="bad-t">−${m.points_lost}</span></span></div>
           <div class="small faint">${m.wins} V · ${m.losses} P · ${fmtDate(m.last)}, ${fmtTime(m.last)}</div></summary>
-        <div class="tr-battles">${m.battles.map((x, i) => html`
-          ${i === 0 || m.battles[i - 1].game !== x.game ? html`<div class="tr-game">Hra ${x.game}${x.mode ? ` · ${x.mode}` : ''}</div>` : ''}
-          <div class="tr-b ${x.result > 0 ? 'w' : x.result < 0 ? 'l' : 'd'}">
-            <span class="tr-res">${x.result > 0 ? `+${x.pts}` : x.result < 0 ? `−${x.pts}` : '='}</span>
-            <span class="grow ellipsis">${x.bey || '?'} <span class="faint">vs</span> ${x.opp_bey || '?'}</span>
-            ${x.finish ? html`<span class="fin-chip ${x.finish}">${x.finish}</span>` : ''}
-          </div>`)}</div>
+        ${battles(m)}
       </details>`)}</div>`)
   }
 
@@ -245,9 +274,10 @@ export async function render(main, [id, tabArg]) {
         <span class="faint num" style="width:22px;text-align:right">${i + 1}.</span>
         <div class="grow" style="min-width:0">
           <div class="meta-name">${r.bey}</div>
+          ${scope === 'all' ? html`<div class="small tr-owner">hraje <a href="#/p/${r.user_id}">${r.nick}</a></div>` : ''}
           <div class="meta-bar" role="img" aria-label="${r.wins} výher, ${r.draws} remíz, ${r.losses} proher">
             <i class="w" style="width:${(100 * r.wins / r.battles).toFixed(1)}%"></i><i class="d" style="width:${(100 * r.draws / r.battles).toFixed(1)}%"></i></div>
-          <div class="small muted">${r.battles} soubojů · ${r.wins}–${r.draws ? `${r.draws}–` : ''}${r.losses} · +${r.points} / −${r.points_lost}${scope === 'all' ? ` · ${plural(r.players, 'hráč', 'hráči', 'hráčů')}` : ''}</div>
+          <div class="small muted">${r.battles} soubojů · ${r.wins}–${r.draws ? `${r.draws}–` : ''}${r.losses} · +${r.points} / −${r.points_lost}</div>
           <div class="fin-line" style="margin-top:4px">${finishLine(r.given)}</div>
         </div>
         <div class="meta-wr num"><b>${Math.round(r.win_rate)}</b><small>%</small></div>

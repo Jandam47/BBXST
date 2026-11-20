@@ -123,6 +123,45 @@ with sync_playwright() as p:
     score(a, 2, 1)                                  # další bod = hra 3
     assert board(a) == '0:1', board(a)
 
+    # ── tournament mode: 3v3, ∞, bey se v sadě neopakuje ──
+    drag(a, '#trainBtn', 140, -40); a.wait_for_selector('#trSetup:not(.hidden)')
+    a.click('[data-mode="3v3"]'); a.click('[data-inf]'); a.click('[data-tourney="1"]')
+    a.click('.trCol.right .trSlot >> nth=0'); a.wait_for_selector('.trList .beyPick')
+    a.click('.trList .beyPick:has-text("Shark Edge")')
+    a.screenshot(path=OUT + '156_bbxst_setup_tourney.png')
+    a.click('#trSave'); a.wait_for_selector('#trSetup', state='hidden')
+    st = json.loads(sql(f"select settings from training_matches where id = '{mid}'"))
+    assert st['tourney'] is True and st['mode'] == '3v3' and st['win'] is None, st
+    for _ in range(3): score(a, 1, 1)
+    g = sql(f"select max(game_no) from training_battles where match_id = '{mid}'")
+    seq = sql(f"select string_agg(p1_bey, ',' order by seq) from training_battles where match_id = '{mid}' and game_no = {g}")
+    assert seq == 'Dran Sword 3-60F,Hells Scythe 4-60T,Wizard Arrow 4-80B', seq
+    score(a, 1, 1)                                  # nová sada – zase všechny tři
+    assert sql(f"select p1_bey from training_battles where match_id = '{mid}' order by seq desc limit 1") == 'Dran Sword 3-60F'
+
+    # ── prohození stran (⇄) ──
+    a.wait_for_selector('#swapBtn', state='visible')
+    a.click('#swapBtn'); a.wait_for_timeout(400)
+    assert a.inner_text('#player1Info .nick') == 'Hrac2', 'po ⇄ je soupeř vlevo'
+    a.screenshot(path=OUT + '157_bbxst_training_swapped.png')
+    score(a, 1, 1)                                  # bod levé straně = Hrac2 (slot 2)
+    assert sql(f"select scorer_slot from training_battles where match_id = '{mid}' order by seq desc limit 1") == '2'
+    assert c.inner_text('#player1Info .nick') == 'Hrac2', 'druhý telefon si strany nemění'
+
+    # ── podržení beye v setupu = úprava dílů (předvyplněné) ──
+    drag(a, '#trainBtn', 140, -40); a.wait_for_selector('#trSetup:not(.hidden)')
+    slot = a.locator('.trSlot:has-text("Hells Scythe")')
+    bb = slot.bounding_box(); a.mouse.move(bb['x'] + 30, bb['y'] + 20); a.mouse.down(); a.wait_for_timeout(800); a.mouse.up()
+    a.wait_for_selector('#nbBlade')
+    assert 'UPRAVIT BEY' in a.inner_text('#trSetup .trTitle')
+    assert a.input_value('#nbBlade') == 'Hells Scythe' and a.input_value('#nbRatchet') == '4-60' and a.input_value('#nbBit') == 'Taper'
+    a.fill('#nbBit', 'Ball')
+    a.screenshot(path=OUT + '158_bbxst_edit_bey.png')
+    a.click('#nbOk'); a.wait_for_selector('.trSlot:has-text("upraveno")')
+    a.click('#trSave'); a.wait_for_selector('#trSetup', state='hidden')
+    st = json.loads(sql(f"select settings from training_matches where id = '{mid}'"))
+    assert any(x['name'] == 'Hells Scythe 4-60B' for x in st['lineup']['p1']), st['lineup']['p1']
+
     # ── ukončení souboje ──
     drag(a, '#trainBtn', 140, -40); a.wait_for_selector('#trSetup:not(.hidden)')
     a.click('#trEnd'); a.click('#jYes'); a.wait_for_selector('#trCircle:not(.hidden)')

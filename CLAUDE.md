@@ -14,7 +14,10 @@ Komunikuj **česky**, celé UI je česky.
   tréninku, `my_training`) → kolečko hráčů → výzva (`training_challenge`, soupeř potvrdí) → oba telefony zapisují
   souboje (`training_battle` s `client_id`, čekající souboje se dopošlou), stav `training_state` (realtime na
   `training_matches` + polling 4 s). S načteným soupeřem je tlačítko SETUP: mód 3v3/3v1/1v3/1v1 (v DB z pohledu
-  p1/p2), body na hru číslo nebo ∞ (změna = nová hra), sestavy z decků obou hráčů nebo nový bey z dílů.
+  p1/p2), body na hru číslo nebo ∞ (změna = nová hra), tournament mode (`settings.tourney`: bey se v sadě
+  neopakuje jako v judge módu, sada = počet beyů hráče), sestavy z decků obou hráčů nebo nový bey z dílů
+  (podržení beye v setupu = úprava jeho dílů, předvyplněné).
+  ⇄ prohodí strany jen na tomhle telefonu (`localStorage.bbxst_training_left`).
   Odkaz z BBXU: `bbxst.html?training=<id>`; rozehraný trénink se obnoví z `localStorage.bbxst_training`.
   Design BBXST se nemění – Adam ho chce zachovat.
 - `BBXST.html` (velká písmena) je **jen přesměrování** na `bbxst.html` kvůli starým odkazům. Neupravovat.
@@ -25,7 +28,7 @@ Komunikuj **česky**, celé UI je česky.
   (zdroj kyoganken.sakura.ne.jp/beyx/weight1.htm), Hasbro názvy jsou v `aliases`. Nové díly = nový SQL soubor
   s `insert … on conflict do update` (viz `07-parts-update.sql`); web se kvůli dílům nasazovat nemusí.
 - `js/config.js` – **obsahuje Adamovy živé klíče Supabase. Nikdy ho neměň ani nepřepisuj.**
-- `supabase/schema.sql`, `02-parts.sql`, `03-live-score.sql`, `04-security-hardening.sql`, `05-judge-handover.sql`, `06-formats-stats.sql`, `07-parts-update.sql`, `08-judge-per-match.sql`, `09-pause.sql`, `10-fashion.sql`, `11-finishes.sql`, `12-rated.sql`, `13-communities.sql` – databáze (spuštěné v produkci, nové soubory
+- `supabase/schema.sql`, `02-parts.sql`, `03-live-score.sql`, `04-security-hardening.sql`, `05-judge-handover.sql`, `06-formats-stats.sql`, `07-parts-update.sql`, `08-judge-per-match.sql`, `09-pause.sql`, `10-fashion.sql`, `11-finishes.sql`, `12-rated.sql`, `13-communities.sql`, `14-training-extras.sql` – databáze (spuštěné v produkci, nové soubory
   spouští Adam). Živé skóre: BBXST v judge módu posílá po každém bodu `live_score` → `matches.live_p1/p2`
   (TV rozpis, vstupenka, seznamy); trigger `bbx_clear_live` ho maže po uložení hry.
   Rozehraná hra: BBXST posílá s `live_score` i `p_state` → `matches.live_state` (souboje v orientaci p1/p2,
@@ -74,7 +77,8 @@ Komunikuj **česky**, celé UI je česky.
   stránka komunity), nezapočítává se do ratingu. Přidat se může člen nebo pozvaný (`training_invite`), jen účet,
   jen jeden otevřený trénink naráz (hlídá registrační trigger), deck 1–3 beye s opakováním dílů.
   `bbx_can_manage` pustí leadera/zástupce k řízení tréninku. Výzvy `training_matches`, souboje `training_battles`
-  (p1/p2 + díly beyů). Historie `training_history`, comba `training_combos` (me / all), meta komunity
+  (p1/p2 + díly beyů). Historie `training_history` (me / all = všechny dvojice), comba `training_combos` (me / all, dělená podle
+  majitele), skončené tréninky = „Historie tréninků“ na stránce komunity (s datem), meta komunity
   `community_meta` (stránka Meta → Komunita, `#/meta?c=<id>`), notifikace výzev v app.js `watchTraining`.
 - `vendor/` – supabase-js, qrcode-generator, html5-qrcode (lokálně, kvůli slabé síti v hale).
 - `sw.js` – service worker (síť první, cache jako záloha).
