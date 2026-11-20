@@ -81,8 +81,10 @@ with sync_playwright() as p:
     page.goto(BASE + f'#/t/{t_id}/manage'); tools(page)
     page.click('[data-act=test-play]'); page.click('.modal [data-yes]'); page.wait_for_selector('[data-act=finish]', timeout=60000)
     page.click('[data-act=finish]'); page.wait_for_selector('.modal button.primary')
-    page.locator('.modal button.primary').last.click(); page.wait_for_timeout(1500)
+    page.locator('.modal button.primary').last.click()
+    page.wait_for_selector('[data-chat=active]'); page.click('[data-chat=active]'); page.wait_for_timeout(800)
     assert sql(f"select status from tournaments where id = '{t_id}'") == 'finished'
+    assert sql(f"select state from chat_rooms where id = 't-{t_id}'") == 'active', 'chat zůstal aktivní'
 
     # ── vyhodnocení
     page.goto(BASE + f'#/t/{t_id}'); page.wait_for_selector('.rep-build')

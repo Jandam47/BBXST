@@ -2,6 +2,7 @@
 //  Řízení turnaje (organizátor / admin)
 //  registrace → start → swiss kola → top cut → ukončení
 // ════════════════════════════════════════════════════════════════
+import { askTournamentChat } from './chat.js'
 import { sb, rpc, q, errMsg, state } from '../supa.js'
 import { html, mount, on, formData, toast, modal, busy, confirmBox, plural, pauseLeft, fmtLeft } from '../ui.js'
 import { pairSwissRound, pairRoundRobin, roundRobinRounds, makeRng, buildDoubleElim, computePlacements, DEFAULT_BO, matchLabel, phaseName, FORMATS, arenaQueue } from '../core.js'
@@ -367,7 +368,10 @@ function finishModal(d, reload) {
     <div class="row" style="margin-top:16px"><button class="btn grow" data-close>Zpět</button><button class="btn primary grow" data-ok>Ukončit a uložit</button></div>`, {
     onMount: (box, close) => on(box, 'click', '[data-ok]', async (e, b) => {
       await busy(b, async () => {
-        try { await rpc('finish_tournament', { p_tournament: t.id, p_placements: pl }); close(); toast('Turnaj uložen. Gratulace vítězům!', 'ok'); reload() }
+        try {
+          await rpc('finish_tournament', { p_tournament: t.id, p_placements: pl }); close(); toast('Turnaj uložen. Gratulace vítězům!', 'ok'); reload()
+          if (t.kind === 'tournament') askTournamentChat(t.id)
+        }
         catch (err) { toast(errMsg(err), 'err') }
       })
     }),

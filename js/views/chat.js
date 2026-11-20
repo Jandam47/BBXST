@@ -3,7 +3,9 @@
 //  Komunitní chat (členové + hosté na čas). Živé zprávy přes Supabase Realtime, přístup hlídá RLS.
 // ════════════════════════════════════════════════════════════════
 import { sb, state, q, rpc, errMsg, isLoggedIn } from '../supa.js'
-import { html, mount, on, toast, timeAgo, modal, busy, fmtTime, fmtDateTime } from '../ui.js'
+import { html, mount, on, toast, timeAgo, modal, busy, confirmBox, fmtTime, fmtDateTime } from '../ui.js'
+
+const STATE_LABEL = { closed: 'Uzavřený', hidden: 'Schovaný' }
 
 const SEEN_KEY = 'bbxu_chat_seen'
 const seen = () => { try { return JSON.parse(localStorage.getItem(SEEN_KEY)) || {} } catch { return {} } }
@@ -39,7 +41,7 @@ async function roomList(main, ctx) {
     return html`<a class="li chat-room ${r.kind}" href="#/chat/${r.id}">
       <span class="av">${r.icon}</span>
       <div class="grow" style="min-width:0">
-        <div class="row between" style="gap:8px"><b class="ellipsis">${r.name}</b>${m ? html`<span class="small faint" style="flex:none">${timeAgo(m.created_at)}</span>` : ''}</div>
+        <div class="row between" style="gap:8px"><b class="ellipsis">${r.name}${r.state && r.state !== 'active' ? html` <span class="chat-state ${r.state}">${STATE_LABEL[r.state]}</span>` : ''}</b>${m ? html`<span class="small faint" style="flex:none">${timeAgo(m.created_at)}</span>` : ''}</div>
         <div class="small ${unread ? '' : 'muted'} ellipsis" style="${unread ? 'font-weight:600' : ''}">${m ? `${m.nick}: ${m.body}` : 'Zatím ticho'}</div>
         ${r.guest_until ? html`<div class="small chat-guest-tag">Host do ${fmtTime(r.guest_until)}</div>` : ''}
       </div>
@@ -80,7 +82,9 @@ async function roomView(main, roomId, ctx) {
   const canWrite = info.can_write
   const timers = []
 
-  const note = room.kind === 'info' || room.kind === 'info_t'
+  const note = room.state === 'hidden' ? 'Chat je schovaný – vidí ho jen organizátor akce a admini. Psát se sem nedá.'
+    : room.state === 'closed' ? 'Chat je uzavřený – jde jen číst.'
+    : room.kind === 'info' || room.kind === 'info_t'
     ? (canWrite ? 'Píšou sem organizátoři a admini – čte každý.' : 'Sem píšou jen organizátoři a admini.')
     : room.kind === 'community' ? (info.guest ? `Jsi tu jako host do ${fmtDateTime(info.guest.until)}.${info.guest.see_history ? '' : ' Vidíš zprávy od pozvání.'}` : 'Vidí jen členové komunity a pozvaní hosté.')
     : 'Volný chat pro všechny s účtem.'
@@ -93,7 +97,12 @@ async function roomView(main, roomId, ctx) {
         ${room.tournament_id ? html`<a class="btn sm ghost" href="#/t/${room.tournament_id}">Turnaj</a>` : ''}
         ${info.is_lead ? html`<button class="btn sm" data-guests>Hosté${info.guests?.length ? ` (${info.guests.length})` : ''}</button>` : ''}
       </div>
-      <p class="small muted chat-note ${info.guest ? 'guest' : ''}">${note}</p>
+      <p class="small muted chat-note ${info.guest ? 'guest' : ''} ${room.state !== 'active' ? 'state' : ''}">${note}</p>
+      ${info.can_manage ? html`<div class="chat-manage row wrap" role="group" aria-label="Správa chatu k turnaji">
+        ${room.state !== 'active' ? html`<button class="btn sm" data-state="active">Znovu otevřít</button>` : ''}
+        ${room.state !== 'closed' ? html`<button class="btn sm" data-state="closed">${room.state === 'hidden' ? 'Ukázat uzavřený' : 'Uzavřít'}</button>` : ''}
+        ${room.state !== 'hidden' ? html`<button class="btn sm" data-state="hidden">Schovat</button>` : ''}
+        <button class="btn sm danger" data-state="delete">Smazat</button></div>` : ''}
       <div class="chat-log" id="log" aria-live="polite"></div>
       ${canWrite ? html`
         <form class="chat-form" id="f-chat">
@@ -157,6 +166,18 @@ async function roomView(main, roomId, ctx) {
     catch (err) { toast(errMsg(err), 'err') }
   })
   on(main, 'click', '[data-guests]', () => guestsModal(roomId))
+  on(main, 'click', '[data-state]', async (e, b) => {
+    const st = b.dataset.state
+    if (st === 'delete' && !await confirmBox('Smazat chat k turnaji i se všemi zprávami? Nejde to vrátit.', { ok: 'Smazat', danger: true })) return
+    busy(b, async () => {
+      try {
+        await rpc('chat_room_state', { p_room: roomId, p_state: st })
+        toast({ active: 'Chat je znovu otevřený.', closed: 'Chat je uzavřený – jen ke čtení.', hidden: 'Chat je schovaný.', delete: 'Chat je smazaný.' }[st], 'ok')
+        if (st === 'delete') location.hash = '#/chat'
+        else window.dispatchEvent(new HashChangeEvent('hashchange'))   // překreslit přes router (čisté <main>)
+      } catch (err) { toast(errMsg(err), 'err') }
+    })
+  })
   return () => { sb.removeChannel(ch); timers.forEach(clearTimeout) }
 }
 
@@ -208,5 +229,26 @@ async function guestsModal(roomId) {
   })
   on(box, 'click', '[data-unguest]', async (e, b) => {
     busy(b, async () => { try { await rpc('chat_guest_remove', { p_room: roomId, p_user: b.dataset.unguest }); await load(); draw() } catch (err) { toast(errMsg(err), 'err') } })
+  })
+}
+
+// po ukončení turnaje: nechat chat k turnaji aktivní, nebo ho uzavřít (jen ke čtení)?
+export function askTournamentChat(tournamentId) {
+  const room = 't-' + tournamentId
+  modal(html`
+    <h2>Chat k turnaji</h2>
+    <p class="muted">Turnaj je ukončený. Má jeho chat v Info k turnaji zůstat aktivní, nebo ho uzavřít? Uzavřený jde jen číst.
+      Později ho můžeš v chatu i schovat nebo smazat.</p>
+    <div class="row" style="margin-top:16px;gap:8px"><button class="btn grow" data-chat="active">Nechat aktivní</button>
+      <button class="btn primary grow" data-chat="closed">Uzavřít</button></div>`, {
+    dismissable: false,
+    onMount: (box, close) => on(box, 'click', '[data-chat]', async (e, b) => {
+      busy(b, async () => {
+        try {
+          if (b.dataset.chat !== 'active') await rpc('chat_room_state', { p_room: room, p_state: b.dataset.chat })
+          close(); toast(b.dataset.chat === 'active' ? 'Chat zůstává aktivní.' : 'Chat je uzavřený.', 'ok')
+        } catch (err) { close(); toast(errMsg(err), 'err') }
+      })
+    }),
   })
 }

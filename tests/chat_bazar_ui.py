@@ -53,6 +53,16 @@ with sync_playwright() as p:
     org.fill('#f-chat textarea', 'Prezence od 9:30, start v 10:00.'); org.keyboard.press('Enter')
     org.wait_for_selector('.msg.own >> text=Prezence od 9:30')
 
+    # ── organizátor akce: uzavřít / schovat / znovu otevřít ──
+    org.click('[data-state=closed]'); org.wait_for_selector('.chat-note.state')
+    assert org.locator('#f-chat').count() == 0 and 'uzavřený' in org.inner_text('.chat-note')
+    org.screenshot(path=OUT + '188_chat_closed_manage.png')
+    org.click('[data-state=hidden]'); org.wait_for_selector('[data-state=active]')
+    assert sql(f"select state from chat_rooms where id = '{troom}'") == 'hidden'
+    go(an, '/chat', '.chat-room'); assert troom not in an.inner_html('main'), 'schovaný nepřihlášený nevidí'
+    go(org, '/chat', '.chat-state.hidden')
+    go(org, f'/chat/{troom}', '[data-state=active]'); org.click('[data-state=active]'); org.wait_for_selector('#f-chat')
+
     # ── hráč: přehled, zkušební chat, info jen ke čtení ──
     h1 = ctx(b, 'hrac1@test.cz')
     go(h1, '/chat', '.chat-room.test')

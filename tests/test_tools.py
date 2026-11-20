@@ -35,6 +35,8 @@ with sync_playwright() as p:
         if pg.is_disabled('[data-act=test-play]'): break
         pg.click('[data-act=test-play]'); pg.click('[data-yes]'); pg.wait_for_selector('text=Dohráno', timeout=20000); pg.wait_for_timeout(800)
     pg.click('[data-act=finish]'); pg.wait_for_selector('[data-ok]'); pg.click('[data-ok]')
+    pg.wait_for_selector('[data-chat=closed]'); pg.screenshot(path='/tmp/shots/41_finish_chat.png')
+    pg.click('[data-chat=closed]'); pg.wait_for_selector('[data-chat]', state='detached')
     pg.wait_for_selector('.notice >> text=ukončený'); pg.click('.tabs >> text=Top cut'); pg.wait_for_selector('.place.p1')
     pg.screenshot(path='/tmp/shots/42_finished.png', full_page=True)
     print('podium:', pg.inner_text('.list').replace('\n', ' | '))

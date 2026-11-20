@@ -71,6 +71,27 @@ await say(boss, 'info', 'Vítejte')
 assert.equal((await as(null, 'select body from chat_messages where room_id = $1', ['t-' + t.id]))[0].body, 'Prezence od 9:30')
 step('zkušební jen s účtem; info čte každý, píše organizátor / admin')
 
+// ── stav chatu k turnaji: uzavřený / schovaný / smazaný ──
+const tr2 = 't-' + t.id
+await fails(p1, 'select chat_room_state($1,$2)', [tr2, 'closed'], /organizátor akce nebo admin/)
+const org2 = await newUser('XOrg2' + sfx, 'organizer')
+await fails(org2, 'select chat_room_state($1,$2)', [tr2, 'closed'], /organizátor akce nebo admin/)   // cizí organizátor
+await as(org, 'select chat_room_state($1,$2)', [tr2, 'closed'])
+await nap(); await fails(org, 'insert into chat_messages (room_id, body) values ($1, $2)', [tr2, 'x'], /row-level/)
+assert.ok((await roomsOf(null)).includes(tr2), 'uzavřený jde číst')
+await as(boss, 'select chat_room_state($1,$2)', [tr2, 'hidden'])
+assert.ok(!(await roomsOf(null)).includes(tr2) && !(await roomsOf(p1)).includes(tr2) && !(await roomsOf(org2)).includes(tr2), 'schovaný nevidí ostatní')
+assert.ok((await roomsOf(org)).includes(tr2) && (await roomsOf(boss)).includes(tr2), 'schovaný vidí organizátor akce a admin')
+assert.equal((await as(p1, 'select count(*)::int n from chat_messages where room_id = $1', [tr2]))[0].n, 0)
+await as(org, 'select chat_room_state($1,$2)', [tr2, 'active'])
+await nap(); await say(org, tr2, 'znovu otevřeno')
+await db.query('update tournaments set name = $1 where id = $2', ['Chat Final ' + sfx, t.id])
+await as(org, 'select chat_room_state($1,$2)', [tr2, 'delete'])
+assert.equal((await db.query('select count(*)::int n from chat_rooms where id = $1', [tr2])).rows[0].n, 0)
+await db.query('update tournaments set name = $1 where id = $2', ['Chat Final 2 ' + sfx, t.id])
+assert.equal((await db.query('select count(*)::int n from chat_rooms where id = $1', [tr2])).rows[0].n, 0, 'úprava turnaje smazaný chat nevrátí')
+step('chat k turnaji: uzavřít (jen číst) / schovat (organizátor akce + admin) / znovu otevřít / smazat')
+
 // ── komunitní chat ─────────────────────────────────────────────────
 const cid = await one(org, 'community_create', ['Chat klub ' + sfx])
 assert.ok(!(await roomsOf(org)).includes('c-' + cid), 'neschválená komunita chat nemá')
