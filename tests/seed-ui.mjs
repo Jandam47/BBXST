@@ -48,6 +48,6 @@ for (const round of [1, 2]) {
   matches = await Q(`select * from matches where tournament_id = $1`, [t.id])
 }
 await Q(`insert into arena_judges (tournament_id, arena, judge_id) select $1, 1, id from profiles where nick = 'Judge'`, [t.id])
-await Q(`insert into chat_messages (room_id, user_id, nick, avatar, body) select 'turnaje', id, nick, avatar, 'Kdo jede v sobotu na Open?' from profiles where nick = 'Hrac2'`)
+await Q(`insert into chat_messages (room_id, user_id, nick, avatar, body) select 'volny', id, nick, avatar, 'Kdo jede v sobotu na Open?' from profiles where nick = 'Hrac2'`)
 console.log('seed ok', t.id)
 await db.end()

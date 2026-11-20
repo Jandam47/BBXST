@@ -8,6 +8,7 @@ import * as Tournament from './views/tournament.js'
 import * as Players from './views/players.js'
 import * as Profile from './views/profile.js'
 import * as Chat from './views/chat.js'
+import * as Bazar from './views/bazar.js'
 import * as Meta from './views/meta.js'
 import * as Auth from './views/auth.js'
 import * as Communities from './views/communities.js'
@@ -26,7 +27,8 @@ const routes = [
   [/^\/meta$/, Meta.render, 'meta'],
   [/^\/p\/([0-9a-f-]{36})$/, Profile.render, 'me'],
   [/^\/me$/, Profile.renderMe, 'me'],
-  [/^\/chat(?:\/([a-z]+))?$/, Chat.render, 'chat'],
+  [/^\/chat(?:\/([a-z0-9-]+))?$/, Chat.render, 'chat'],
+  [/^\/bazar(?:\/([0-9a-f-]{36}))?$/, Bazar.render, 'chat'],
   [/^\/login(?:\/([a-z]+))?$/, Auth.render, 'me'],
 ]
 
@@ -37,7 +39,10 @@ export function go(path) { location.hash = '#' + path }
 
 async function route() {
   const path = decodeURIComponent(location.hash.replace(/^#/, '')) || '/'
-  const main = $('main')
+  // čisté <main> pro každý pohled – posluchače on(main, …) z předchozí stránky nesmí přežít
+  // (jinak např. odeslání zprávy v jedné místnosti chatu poslalo zprávu i do předchozí)
+  const old = $('main'), main = old.cloneNode(false)
+  old.replaceWith(main)
   if (typeof cleanup === 'function') { try { cleanup() } catch {} }
   cleanup = null
   document.body.classList.remove('tv')
@@ -178,6 +183,21 @@ function watchTraining() {
     .subscribe()
 }
 
+// bazar: nová zpráva v mém vlákně (jako zájemce i jako prodejce) – RLS pustí jen moje vlákna
+let bzChannel = null
+function watchBazar() {
+  if (bzChannel) { sb.removeChannel(bzChannel); bzChannel = null }
+  if (!isLoggedIn() || !state.profile?.nick) return
+  bzChannel = sb.channel('my-bazar')
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'bazar_comments' }, ({ new: c }) => {
+      if (!c?.id || c.author_id === state.user?.id) return
+      if (location.hash === '#/bazar/' + c.ad_id) return
+      toast(html`<a href="#/bazar/${c.ad_id}">💬 <b>${c.nick}</b> ti napsal v bazaru.</a>`, 'call', 8000)
+      systemNotify(`${c.nick} ti napsal v bazaru`, c.body, 'bz-' + c.ad_id)
+    })
+    .subscribe()
+}
+
 async function boot() {
   if (!configured) {
     mount($('main'), html`
@@ -194,11 +214,13 @@ async function boot() {
   watchMyMatches()
   watchFashion()
   watchTraining()
+  watchBazar()
   onState((evt) => {
     renderChrome()
     watchMyMatches()
     watchFashion()
     watchTraining()
+    watchBazar()
     if (evt === 'PASSWORD_RECOVERY') Auth.newPasswordModal()
     if (evt === 'SIGNED_IN' && isLoggedIn() && state.profile && !state.profile.nick && !document.querySelector('#f-onb')) Auth.onboardingModal()
     if (evt === 'SIGNED_OUT') route()

@@ -48,6 +48,41 @@ http.createServer(async (req, res) => {
     return r.end(data)
   }
 
+  // /storage/v1 → jednoduché úložiště v /tmp/bbx-storage (bazar): upload, veřejné čtení, mazání
+  if (url.pathname.startsWith('/storage/v1/')) {
+    const STORE = '/tmp/bbx-storage'
+    const rest = decodeURIComponent(url.pathname.slice('/storage/v1/'.length))
+    if (rest.includes('..')) return send(res, 400, { message: 'bad path' })
+    if (req.method === 'GET' && rest.startsWith('object/public/')) {
+      const f = path.join(STORE, rest.slice('object/public/'.length))
+      if (!fs.existsSync(f)) return send(res, 404, { message: 'not found' })
+      res.writeHead(200, { 'content-type': 'image/jpeg', 'access-control-allow-origin': '*' }); return res.end(fs.readFileSync(f))
+    }
+    if (req.method === 'POST' && rest.startsWith('object/')) {
+      const chunks = []; for await (const c of req) chunks.push(c)
+      let buf = Buffer.concat(chunks)
+      const ct = req.headers['content-type'] || ''
+      if (ct.startsWith('multipart/form-data')) {          // supabase-js posílá Blob jako FormData
+        const boundary = '--' + ct.split('boundary=')[1]
+        const parts = buf.toString('latin1').split(boundary).filter(x => x.includes('\r\n\r\n'))
+        const file = parts.find(x => /filename=|name=""/.test(x)) || parts[parts.length - 1]
+        const body = file.slice(file.indexOf('\r\n\r\n') + 4, file.lastIndexOf('\r\n'))
+        buf = Buffer.from(body, 'latin1')
+      }
+      const key = rest.slice('object/'.length)
+      fs.mkdirSync(path.dirname(path.join(STORE, key)), { recursive: true })
+      fs.writeFileSync(path.join(STORE, key), buf)
+      return send(res, 200, { Key: key, Id: key })
+    }
+    if (req.method === 'DELETE' && rest.startsWith('object/')) {
+      const bucket = rest.slice('object/'.length).replace(/\/$/, '')
+      const b = JSON.parse((await body(req)) || '{}')
+      for (const pfx of b.prefixes || []) { try { fs.unlinkSync(path.join(STORE, bucket, pfx)) } catch {} }
+      return send(res, 200, (b.prefixes || []).map(name => ({ name })))
+    }
+    return send(res, 404, { message: 'not found' })
+  }
+
   if (url.pathname.startsWith('/auth/v1/')) {
     const ep = url.pathname.slice(9)
     const b = req.method === 'POST' || req.method === 'PUT' ? JSON.parse((await body(req)) || '{}') : {}

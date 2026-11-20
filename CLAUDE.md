@@ -30,7 +30,7 @@ Komunikuj **česky**, celé UI je česky.
   (zdroj kyoganken.sakura.ne.jp/beyx/weight1.htm), Hasbro názvy jsou v `aliases`. Nové díly = nový SQL soubor
   s `insert … on conflict do update` (viz `07-parts-update.sql`); web se kvůli dílům nasazovat nemusí.
 - `js/config.js` – **obsahuje Adamovy živé klíče Supabase. Nikdy ho neměň ani nepřepisuj.**
-- `supabase/schema.sql`, `02-parts.sql`, `03-live-score.sql`, `04-security-hardening.sql`, `05-judge-handover.sql`, `06-formats-stats.sql`, `07-parts-update.sql`, `08-judge-per-match.sql`, `09-pause.sql`, `10-fashion.sql`, `11-finishes.sql`, `12-rated.sql`, `13-communities.sql`, `14-training-extras.sql`, `15-training-bots.sql`, `16-training-reset.sql` – databáze (spuštěné v produkci, nové soubory
+- `supabase/schema.sql`, `02-parts.sql`, `03-live-score.sql`, `04-security-hardening.sql`, `05-judge-handover.sql`, `06-formats-stats.sql`, `07-parts-update.sql`, `08-judge-per-match.sql`, `09-pause.sql`, `10-fashion.sql`, `11-finishes.sql`, `12-rated.sql`, `13-communities.sql`, `14-training-extras.sql`, `15-training-bots.sql`, `16-training-reset.sql`, `17-chat-bazar.sql` – databáze (spuštěné v produkci, nové soubory
   spouští Adam). Živé skóre: BBXST v judge módu posílá po každém bodu `live_score` → `matches.live_p1/p2`
   (TV rozpis, vstupenka, seznamy); trigger `bbx_clear_live` ho maže po uložení hry.
   Rozehraná hra: BBXST posílá s `live_score` i `p_state` → `matches.live_state` (souboje v orientaci p1/p2,
@@ -89,6 +89,21 @@ Komunikuj **česky**, celé UI je česky.
   trigger `bbx_training_close` uzavře rozehrané výzvy a `bbx_tmatch` odmítne zápis i setup.
   **TV tréninku** (`#/t/<id>/tv`, `Training.renderTV`): comba celého tréninku (`training_combos` all) po 12 na
   stránku (střídání po 12 s), obnova pollingem 8 s (TV nemusí být přihlášená), tlačítko TV v záhlaví jen u živého tréninku (v archivu ne).
+- **Chat** (17, `js/views/chat.js`, `#/chat`, `#/chat/<room>`, přepínač Chat | Bazar): `chat_rooms.kind` = `test`
+  (Zkušební chat, id 'volny', píše každý s účtem), `info` (pevná Obecné informace) a `info_t` (místnost ke každému
+  turnaji kind 'tournament', id `t-<turnaj>`, název „DD.MM.RRRR Název“ – zakládá/přejmenovává trigger
+  `bbx_chat_sync_tournament`) – Info čte každý, píšou organizátoři+; `community` (id `c-<komunita>`, po schválení
+  komunity, `bbx_chat_sync_community`) – čtou a píšou aktivní členové + hosté `chat_guests` (zve leader/zástupce
+  `chat_guest_invite` na 1 min – 7 dní, `see_history` = vidí i zprávy před pozváním). Přístup jen RLS přes
+  `bbx_chat_read(room, created_at)` / `bbx_chat_write` / `bbx_chat_moderate` (admin, leader/zástupce v komunitě).
+  Přehled `chat_room_list`, detail `chat_room_info`. Limit 1 zpráva / s (`bbx_chat_fill`).
+- **Bazar** (17, `js/views/bazar.js`, `#/bazar`, `#/bazar/<id>`, jen účet): `bazar_ads` (název, cena = null
+  „Dohodou“, popis, 1–3 fotky, active/sold) přes RPC `bazar_list`/`bazar_ad`/`bazar_save`/`bazar_set_status`/
+  `bazar_delete` (vrátí cesty fotek, klient je smaže z úložiště). Fotky: Supabase Storage bucket `bazar` (veřejné
+  čtení, nahrávat jen do složky `<uid>/`, max 1 MB, JPEG/WebP); klient je zmenší na max 1280 px JPEG.
+  `bazar_comments` = soukromé vlákno zájemce ↔ prodejce (`buyer_id`), čtení + realtime přes RLS, psaní
+  `bazar_comment` (prodejce odpovídá s `p_buyer`). Upozornění na novou zprávu v app.js `watchBazar`.
+  Router v app.js dává každému pohledu nové čisté `<main>` (posluchače `on(main, …)` nepřežijí navigaci).
 - `vendor/` – supabase-js, qrcode-generator, html5-qrcode (lokálně, kvůli slabé síti v hale).
 - `sw.js` – service worker (síť první, cache jako záloha).
 - Vzhled: cyberpunk (černé pozadí s mřížkou, azurová `--cyan` + purpurová `--magenta`, žlutá `--bolt` jen pro
@@ -141,12 +156,14 @@ Komunikuj **česky**, celé UI je česky.
 
 ## Testy
 Potřebují lokální PostgreSQL 16, Node a pro UI Python Playwright + Chrome a PostgREST (`/tmp/postgrest`).
+`tests/ui-server.mjs` napodobuje i Supabase Storage (`/tmp/bbx-storage`); realtime lokálně není.
 - `node tests/core.test.mjs` – logika (párování 4–64 hráčů, pavouk 2–32 s byes, umístění).
 - `tests/reset_db.sh && node tests/db.test.mjs` – celý turnaj proti DB se stubem Supabase (role, RLS, RPC).
 - `node tests/fashion.test.mjs` – fashion show v DB (po reset_db / ui-up): judge, hodnocení, rozstřel, boss, vyhlášení.
+- `node tests/chat.test.mjs` – chat (místnosti, přístup, hosté) a bazar (fotky, soukromá vlákna) v DB.
 - `node tests/community.test.mjs` – komunity a komunitní trénink v DB (schválení, členové, trénink, výzvy, souboje, meta).
 - `tests/ui-up.sh && python3 tests/ui_smoke.py && python3 tests/bbxst_judge.py && python3 tests/test_tools.py` – proklik v Chrome
-  (`tests/judge_handover.py`, `tests/formats_stats.py`, `tests/arenas_status.py`, `tests/fashion_ui.py`, `tests/community_ui.py`, `tests/bbxst_training.py` a `tests/training_bot_ui.py` každý zvlášť po čerstvém `ui-up.sh`: převzetí judge;
+  (`tests/judge_handover.py`, `tests/formats_stats.py`, `tests/arenas_status.py`, `tests/fashion_ui.py`, `tests/community_ui.py`, `tests/bbxst_training.py`, `tests/training_bot_ui.py` a `tests/chat_bazar_ui.py` každý zvlášť po čerstvém `ui-up.sh`: převzetí judge;
   deathmatch přes testovací nástroje až po finále, vyhodnocení, meta, profil)
   (poslední: zkušební turnaj 16 hráčů přes testovací nástroje až po ukončení).
 Když měníš SQL, přidej nový soubor i do `tests/reset_db.sh`. Po změně logiky nebo DB pusť testy.

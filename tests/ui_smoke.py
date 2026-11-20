@@ -81,7 +81,7 @@ def run(only=None):
         page.wait_for_selector('.prof-head .av >> text=🦈')
         page.goto(BASE + '#/players'); page.wait_for_selector('.list'); shot(page, '12_players')
         page.goto(BASE + '#/chat'); page.wait_for_selector('.list'); shot(page, '13_chat_rooms')
-        page.click('text=Turnaje'); page.wait_for_selector('.chat-log')
+        page.click('.chat-room.test'); page.wait_for_selector('.chat-log')
         page.fill('#f-chat textarea', 'Já jedu!'); page.keyboard.press('Enter'); page.wait_for_selector('.msg.own >> text=Já jedu!'); shot(page, '14_chat_room')
         c.close()
 
