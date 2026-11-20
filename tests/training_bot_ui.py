@@ -73,6 +73,7 @@ with sync_playwright() as p:
     assert sql(f"select p2_bey from training_battles where match_id = '{mid}'") == 'Shark Edge 3-60LF', 'bot bez decku = zrcadlo'
     pl.screenshot(path=OUT + '172_bbxst_vs_bot.png')
 
+    go(lead, f'/t/{tid}'); lead.wait_for_selector('.t-head a[href$="/tv"]')
     # ── leader ukončí trénink → archiv ──
     go(lead, f'/t/{tid}/manage'); lead.click('[data-act=finish]')
     lead.click('[data-yes]'); lead.wait_for_selector('.tr-stamp')
@@ -88,6 +89,16 @@ with sync_playwright() as p:
     pl.wait_for_selector('.tr-hist')
     pl.screenshot(path=OUT + '173_training_archive.png', full_page=True)
     pl.click('.tr-back'); pl.wait_for_selector('.tr-past')
+    # ── TV: comba celého tréninku, i bez přihlášení ──
+    tvc = b.new_context(viewport={'width': 1920, 'height': 1080}, service_workers='block'); tv = tvc.new_page()
+    tv.on('pageerror', lambda e: errors.append('PAGEERROR ' + str(e)))
+    tv.goto(BASE + f'#/t/{tid}/tv'); tv.wait_for_selector('.trtv-row')
+    assert tv.locator('.trtv-row').count() == 2, tv.locator('.trtv-row').count()
+    assert '🤖 BOT' in tv.inner_text('.trtv-grid') and 'Hrac2' in tv.inner_text('.trtv-grid')
+    assert 'Bot klub' in tv.inner_text('.trtv-sub')
+    tv.screenshot(path=OUT + '174_training_tv.png')
+    go(pl, f'/t/{tid}'); pl.wait_for_selector('.tr-stamp')
+    assert pl.locator('.t-head a[href$="/tv"]').count() == 0, 'v archivu TV tlačítko není'
     print('CONSOLE ERRORS:', len(errors), errors[:5])
     assert not errors
     print('TRAINING BOT + ARCHIV OK')

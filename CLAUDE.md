@@ -87,6 +87,8 @@ Komunikuj **česky**, celé UI je česky.
   aktivní (BBXU „Hrát“ → rovnou BBXST), bez decku bota = zrcadlo vyzyvatelova decku, sestavu mění hráč v SETUPu.
   **Archiv**: skončený / zrušený trénink = jen ke čtení (zpět do komunity, razítko Archiv, bez Řízení a BBXST);
   trigger `bbx_training_close` uzavře rozehrané výzvy a `bbx_tmatch` odmítne zápis i setup.
+  **TV tréninku** (`#/t/<id>/tv`, `Training.renderTV`): comba celého tréninku (`training_combos` all) po 12 na
+  stránku (střídání po 12 s), obnova pollingem 8 s (TV nemusí být přihlášená), tlačítko TV v záhlaví jen u živého tréninku (v archivu ne).
 - `vendor/` – supabase-js, qrcode-generator, html5-qrcode (lokálně, kvůli slabé síti v hale).
 - `sw.js` – service worker (síť první, cache jako záloha).
 - Vzhled: cyberpunk (černé pozadí s mřížkou, azurová `--cyan` + purpurová `--magenta`, žlutá `--bolt` jen pro

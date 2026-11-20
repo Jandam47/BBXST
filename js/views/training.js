@@ -52,7 +52,9 @@ export async function render(main, [id, tabArg]) {
       <header class="t-head ${arch ? 'tr-archive' : ''}">
         <div class="row between wrap">
           <a class="btn sm ghost tr-back" href="${back}">← ${b.community ? b.community.name : 'Zpět'}</a>
-          ${arch ? html`<span class="tr-stamp">Archiv</span>` : html`<span class="row" style="gap:8px">${statusPill(t)}
+          ${arch ? html`<span class="tr-stamp">Archiv</span>`
+            : html`<span class="row" style="gap:8px">${statusPill(t)}
+            <a class="btn sm ghost btn-ico" href="#/t/${t.id}/tv">${raw(icon('tv'))}TV</a>
             <a class="btn sm ghost btn-ico" href="${bbxstUrl()}">${raw(icon('bars'))}BBXST</a></span>`}</div>
         <h1 style="margin-top:10px">${t.name}</h1>
         <div class="meta">
@@ -394,4 +396,65 @@ export async function render(main, [id, tabArg]) {
     .subscribe()
   document.body.classList.add('has-tnav')
   return () => { alive = false; off(); sb.removeChannel(ch); document.body.classList.remove('has-tnav') }
+}
+
+// ────────────────────────────────────────────────────────────────
+//  TV: comba celého tréninku (jako záložka Comba → Celý trénink)
+//  Obnova každých 8 s (TV nemusí být přihlášená – realtime by nedostala), víc comb = stránky po 12 s.
+// ────────────────────────────────────────────────────────────────
+const TV_PER_PAGE = 12
+export async function renderTV(main, [id]) {
+  document.body.classList.add('tv')
+  const clock = () => new Date().toLocaleTimeString('cs-CZ', { hour: '2-digit', minute: '2-digit' })
+  let t = null, comm = null, rows = [], tot = null, page = 0, alive = true, err = null
+
+  async function load() {
+    try {
+      const [tt, rr, hh] = await Promise.all([
+        q(sb.from('tournaments').select('id,name,status').eq('id', id).maybeSingle()),
+        rpc('training_combos', { p_tournament: id, p_scope: 'all' }),
+        rpc('training_history', { p_tournament: id, p_scope: 'all' }),
+      ])
+      if (tt && !comm) comm = (await rpc('training_board', { p_tournament: id }))?.community?.name || ''
+      t = tt; rows = rr || []; tot = hh?.totals || null; err = null
+    } catch (e) { err = errMsg(e) }
+  }
+
+  const draw = () => {
+    if (!alive) return
+    if (!t) return mount(main, html`<div class="empty"><h2>Trénink nenalezen</h2><a class="btn" href="#/">Zpět</a></div>`)
+    const pages = Math.max(1, Math.ceil(rows.length / TV_PER_PAGE))
+    if (page >= pages) page = 0
+    const slice = rows.slice(page * TV_PER_PAGE, (page + 1) * TV_PER_PAGE)
+    const open = t.status === 'registration'
+    mount(main, html`
+      <div class="tv-head"><h1>${t.name}</h1><div class="r">Comba celého tréninku · ${clock()}</div></div>
+      <div class="trtv-sub">
+        ${comm ? html`<span>${comm}</span>` : ''}
+        ${tot ? html`<span>${plural(tot.battles, 'souboj', 'souboje', 'soubojů')}</span><span>${plural(tot.players, 'hráč', 'hráči', 'hráčů')}</span>` : ''}
+        <span class="${open ? 'trtv-live' : ''}">${open ? 'Trénink běží' : 'Archiv'}</span>
+        ${pages > 1 ? html`<span class="trtv-page num">${page + 1} / ${pages}</span>` : ''}
+        ${err ? html`<span class="bad-t">Bez spojení – zkouším znovu</span>` : ''}
+      </div>
+      ${rows.length ? html`<ol class="trtv-grid" start="${page * TV_PER_PAGE + 1}">${slice.map((r, i) => {
+        const rank = page * TV_PER_PAGE + i + 1
+        return html`<li class="trtv-row ${rank <= 3 ? 'top top' + rank : ''}">
+          <span class="trtv-rank num">${rank}</span>
+          <div class="trtv-main">
+            <div class="trtv-bey">${r.bey}</div>
+            <div class="trtv-owner">${r.user_id ? r.nick : `🤖 ${r.nick}`}</div>
+            <div class="meta-bar"><i class="w" style="width:${(100 * r.wins / r.battles).toFixed(1)}%"></i><i class="d" style="width:${(100 * r.draws / r.battles).toFixed(1)}%"></i></div>
+            <div class="trtv-stats num">${r.wins}–${r.draws ? `${r.draws}–` : ''}${r.losses} · ${r.battles} soub. · +${r.points} / −${r.points_lost}</div>
+          </div>
+          <div class="trtv-wr num"><b>${Math.round(r.win_rate)}</b><small>%</small></div>
+        </li>` })}</ol>`
+      : html`<div class="fx-tv-wait"><h2>Zatím žádné souboje</h2><p>Vyzvěte se v BBXST – comba se tu objeví po prvním zapsaném souboji.</p></div>`}
+      <a class="btn sm tv-exit" href="#/t/${t.id}">Zavřít TV</a>`)
+  }
+
+  await load(); draw()
+  const poll = setInterval(async () => { await load(); draw() }, 8000)
+  const pager = setInterval(() => { if (rows.length > TV_PER_PAGE) { page++; draw() } }, 12000)
+  const clockTimer = setInterval(() => { const r = main.querySelector('.tv-head .r'); if (r) r.textContent = r.textContent.replace(/\d{1,2}:\d{2}$/, clock()) }, 15000)
+  return () => { alive = false; clearInterval(poll); clearInterval(pager); clearInterval(clockTimer); document.body.classList.remove('tv') }
 }

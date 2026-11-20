@@ -588,7 +588,9 @@ async function tabJudge(box, { d, reload }) {
 //  TV ROZPIS (nahrazuje BBX_watchTV)
 // ────────────────────────────────────────────────────────────────
 export async function renderTV(main, [id]) {
-  if (await fashionKind(id)) return Fashion.renderTV(main, [id])
+  const k = await kindOf(id)
+  if (Fashion.isFashion(k)) return Fashion.renderTV(main, [id])
+  if (Training.isTraining(k)) return Training.renderTV(main, [id])
   document.body.classList.add('tv')
   let d = await load(id)
   let scrollTimer = null
