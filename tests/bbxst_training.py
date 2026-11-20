@@ -174,14 +174,21 @@ with sync_playwright() as p:
     a.click('#nbRatchet'); a.wait_for_selector('#trWheel:not(.hidden) .twDial')
     assert a.inner_text('.twCenter b') == '4-60'
     assert a.locator('.twK.h[data-h="75"]').is_disabled(), '75 žádný ratchet nemá'
-    a.click('.twK.t[data-t="3"]')                      # 3-60 existuje → hned vybráno
+    a.click('.twK.t[data-t="3"]'); a.wait_for_timeout(200)
+    assert a.locator('#trWheel:not(.hidden)').count() == 1, 'po jedné řadě se nezavře'
+    assert a.inner_text('.twCenter b') == '3-60'
+    a.click('.twK.h[data-h="60"]')                     # obě řady → zavře se
     a.wait_for_selector('#trWheel', state='hidden')
     assert a.input_value('#nbRatchet') == '3-60'
     a.click('#nbRatchet'); a.wait_for_selector('#trWheel:not(.hidden)')
-    a.click('.twK.h[data-h="85"]')                     # 3-85 existuje
+    a.click('.twK.h[data-h="85"]'); a.wait_for_timeout(200)
+    assert a.locator('#trWheel:not(.hidden)').count() == 1
+    a.click('.twK.t[data-t="3"]')
     a.wait_for_selector('#trWheel', state='hidden'); assert a.input_value('#nbRatchet') == '3-85'
     a.click('#nbRatchet'); a.wait_for_selector('#trWheel:not(.hidden)')
-    a.click('.twK.t[data-t="M"]')                      # výška 85 zůstane → M-85
+    a.click('.twK.t[data-t="M"]'); a.wait_for_timeout(200)
+    assert a.locator('#trWheel:not(.hidden)').count() == 1
+    a.click('.twK.h[data-h="85"]')
     a.wait_for_selector('#trWheel', state='hidden'); assert a.input_value('#nbRatchet') == 'M-85'
     a.click('#nbRatchet'); a.wait_for_selector('#trWheel:not(.hidden)')
     a.click('.twK.t[data-t="8"]'); a.wait_for_timeout(150)  # 8-85 není → výška se zruší, nabídne 70 / 80

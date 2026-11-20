@@ -2773,6 +2773,7 @@ function trRatchetWheel(cur, curBit, onPick) {
   const specials = TW_SPECIAL.filter(([n]) => tr.parts.some(p => p.category === "bit" && p.name === n))
   const m = /^([0-9M])-(\d+)$/.exec(cur || "")
   let t = m?.[1] ?? null, h = m?.[2] ?? null
+  let pickT = false, pickH = false                 // zavře se, až vybereš obě řady (předvyplněné se nepočítá)
   const done = (val) => { box.classList.add("hidden"); onPick(val) }
   const at = (i, n, r) => { const a = -Math.PI / 2 + (2 * Math.PI * i) / n; return `left:${50 + r * Math.cos(a)}%;top:${50 + r * Math.sin(a)}%` }
   const draw = () => {
@@ -2788,15 +2789,16 @@ function trRatchetWheel(cur, curBit, onPick) {
       </div>
       <div class="twSide"><button class="qr-btn confirm" id="twOk" ${ok ? "" : "disabled"}>POUŽÍT</button><button class="qr-btn cancel" id="twBack">ZPĚT</button></div>`
     box.querySelectorAll("[data-t]").forEach(b => b.onclick = () => {
-      t = b.dataset.t
-      if (h && !have.has(`${t}-${h}`)) h = null
-      if (h) return done({ ratchet: `${t}-${h}` })     // výška už vybraná → hotovo
+      t = b.dataset.t; pickT = true
+      if (h && !have.has(`${t}-${h}`)) { h = null; pickH = false }
+      if (pickH && h) return done({ ratchet: `${t}-${h}` })     // obě řady vybrané → hotovo
       draw()
     })
     box.querySelectorAll("[data-h]").forEach(b => b.onclick = () => {
-      h = b.dataset.h
-      if (t && have.has(`${t}-${h}`)) return done({ ratchet: `${t}-${h}` })
-      t = null; draw()
+      h = b.dataset.h; pickH = true
+      if (t && !have.has(`${t}-${h}`)) { t = null; pickT = false }
+      if (pickT && t) return done({ ratchet: `${t}-${h}` })
+      draw()
     })
     box.querySelectorAll("[data-sp]").forEach(b => b.onclick = () => done({ ratchet: "", bit: b.dataset.sp }))
     document.getElementById("twOk").onclick = () => ok && done({ ratchet: `${t}-${h}` })
