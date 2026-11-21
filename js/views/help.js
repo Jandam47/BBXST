@@ -7,12 +7,13 @@ const S = [
   ['start', 'První kroky', html`
     <p>Na turnaj se přihlásíš i bez účtu – jako <b>host</b>. Výsledky se ti ale ukládají do profilu jen s účtem. Účet si můžeš založit kdykoli později a registrace se ti do něj přenesou.</p>
     <ul>
-      <li>Aplikaci si přidej na plochu (v prohlížeči <i>Přidat na plochu</i> / <i>Instalovat</i>) – pak běží jako appka a jde zapnout upozornění.</li>
+      <li>Web najdeš na <b>bbxu.cz</b>. Aplikaci si přidej na plochu: <b>Profil → Aplikace na plochu</b>. BBXU (turnaje) a BBXST (počítadlo / judge) se instalují zvlášť – na plochu si dej obě.</li>
       <li>V profilu si nastav nick, avatara a kraj. Nick je vidět v pořadí i na TV.</li>
     </ul>`],
   ['reg', 'Registrace a vstupenka', html`
     <ul>
       <li>U turnaje dej <b>Přihlásit se</b> a slož tři beyblady z dílů. Každý bey musí být jiný; u některých turnajů se nesmí opakovat ani jednotlivé díly.</li>
+      <li>Díly vybíráš ze seznamu – začni psát a klepni na návrh. <b>Ratchet</b> se vybírá na kolečku: uvnitř počet zubů, venku výška. <b>Turbo / Operate</b> (ratchet je v bitu) jsou pod kolečkem.</li>
       <li>Po přihlášení máš v záložce <b>Můj Status</b> vstupenku s QR kódem. Ulož si ji do telefonu – v hale bývá slabý signál.</li>
       <li><b>Kontrola registrace:</b> na místě ukaž QR kód organizátorovi. Zkontroluje, že máš beyblady z přihlášky, a na vstupence pak svítí <i>✓ Registrace zkontrolována</i>. Když potom beyblady změníš, musí tě zkontrolovat znovu.</li>
       <li>Beyblady můžeš měnit, dokud turnaj nezačne. Pak už ne.</li>
@@ -22,6 +23,7 @@ const S = [
       <li>V <b>Můj Status</b> uvidíš svou arénu, soupeře a kolikátý jsi na řadě. Když jsi na řadě, přijde upozornění.</li>
       <li>Organizátor může vyhlásit <b>pauzu</b> – odpočet je nahoře v turnaji i na TV.</li>
       <li><b>Můj deck</b> ukazuje, jak se ti daří s každým beyem, jakými endy vyhráváš a kdo tě porazil.</li>
+      <li>V záložce <b>Swiss</b> má každý zápas pod skóre <b>historii bodů</b> v pořadí, jak padaly: <i>+1</i>, <i>+2 O</i> (over), <i>+2 B</i> (burst), <i>+3</i> (xtreme), <i>R</i> = remíza. Zůstane tam i po dohrání.</li>
     </ul>`],
   ['points', 'Body a endy', html`
     <div class="help-pts">
@@ -67,11 +69,30 @@ const S = [
     </ul>`],
   ['judge', 'Pro judge (BBXST)', html`
     <ul>
-      <li>V turnaji otevři <b>Judge</b> a vyber zápas, nebo v BBXST načti QR vstupenky hráčů. Zápas je pak tvůj – jiný judge ho nepřevezme bez organizátora.</li>
+      <li>Zápas načteš třemi způsoby: v BBXU <b>Judge menu</b> → Rozhodovat, v BBXST <b>menu → aréna</b> (zápas na řadě je velkým písmem, fronta pod ním), nebo <b>naskenuj QR</b> vstupenky obou hráčů.</li>
+      <li>Skenovat jde jen hráče, který teď v běžícím turnaji hraje. Po prvním skenu uvidíš turnaj, arénu a jméno soupeře – <b>druhý sken musí být přesně ten soupeř</b>, jinak BBXST upozorní. Zápas se pak načte sám.</li>
+      <li>Zápas je pak tvůj – jiný judge ho nepřevezme bez organizátora.</li>
       <li>Po každém bodu vyber, kterým beyem se hrálo. U +2 nejdřív zvol <b>OVER</b> nebo <b>BURST</b>.</li>
       <li><b>⇄</b> prohodí strany při 0:0, když hráči stojí obráceně. Po každé sadě tří soubojů svítí <b>OTOČ ARÉNU</b>.</li>
-      <li>Skóre se po každém bodu posílá na TV i hráčům. Když vypadne signál, hra se uloží v telefonu a odešle se sama – nic se nezapočítá dvakrát.</li>
+      <li>Skóre se po každém bodu posílá na TV, do Živě i hráčům. Když vypadne signál, hra se uloží v telefonu a odešle se sama – nic se nezapočítá dvakrát.</li>
       <li><b>PASS JUDGE</b> (zlaté tlačítko vlevo dole) předá rozehraný zápas jinému judgovi i se skóre. <b>ZRUŠIT</b> hru zahodí.</li>
+    </ul>`],
+  ['live', 'Živě a TV rozpis', html`
+    <ul>
+      <li><b>Živě</b> (tlačítko v záhlaví turnaje) je přenos pro diváky – funguje i bez přihlášení, klidně na TV doma. U každé arény: skóre, endy obou stran a decky hráčů. Beye zahrané v aktuální sadě jsou šedé s výsledkem (<i>+body</i> zeleně, <i>−</i> červeně, <i>R</i> remíza), zbylé svítí.</li>
+      <li><b>★ Sledovat hráče</b>: vybraní hráči jsou nahoře – kde hrají, proti komu a jak dopadli. S účtem si zapneš <b>Upozornit na telefon</b>: přijde ti, když sledovaný jde na arénu a jak zápas skončil.</li>
+      <li><b>Dění</b> ukazuje každý bod a výsledek, jak padají; zaškrtávacími okénky vybereš, ze kterých arén. Velké věci (Xtreme, výsledek sledovaného) vyskočí přes obrazovku.</li>
+      <li><b>🎬 Režie</b> ukáže jednu arénu přes celou obrazovku. Arénu přepneš v liště nahoře, <b>AUTO</b> sama skáče tam, kde se něco děje.</li>
+      <li>Dál je tam pavouk top cutu (<i>Skrýt odehrané</i>), poslední výsledky, pořadí a rozbalovací <b>Statistiky turnaje</b>.</li>
+      <li><b>TV rozpis</b> je pro obrazovku v hale: na šířku je všechno na jedné stránce, na výšku arény pod sebou. Sám neroluje.</li>
+    </ul>`],
+  ['org', 'Pro organizátory', html`
+    <ul>
+      <li>Akci založíš na hlavní stránce tlačítkem <b>Založ akci</b> → kolečko: Casual (trénink, meeting), Fashion, Turnaje (Deathmatch, Klasika 3v3, ligový turnaj).</li>
+      <li><b>Kontrola registrací</b> (záložka Hráči): načti QR kód nebo klepni na hráče, odškrtej tři beyblady a <i>Potvrdit registraci</i>. Kdo nepřišel → <i>Vyřadit</i>. Zelená = zkontrolováno, žlutá = čeká, červená = vyřazen.</li>
+      <li>Turnaj jde spustit, až jsou všichni zkontrolovaní. Výjimečně <i>⚠ Spustit bez kontroly registrací</i>.</li>
+      <li>Hráče bez telefonu přidáš v <b>Řízení</b> – rovnou je zkontrolovaný a QR kód najdeš v záložce Hráči.</li>
+      <li>V Řízení je i <b>pauza</b> s odpočtem, <b>Obsadit volné arény</b> (přesune čekající zápasy) a uvolnění judge ze zápasu.</li>
     </ul>`],
   ['training', 'Komunitní trénink', html`
     <ul>
@@ -90,6 +111,7 @@ const S = [
   ['notify', 'Upozornění na telefonu', html`
     <ul>
       <li>V profilu zapni <b>Upozornění na telefonu</b>. Přijde ti, když jsi na řadě v aréně, když turnaj začne, výzva na tréninku nebo zpráva v bazaru.</li>
+      <li>Upozornění na sledované hráče si zapneš v <b>Živě</b> u sekce Sledovaní.</li>
       <li>Na iPhonu to funguje jen v aplikaci přidané na plochu.</li>
     </ul>`],
   ['account', 'Účet a soukromí', html`
@@ -103,7 +125,7 @@ export function render(main) {
   const k = new URLSearchParams(location.hash.split('?')[1] || '').get('k')
   mount(main, html`
     <h1>Jak na to</h1>
-    <p class="muted" style="margin-top:6px">Krátce o turnajích, bodování, judgování a tréninku.</p>
+    <p class="muted" style="margin-top:6px">Krátce o turnajích, bodování, judgování, živém přenosu a tréninku.</p>
     <nav class="help-nav" aria-label="Obsah nápovědy">${S.map(([id, t]) => html`<a href="#/help?k=${id}" data-k="${id}">${t}</a>`)}</nav>
     <div class="stack help">${S.map(([id, t, body]) => html`
       <details class="card help-sec" id="h-${id}" ${id === k ? 'open' : ''}>

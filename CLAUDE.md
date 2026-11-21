@@ -174,7 +174,7 @@ Komunikuj **česky**, celé UI je česky.
 - **Záloha** (21): hlavní admin v profilu „Záloha dat“ → `export_backup()` = JSON všech veřejných tabulek kromě
   `bbx_settings`, `push_*`, `client_errors` (bez e-mailů a fotek); čas v `bbx_settings.last_backup`, `backup_status()`.
   Po 14 dnech (`backupDue`) banner na hlavní stránce.
-- **Nápověda** `#/help` (`js/views/help.js`, `?k=<sekce>` otevře sekci): tlačítko „?“ na hlavní stránce, „Jak na to“ v profilu.
+- **Nápověda** `#/help` (`js/views/help.js`, `?k=<sekce>` otevře sekci; sekce start, reg, play, points, standings, league, judge, live, org, training, chat, notify, account): tlačítko „?“ na hlavní stránce, „Jak na to“ v profilu. Při nové funkci pro uživatele doplň i nápovědu.
 - **Vzájemná bilance** (21): `player_h2h(p_user)` → profil: „Ty vs hráč“ (`vs_me`, posledních 5 zápasů) a nejčastější
   soupeři s účtem (výhry–prohry).
 - **Počítadlo judgování** (24): `player_judged(p_user)` = zápasy, kde hráč zapsal aspoň jednu hru (`games.judge_id`;
