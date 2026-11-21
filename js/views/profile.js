@@ -2,6 +2,7 @@
 //  Profil hráče: role, statistiky, historie turnajů, beyblady, rating
 // ════════════════════════════════════════════════════════════════
 import { sb, state, rpc, q, errMsg, refreshMe, isLoggedIn } from '../supa.js'
+import { adminErrors, adminBackup } from '../admin.js'
 import { html, mount, on, formData, toast, modal, busy, confirmBox, fmtDate, raw, plural, kindLabel, finishTiles } from '../ui.js'
 import { ROLES, REGIONS, roleLevel } from '../core.js'
 import { avatarPicker } from './auth.js'
@@ -68,13 +69,43 @@ function beyList(rows = []) {
     </div>`)}</div>`
 }
 
+// vzájemná bilance: já vs tenhle hráč + jeho nejčastější soupeři
+function h2hBlock(h, p, own) {
+  const vs = h?.vs_me, opps = h?.opponents || []
+  const vsN = vs ? vs.wins + vs.losses : 0
+  if (!vsN && !opps.length) return ''
+  return html`
+    ${vsN ? html`<div class="h2h card">
+      <div class="h2h-side me"><span class="av">${state.profile?.avatar || '🌀'}</span><b>Ty</b></div>
+      <div class="h2h-score num"><b class="${vs.wins > vs.losses ? 'lead' : ''}">${vs.wins}</b><i>:</i><b class="${vs.losses > vs.wins ? 'lead' : ''}">${vs.losses}</b>
+        <small>${vsN === 1 ? '1 zápas' : vsN <= 4 ? `${vsN} zápasy` : `${vsN} zápasů`}</small></div>
+      <div class="h2h-side opp"><span class="av">${p.avatar}</span><b class="ellipsis">${p.nick}</b></div>
+      <div class="h2h-recent">${vs.recent.map(m => html`<a href="#/t/${m.tournament_id}" class="h2h-m ${m.won ? 'w' : 'l'}" title="${m.tournament}">
+        <span>${m.won ? 'V' : 'P'}</span><small class="num">${m.my}:${m.opp}</small></a>`)}</div>
+    </div>` : ''}
+    ${opps.length ? html`<h2>${own ? 'Tvoji nejčastější soupeři' : 'Nejčastější soupeři'}</h2>
+    <div class="list">${opps.map(o => {
+      const me = o.user === state.user?.id
+      return html`<a class="li h2h-opp ${me ? 'is-me' : ''}" href="#/p/${o.user}">
+        <span class="av">${o.avatar}</span>
+        <div class="grow" style="min-width:0">
+          <div class="ellipsis" style="font-weight:600">${o.nick}${me ? html` <span class="small faint">(ty)</span>` : ''}</div>
+          <div class="meta-bar" role="img" aria-label="${o.wins} výher, ${o.losses} proher"><i class="w" style="width:${(100 * o.wins / o.matches).toFixed(1)}%"></i></div>
+        </div>
+        <span class="num h2h-rec"><b>${o.wins}</b>–${o.losses}</span>
+      </a>`
+    })}</div>
+    <p class="hint">Bilance ${own ? 'tvých' : 'hráčových'} zápasů proti hráčům s účtem (výhry–prohry).</p>` : ''}`
+}
+
 export async function render(main, [id], ctx) {
-  const [p, stats, bs, ach, comms] = await Promise.all([
+  const [p, stats, bs, ach, comms, h2h] = await Promise.all([
     q(sb.from('profiles').select('*').eq('id', id).maybeSingle()),
     rpc('player_stats', { p_user: id }),
     rpc('player_bey_stats', { p_user: id }).catch(() => ({})),
     rpc('player_achievements', { p_user: id }).catch(() => []),
     rpc('player_communities', { p_user: id }).catch(() => []),
+    rpc('player_h2h', { p_user: id }).catch(() => ({ opponents: [] })),
   ])
   if (ctx && !ctx.isCurrent()) return
   if (!p || !p.nick) { mount(main, html`<div class="empty">${p && id === state.user?.id ? html`<button class="btn primary" onclick="location.reload()">Dokonči profil</button>` : 'Profil nenalezen.'}</div>`); return }
@@ -100,9 +131,12 @@ export async function render(main, [id], ctx) {
     ${own ? html`<div class="row wrap" style="margin-top:14px">
       <button class="btn sm" data-act="edit">Upravit profil</button>
       <button class="btn sm ghost" data-act="pw">Změnit heslo</button>
+      <a class="btn sm ghost" href="#/help">Jak na to</a>
       <button class="btn sm ghost" data-act="logout">Odhlásit</button></div>` : ''}
     ${own && state.level >= 4 ? html`<section id="admin-req" class="admin-box"></section>` : ''}
     ${own && state.level >= 3 ? html`<section id="admin-rep" class="admin-box"></section>` : ''}
+    ${own && state.level >= 3 ? html`<section id="admin-err" class="admin-box"></section>` : ''}
+    ${own && state.level >= 4 ? html`<section id="admin-bk" class="admin-box"></section>` : ''}
 
     <div class="stats">
       <div class="stat"><div class="v">${tours.length}</div><div class="k">${tours.length === 1 ? 'turnaj' : tours.length >= 2 && tours.length <= 4 ? 'turnaje' : 'turnajů'}</div></div>
@@ -110,6 +144,8 @@ export async function render(main, [id], ctx) {
       <div class="stat"><div class="v">${r.titles}</div><div class="k">${r.titles === 1 ? 'titul' : r.titles >= 2 && r.titles <= 4 ? 'tituly' : 'titulů'}</div></div>
       <div class="stat"><div class="v">${r.podiums}</div><div class="k">na bedně</div></div>
     </div>
+
+    ${h2hBlock(h2h, p, own)}
 
     ${ach.length ? html`<h2>Achievementy</h2>
     <div class="ach-grid">${ach.map(a => html`<a class="ach p${a.place}" href="#/t/${a.tournament_id}" title="${a.name}">
@@ -172,6 +208,8 @@ export async function render(main, [id], ctx) {
       <button class="btn sm danger" data-act="delete-account">Smazat účet</button></section>` : ''}`)
   if (own && state.level >= 4) adminRequests(main.querySelector('#admin-req'))
   if (own && state.level >= 3) adminReports(main.querySelector('#admin-rep'))
+  if (own && state.level >= 3) adminErrors(main.querySelector('#admin-err'))
+  if (own && state.level >= 4) adminBackup(main.querySelector('#admin-bk'))
   if (own) pushCard(main.querySelector('#push-card'))
 
   on(main, 'click', '#bk [data-k]', (e, b) => {

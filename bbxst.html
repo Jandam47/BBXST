@@ -3005,5 +3005,9 @@ console.log(
 if ('serviceWorker' in navigator)
   navigator.serviceWorker.register('./sw.js');
   </script>
+  <script type="module">
+import { installErrorLog } from './js/errlog.js'
+installErrorLog(typeof sb !== 'undefined' ? sb : null, 'bbxst')
+  </script>
 </body>
 </html>

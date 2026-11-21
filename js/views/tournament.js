@@ -21,7 +21,12 @@ export async function load(id) {
   let myReg = null
   if (state.user && t) myReg = (await rpc('my_registration', { p_tournament: id }))?.[0] || null
   const pmap = new Map(players.map(p => [p.id, p]))
-  return { t, players, matches, myReg, pmap, busy: busyRegs(matches, players) }
+  // prezence (jen pro judge / organizátora, ostatním RPC vrátí prázdno)
+  let checkin = null
+  if (t && t.kind === 'tournament' && t.status === 'registration' && state.user && !state.isAnon) {
+    checkin = new Map((await rpc('checkin_list', { p_tournament: id }).catch(() => [])).map(x => [x.reg, x.checked_in_at]))
+  }
+  return { t, players, matches, myReg, pmap, checkin, busy: busyRegs(matches, players) }
 }
 
 // fronta zápasů na aréně (rozehraný první, hráč, který judguje, o místo níž)
@@ -175,7 +180,10 @@ function tabMe(box, { d, reload }) {
   } else if (myReg.status === 'dropped') {
     arenaBlock = html`<div class="lbl">Z turnaje jsi odstoupil.</div>`
   } else if (t.status === 'registration') {
-    arenaBlock = html`<div class="lbl">Arénu se dozvíš po startu turnaje.</div><div class="hint">Ukaž tenhle QR kód rozhodčímu u stolu.</div>`
+    arenaBlock = html`<div class="lbl">Arénu se dozvíš po startu turnaje.</div>
+      ${myReg.checked_in_at
+        ? html`<div class="pass-checkin on">✓ Prezence ${fmtTime(myReg.checked_in_at)}</div>`
+        : html`<div class="pass-checkin">Prezence: na místě ukaž QR kód judgovi nebo organizátorovi.</div>`}`
   } else if (t.status === 'finished') {
     arenaBlock = html`<div class="lbl">Konečné umístění</div><div class="big">${myReg.final_place ?? '–'}.</div>`
   } else {

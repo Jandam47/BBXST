@@ -11,9 +11,11 @@ import * as Chat from './views/chat.js'
 import * as Bazar from './views/bazar.js'
 import { watchUnread } from './unread.js'
 import { syncPush } from './push.js'
+import { installErrorLog, logError } from './errlog.js'
 import * as Meta from './views/meta.js'
 import * as Auth from './views/auth.js'
 import * as Communities from './views/communities.js'
+import * as Help from './views/help.js'
 
 const cfg = window.BBX_CONFIG
 
@@ -32,6 +34,7 @@ const routes = [
   [/^\/chat(?:\/([a-z0-9-]+))?$/, Chat.render, 'chat'],
   [/^\/bazar(?:\/([0-9a-f-]{36}))?$/, Bazar.render, 'chat'],
   [/^\/login(?:\/([a-z]+))?$/, Auth.render, 'me'],
+  [/^\/help$/, Help.render, 'home'],
 ]
 
 let cleanup = null
@@ -60,6 +63,7 @@ async function route() {
       else if (typeof c === 'function') c()
     } catch (e) {
       console.error(e)
+      logError(e, path.split('?')[0].replace(/[0-9a-f-]{36}/gi, ':id'))
       if (token === navToken) mount(main, html`<div class="notice err">Stránku se nepodařilo načíst: ${e.message || e}</div>`)
     }
     window.scrollTo(0, 0)
@@ -209,6 +213,7 @@ async function boot() {
       </div>`)
     return
   }
+  installErrorLog(sb, 'bbxu')
   document.title = `${cfg.appName} – ${cfg.appSub}`
   const isRecovery = location.hash.includes('type=recovery')
   await initAuth()

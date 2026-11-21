@@ -5,12 +5,14 @@ import { sb, state, rpc, q, errMsg, isLoggedIn, canManage } from '../supa.js'
 import { html, mount, on, formData, toast, busy, statusPill, fmtDate, fmtTime, toLocalInput, fromLocalInput, plural, EVENT_TYPES, kindLabel } from '../ui.js'
 import { DEFAULT_BO, FORMATS } from '../core.js'
 import { trainingForm } from './communities.js'
+import { backupDue } from '../admin.js'
 
 export async function renderList(main, _p, ctx) {
-  const [all, leads, invites] = await Promise.all([
+  const [all, leads, invites, lastBackup] = await Promise.all([
     rpc('tournament_list'),
     isLoggedIn() ? rpc('my_lead_communities').catch(() => []) : [],
     isLoggedIn() ? rpc('my_training_invites').catch(() => []) : [],
+    state.level >= 4 ? rpc('backup_status').catch(() => undefined) : undefined,
   ])
   if (!ctx.isCurrent()) return
   const mine = new Set(state.myRegs.map(r => r.tournament_id))
@@ -64,9 +66,13 @@ export async function renderList(main, _p, ctx) {
     ${invites.map(i => html`<a class="banner-call invite" href="#/t/${i.tournament_id}">
       <span class="big">👥</span>
       <span><b>Pozvánka na trénink ${i.name}</b><br><span class="muted small">${i.community}${i.by ? ` · zve ${i.by}` : ''}${i.starts_at ? ` · ${fmtDate(i.starts_at)} ${fmtTime(i.starts_at)}` : ''}</span></span></a>`)}
+    ${lastBackup !== undefined && backupDue(lastBackup) ? html`<a class="banner-call backup" href="#/me">
+      <span class="big">⛁</span>
+      <span><b>Čas na zálohu dat</b><br><span class="muted small">${lastBackup ? `Poslední záloha je z ${fmtDate(lastBackup)}.` : 'Zálohu jsi ještě nestáhl.'} Stáhneš ji v profilu.</span></span></a>` : ''}
     <div class="row between wrap" style="gap:12px">
       <h1>Turnaje a akce</h1>
       <div class="row">
+        <a class="btn sm ghost help-btn" href="#/help" aria-label="Nápověda – jak na to">?</a>
         ${leads.length ? html`<button class="btn sm" data-act="training">+ Trénink</button>` : ''}
         ${state.level >= 2 ? html`<a class="btn sm" href="#/new/event">+ Akce</a><a class="btn primary sm" href="#/new">+ Turnaj</a>` : ''}
       </div>
