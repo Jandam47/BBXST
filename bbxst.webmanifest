@@ -2,7 +2,7 @@
   "name": "BBXST – Beyblade X Score Tracker",
   "short_name": "BBXST",
   "start_url": "./bbxst.html",
-  "scope": "./",
+  "scope": "./bbxst.html",
   "display": "fullscreen",
   "orientation": "landscape",
   "background_color": "#020609",

@@ -154,6 +154,12 @@ Komunikuj **česky**, celé UI je česky.
   body ligy, turnaje, V–P a body +/− ze zápasů bez volných losů; pořadí body → výhry → rozdíl → získané body.
   `league_list`, `league_detail`, umístění v profilu (`player_leagues.standings`), název ligy v `tournament_list`
   a v záhlaví turnaje.
+- **Instalace aplikací** (`js/install.js`): BBXU a BBXST mají oddělené manifesty i platnost (`manifest.json` scope
+  `./index.html`, `bbxst.webmanifest` scope `./bbxst.html`), takže jdou nainstalovat obě zvlášť. Holou adresu složky
+  index.html přepíše na `index.html` (inline skript v hlavičce, ten zachytí i `beforeinstallprompt` → `window.__bip`).
+  Profil (i host) → karta „Aplikace na plochu“: BBXU přes `__bip.prompt()`, BBXST odkazem `bbxst.html?install=1`, kde se
+  ukáže jen tehdy výzva k instalaci (iPhone / bez nabídky prohlížeče = návod). V BBXST je `history` jiná proměnná –
+  používej `window.history`. Přihlášení vrací na adresu bez `index.html` (`redirectTo` v auth.js).
 - **Měsíční kontrola dílů**: naplánovaná úloha (2. den v měsíci) porovná kyoganken s `bey_parts` a případně otevře PR
   s novým `NN-parts-RRRR-MM.sql` (do DB nic nezapisuje).
 - `vendor/` – supabase-js, qrcode-generator, html5-qrcode (lokálně, kvůli slabé síti v hale).
@@ -218,7 +224,7 @@ Potřebují lokální PostgreSQL 16, Node a pro UI Python Playwright + Chrome a 
 - `node tests/account.test.mjs` – nahlášení a smazání účtu; `node tests/push.test.mjs` – odběry a push události (outbox).
 - `node tests/community.test.mjs` – komunity a komunitní trénink v DB (schválení, členové, trénink, výzvy, souboje, meta).
 - `tests/ui-up.sh && python3 tests/ui_smoke.py && python3 tests/bbxst_judge.py && python3 tests/test_tools.py` – proklik v Chrome
-  (`tests/judge_handover.py`, `tests/formats_stats.py`, `tests/arenas_status.py`, `tests/fashion_ui.py`, `tests/community_ui.py`, `tests/bbxst_training.py`, `tests/training_bot_ui.py`, `tests/chat_bazar_ui.py`, `tests/extras_ui.py`, `tests/checkin_ui.py` a `tests/leagues_ui.py` každý zvlášť po čerstvém `ui-up.sh`: převzetí judge;
+  (`tests/judge_handover.py`, `tests/formats_stats.py`, `tests/arenas_status.py`, `tests/fashion_ui.py`, `tests/community_ui.py`, `tests/bbxst_training.py`, `tests/training_bot_ui.py`, `tests/chat_bazar_ui.py`, `tests/extras_ui.py`, `tests/checkin_ui.py`, `tests/leagues_ui.py` a `tests/install_ui.py` každý zvlášť po čerstvém `ui-up.sh`: převzetí judge;
   deathmatch přes testovací nástroje až po finále, vyhodnocení, meta, profil)
   (poslední: zkušební turnaj 16 hráčů přes testovací nástroje až po ukončení).
 Když měníš SQL, přidej nový soubor i do `tests/reset_db.sh`. Po změně logiky nebo DB pusť testy.

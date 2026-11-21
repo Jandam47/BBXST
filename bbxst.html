@@ -6,6 +6,7 @@
 <title>Beyblade X – Score Tracker</title>
 
 <link rel="manifest" href="bbxst.webmanifest">
+<script>addEventListener('beforeinstallprompt', function (e) { window.__bip = e; dispatchEvent(new Event('bbx:installable')) })</script>
 <meta name="theme-color" content="#000000">
 <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
@@ -3008,6 +3009,58 @@ if ('serviceWorker' in navigator)
   <script type="module">
 import { installErrorLog } from './js/errlog.js'
 installErrorLog(typeof sb !== 'undefined' ? sb : null, 'bbxst')
+  </script>
+  <script>
+// instalace BBXST na plochu – jen po příchodu z profilu BBXU (bbxst.html?install=1), jinak se nic neukáže
+(function () {
+  var q = new URLSearchParams(location.search)
+  if (q.get('install') !== '1') return
+  q.delete('install')
+  window.history.replaceState(null, '', location.pathname + (q.toString() ? '?' + q : '') + location.hash)  // „history“ je v BBXST jiná proměnná
+  if (matchMedia('(display-mode: fullscreen), (display-mode: standalone)').matches || navigator.standalone) return
+  var ios = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+  var o = document.createElement('div')
+  o.id = 'instOverlay'
+  o.setAttribute('role', 'dialog'); o.setAttribute('aria-label', 'Nainstalovat BBXST')
+  o.style.cssText = 'position:fixed;inset:0;z-index:99999;display:grid;place-items:center;background:rgba(0,0,0,.82);padding:16px;font-family:Rajdhani,sans-serif'
+  o.innerHTML = '<div style="max-width:420px;width:100%;background:#020609;border:1px solid #00e5ff;box-shadow:0 0 24px rgba(0,229,255,.35);padding:18px 20px;color:#e8f6ff">' +
+    '<div style="display:flex;gap:14px;align-items:center"><img src="icons/icon-192.png" alt="" width="52" height="52" style="border-radius:12px">' +
+    '<div><div style="font-family:Orbitron,sans-serif;font-weight:900;font-size:20px;color:#00e5ff">BBXST</div>' +
+    '<div style="font-size:16px;opacity:.8">Počítadlo skóre na plochu – otevře se na šířku přes celou obrazovku.</div></div></div>' +
+    '<p id="instMsg" style="font-size:16px;margin:14px 0 0;line-height:1.35"></p>' +
+    '<div style="display:flex;gap:10px;margin-top:16px">' +
+    '<button id="instNo" style="flex:1;padding:12px;background:transparent;border:1px solid #3a4a55;color:#e8f6ff;font:600 17px Rajdhani,sans-serif">Teď ne</button>' +
+    '<button id="instGo" style="flex:1;padding:12px;background:#00e5ff;border:0;color:#001018;font:700 17px Rajdhani,sans-serif">Instalovat</button></div></div>'
+  document.body.appendChild(o)
+  var msg = o.querySelector('#instMsg'), go = o.querySelector('#instGo')
+  var close = function () { o.remove() }
+  var help = function () {
+    go.style.display = 'none'
+    msg.textContent = ios
+      ? 'V Safari klepni na Sdílet (čtvereček se šipkou) → Přidat na plochu.'
+      : 'V menu prohlížeče (⋮ vpravo nahoře) zvol Nainstalovat aplikaci nebo Přidat na plochu. Když tu menu není (jsi uvnitř aplikace BBX Unity), dej nejdřív ⋮ → Otevřít v Chrome.'
+  }
+  var ready = function () { go.style.display = ''; msg.textContent = 'Jedním klepnutím přidáš BBXST na plochu jako samostatnou aplikaci.' }
+  o.querySelector('#instNo').onclick = close
+  go.onclick = function () {
+    var e = window.__bip
+    if (!e) return help()
+    e.prompt()
+    e.userChoice.then(function (r) {
+      window.__bip = null
+      if (r && r.outcome === 'accepted') { msg.textContent = 'Hotovo – BBXST najdeš na ploše.'; go.style.display = 'none'; o.querySelector('#instNo').textContent = 'Zavřít' }
+      else help()
+    })
+  }
+  if (ios) return help()
+  if (window.__bip) ready()
+  else {
+    go.style.display = 'none'; msg.textContent = 'Připravuji instalaci…'
+    addEventListener('bbx:installable', ready)
+    setTimeout(function () { if (!window.__bip) help() }, 3000)
+  }
+  addEventListener('appinstalled', function () { msg.textContent = 'Hotovo – BBXST najdeš na ploše.'; go.style.display = 'none' })
+})()
   </script>
 </body>
 </html>

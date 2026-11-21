@@ -4,6 +4,7 @@
 import { sb, state, rpc, q, errMsg, refreshMe, isLoggedIn } from '../supa.js'
 import { adminErrors, adminBackup } from '../admin.js'
 import { leagueBadges, leagueRolesCard } from './leagues.js'
+import { installCard } from '../install.js'
 import { html, mount, on, formData, toast, modal, busy, confirmBox, fmtDate, raw, plural, kindLabel, finishTiles } from '../ui.js'
 import { ROLES, REGIONS, roleLevel } from '../core.js'
 import { avatarPicker } from './auth.js'
@@ -22,7 +23,9 @@ export async function renderMe(main) {
     <p class="muted" style="margin-top:6px">Bez účtu se tvoje výsledky nesčítají do profilu. Založ si účet a turnaje níže se ti do něj přenesou.</p>
     <a class="btn primary block" style="margin-top:16px" href="#/login/signup">Založit účet</a>
     ${ts.length ? html`<h2>Moje registrace</h2><div class="list">${ts.map(t => html`<a class="li" href="#/t/${t.id}"><span class="grow">${t.name}</span><span class="faint small">${fmtDate(t.starts_at)}</span></a>`)}</div>` : ''}
+    <section class="card inst-card" id="inst-card"></section>
     <button class="btn ghost block" style="margin-top:24px" data-act="logout">Zapomenout hosta na tomhle zařízení</button>`)
+  installCard(main.querySelector('#inst-card'))
   on(main, 'click', '[data-act=logout]', async () => {
     if (!await confirmBox('Ztratíš přístup ke svým QR kódům na tomhle zařízení. Pokračovat?', { ok: 'Ano', danger: true })) return
     await sb.auth.signOut(); location.hash = '#/'
@@ -206,6 +209,7 @@ export async function render(main, [id], ctx) {
 
     ${events.length ? html`<h2>Akce</h2><div class="list">${events.map(t => html`<a class="li" href="#/t/${t.id}"><span class="grow">${t.name}</span><span class="small faint">${kindLabel(t)} · ${fmtDate(t.starts_at)}</span></a>`)}</div>` : ''}
     ${own ? html`<section class="card push-card" id="push-card" aria-live="polite"><div class="spinner" aria-label="Načítám"></div></section>` : ''}
+    ${own ? html`<section class="card inst-card" id="inst-card"></section>` : ''}
     ${own ? html`<section class="danger-zone">
       <h2>Účet</h2>
       <p class="small muted">Smazáním účtu zmizí profil, zprávy, inzeráty i fotky. Výsledky turnajů zůstanou, ale bez tvého jména.</p>
@@ -215,6 +219,7 @@ export async function render(main, [id], ctx) {
   if (own && state.level >= 3) adminErrors(main.querySelector('#admin-err'))
   if (own && state.level >= 4) adminBackup(main.querySelector('#admin-bk'))
   if (own) pushCard(main.querySelector('#push-card'))
+  if (own) installCard(main.querySelector('#inst-card'))
 
   on(main, 'change', '[data-lgrole]', async (e, sel) => {
     const r = lgs.roles.find(x => x.league === sel.dataset.lgrole)

@@ -16,6 +16,12 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Chakra+Petch:wght@500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/bbxu.css">
+<script>
+// instalace z profilu: zachytit nabídku prohlížeče hned, než se načte aplikace
+addEventListener('beforeinstallprompt', function (e) { window.__bip = e; dispatchEvent(new Event('bbx:installable')) })
+// BBXU platí jen pro index.html (BBXST se instaluje zvlášť) – holou adresu složky přepsat
+if (/\/$/.test(location.pathname)) history.replaceState(null, '', location.pathname + 'index.html' + location.search + location.hash)
+</script>
 <script src="js/config.js"></script>
 <script src="vendor/supabase.js"></script>
 <script src="vendor/qrcode.js"></script>
