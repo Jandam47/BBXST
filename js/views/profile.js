@@ -168,7 +168,7 @@ export async function render(main, [id], ctx) {
     ${stats.rating.length > 1 ? html`<h2>Vývoj ratingu</h2><div class="card">${sparkline(stats.rating)}
       <div class="row between small faint"><span>start 1000</span><span>teď ${p.rating}</span></div></div>` : ''}
 
-    <h2>Funkce</h2>
+    ${canEditRoles ? html`<h2>Funkce</h2>
     <div class="card roles">
       ${ROLES.map(x => {
         const has = lvl >= x.level
@@ -176,8 +176,8 @@ export async function render(main, [id], ctx) {
         return html`<label class="check"><span>${x.label}${x.level === 1 ? html` <span class="faint small">· rozhoduje zápasy</span>` : x.level === 2 ? html` <span class="faint small">· zakládá turnaje a akce</span>` : x.level === 3 ? html` <span class="faint small">· přiděluje role</span>` : ''}</span>
           <input type="checkbox" ${has ? 'checked' : ''} ${editable ? '' : 'disabled'} data-role="${x.key}" data-level="${x.level}"></label>`
       })}
-      ${canEditRoles ? html`<p class="hint">Vyšší funkce zahrnuje nižší: admin je i organizátor a judge, organizátor je i judge.</p>` : ''}
-    </div>
+      <p class="hint">Vyšší funkce zahrnuje nižší: admin je i organizátor a judge, organizátor je i judge.</p>
+    </div>` : ''}
     ${own ? '' : leagueRolesCard(lgs.roles, lvl)}
 
     <h2>Turnaje</h2>
