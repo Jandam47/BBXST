@@ -129,7 +129,7 @@ export async function render(main, [id], ctx) {
       <div class="grow">
         <h1>${p.nick}</h1>
         <div class="muted">${p.region || 'Kraj neuveden'} · rating <b class="num" style="color:var(--text)">${p.rating}</b></div>
-        <div class="row wrap" style="margin-top:6px;gap:6px">${ROLES.filter(x => x.level > 0 && x.level <= lvl).map(x => html`<span class="pill role">${x.label}</span>`)}</div>
+        <div class="row wrap" style="margin-top:6px;gap:6px">${ROLES.filter(x => x.level > 0 && x.level <= lvl).map(x => html`<span class="pill role">${x.label}</span>`)}${p.cashier ? html`<span class="pill role cash">💰 Pokladník</span>` : ''}</div>
       </div>
     </div>
     ${communityBadges(comms)}
@@ -176,7 +176,9 @@ export async function render(main, [id], ctx) {
         return html`<label class="check"><span>${x.label}${x.level === 1 ? html` <span class="faint small">· rozhoduje zápasy</span>` : x.level === 2 ? html` <span class="faint small">· zakládá turnaje a akce</span>` : x.level === 3 ? html` <span class="faint small">· přiděluje role</span>` : ''}</span>
           <input type="checkbox" ${has ? 'checked' : ''} ${editable ? '' : 'disabled'} data-role="${x.key}" data-level="${x.level}"></label>`
       })}
-      <p class="hint">Vyšší funkce zahrnuje nižší: admin je i organizátor a judge, organizátor je i judge.</p>
+      <label class="check"><span>💰 Pokladník <span class="faint small">· vybírá vstupné na turnajích</span></span>
+        <input type="checkbox" data-cashier ${p.cashier ? 'checked' : ''}></label>
+      <p class="hint">Vyšší funkce zahrnuje nižší: admin je i organizátor a judge, organizátor je i judge. Pokladník je funkce navíc – organizátor ho pak může vybrat u turnaje se vstupným.</p>
     </div>` : ''}
     ${own ? '' : leagueRolesCard(lgs.roles, lvl)}
 
@@ -246,6 +248,11 @@ export async function render(main, [id], ctx) {
     const label = ROLES.find(x => x.key === target).label
     if (!await confirmBox(`Nastavit ${p.nick} funkci: ${label}?`, { ok: 'Nastavit' })) { cb.checked = !cb.checked; return }
     try { await rpc('set_user_role', { p_user: id, p_role: target }); toast('Funkce změněna.', 'ok'); render(main, [id]) }
+    catch (err) { cb.checked = !cb.checked; toast(errMsg(err), 'err') }
+  })
+  on(main, 'change', '[data-cashier]', async (e, cb) => {
+    if (!await confirmBox(cb.checked ? `Dát ${p.nick} funkci Pokladník?` : `Odebrat ${p.nick} funkci Pokladník?`, { ok: cb.checked ? 'Dát' : 'Odebrat' })) { cb.checked = !cb.checked; return }
+    try { await rpc('set_cashier', { p_user: id, p_on: cb.checked }); toast('Funkce změněna.', 'ok'); render(main, [id]) }
     catch (err) { cb.checked = !cb.checked; toast(errMsg(err), 'err') }
   })
   on(main, 'click', '[data-act=logout]', async () => { await disablePush(); await sb.auth.signOut(); toast('Odhlášeno.'); location.hash = '#/' })

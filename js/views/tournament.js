@@ -1,9 +1,9 @@
 // ════════════════════════════════════════════════════════════════
 //  Detail turnaje / akce: můj status, hráči, swiss, pavouk, judge menu, TV
 // ════════════════════════════════════════════════════════════════
-import { sb, state, rpc, q, errMsg, canManage, ensureSession, refreshMe, askNotify } from '../supa.js'
+import { sb, state, rpc, q, errMsg, canManage, canCash, ensureSession, refreshMe, askNotify } from '../supa.js'
 import { html, raw, mount, on, formData, toast, modal, busy, confirmBox, qrSvg, qrPng, statusPill, fmtDate, fmtTime, pauseLeft, fmtLeft, finishLine, kindLabel } from '../ui.js'
-import { regCheckPanel, regState, checkModal, scanModal } from '../regcheck.js'
+import { regCheckPanel, payPanel, regState, checkModal, payModal, scanModal } from '../regcheck.js'
 import { computeStandings, matchLabel, qrPayload, nextPow2, phaseName, arenaQueue, busyRegs } from '../core.js'
 import { renderManage } from './manage.js'
 import { icon } from '../icons.js'
@@ -28,8 +28,13 @@ export async function load(id, { hist = true } = {}) {  // hist = historie bodů
   if (t && t.kind === 'tournament' && t.status === 'registration' && state.user && !state.isAnon) {
     checkin = new Map((await rpc('checkin_list', { p_tournament: id }).catch(() => [])).map(x => [x.reg, x.checked_in_at]))
   }
+  // vstupné (jen pokladník turnaje / organizátor / admin): reg → { at, by }
+  let pay = null
+  if (t && canCash(t) && !['finished', 'canceled'].includes(t.status)) {
+    pay = new Map((await rpc('pay_list', { p_tournament: id }).catch(() => [])).filter(x => x.paid_at).map(x => [x.reg, { at: x.paid_at, by: x.paid_by_nick }]))
+  }
   const points = hist && t?.kind === 'tournament' && t.status !== 'registration' ? await loadPoints(id, matches).catch(() => null) : null
-  return { t, players, matches, myReg, pmap, checkin, league, points, busy: busyRegs(matches, players) }
+  return { t, players, matches, myReg, pmap, checkin, pay, league, points, busy: busyRegs(matches, players) }
 }
 
 // historie bodů dohraných her: match_id → [[souboje 1. hry], [2. hry], …]; znovu se stahuje jen po nové hře
@@ -150,6 +155,7 @@ export async function render(main, [id, tabArg]) {
           ${t.visibility === 'staff' ? html`<span class="vis-tag" style="color:var(--warn)">🔒 Jen pro organizátory</span>` : ''}
           ${t.kind === 'tournament' ? html`<span>⚔ ${t.format === 'deathmatch' ? `Deathmatch${t.status !== 'registration' ? ` (${t.swiss_rounds} kol)` : ''}` : `${t.swiss_rounds} kol swiss`}${t.top_cut ? (t.top_cut === 2 ? ', finále' : `, top ${t.top_cut}`) : ''}${t.unique_parts ? ' · díly se neopakují' : ''}${t.rated === false ? ' · bez ratingu' : ''}</span>` : html`<span>${kindLabel(t)}</span>`}
           ${d.league ? html`<a class="lg-tag" href="#/l/${d.league.id}">🏆 ${d.league.name}</a>` : ''}
+          ${t.fee ? html`<span class="fee-tag">💰 Vstupné${t.entry_fee ? ` ${t.entry_fee} Kč` : ''}</span>` : ''}
           ${t.status === 'swiss' ? html`<span style="color:var(--bolt)">Kolo ${t.current_round} z ${t.swiss_rounds}</span>` : ''}
         </div>
         ${t.description ? html`<p class="desc">${t.description}</p>` : ''}
@@ -230,7 +236,9 @@ function tabMe(box, { d, reload }) {
     arenaBlock = html`<div class="lbl">Arénu se dozvíš po startu turnaje.</div>
       ${myReg.checked_in_at
         ? html`<div class="pass-checkin on">✓ Registrace zkontrolována ${fmtTime(myReg.checked_in_at)}</div>`
-        : html`<div class="pass-checkin">Na místě ukaž QR kód organizátorovi – zkontroluje tvoje beyblady.</div>`}`
+        : html`<div class="pass-checkin">Na místě ukaž QR kód organizátorovi – zkontroluje tvoje beyblady.</div>`}
+      ${t.fee ? (myReg.paid_at ? html`<div class="pass-checkin on">💰 Vstupné zaplaceno</div>`
+        : html`<div class="pass-checkin">💰 Vstupné${t.entry_fee ? ` ${t.entry_fee} Kč` : ''} zaplať na místě – ukaž QR kód pokladníkovi.</div>`) : ''}`
   } else if (t.status === 'finished') {
     arenaBlock = html`<div class="lbl">Konečné umístění</div><div class="big">${myReg.final_place ?? '–'}.</div>`
   } else {
@@ -409,17 +417,23 @@ function tabPlayers(box, { d, reload }) {
 
   // organizátor v registraci: kontrola registrací (QR + beyblady), barevný stav u každého hráče
   const check = mgr && t.kind === 'tournament' && t.status === 'registration' && d.checkin
+  // vstupné: pokladník (nebo organizátor mimo kontrolu registrací) klepnutím zapisuje zaplaceno
+  const cash = !!d.pay
+  const payOnly = cash && !check
+  const tap = check || payOnly
+  const rowCls = (p) => check ? `rc-row rc-${regState(p, d.checkin)}` : payOnly ? `rc-row pay-row ${p.status === 'dropped' ? 'rc-out' : d.pay.get(p.id) ? 'rc-ok' : 'rc-wait'}` : ''
   mount(box, list.length ? html`
-    ${check ? regCheckPanel(d) : ''}
-    <div class="list ${check ? 'rc-list' : ''}">${list.map(p => html`
-      <div class="li ${check ? `rc-row rc-${regState(p, d.checkin)}` : ''}" ${check ? html`data-check="${p.id}" role="button" tabindex="0"` : ''} style="${p.status === 'dropped' && !check ? 'opacity:.5' : ''}">
+    ${check ? regCheckPanel(d) : payOnly ? payPanel(d) : ''}
+    <div class="list ${tap ? 'rc-list' : ''}">${list.map(p => html`
+      <div class="li ${rowCls(p)}" ${tap ? html`data-check="${p.id}" role="button" tabindex="0"` : ''} style="${p.status === 'dropped' && !tap ? 'opacity:.5' : ''}">
         ${t.status === 'finished' && p.final_place ? html`<span class="place p${p.final_place}">${p.final_place}.</span>` : ''}
         <span class="av">${p.avatar || '👤'}</span>
         <div class="grow">
           <div class="ellipsis" style="font-weight:600">${p.has_account ? html`<a href="#/p/${p.user_id}">${p.nick}</a>` : p.nick}
             ${p.seed ? html`<span class="faint small"> · seed ${p.seed}</span>` : ''}
             ${p.status === 'dropped' ? html`<span class="faint small"> · ${check ? 'vyřazen' : 'odstoupil'}</span>` : ''}
-            ${check && p.status !== 'dropped' ? html`<span class="small rc-tag"> · ${d.checkin.get(p.id) ? '✓ zkontrolováno' : 'čeká'}</span>` : ''}</div>
+            ${check && p.status !== 'dropped' ? html`<span class="small rc-tag"> · ${d.checkin.get(p.id) ? '✓ zkontrolováno' : 'čeká'}</span>` : ''}
+            ${cash && p.status !== 'dropped' ? html`<span class="small pay-tag ${d.pay.get(p.id) ? 'on' : ''}"> · ${d.pay.get(p.id) ? '💰 zaplaceno' : 'nezaplaceno'}</span>` : ''}</div>
           ${p.bey1 ? html`<div class="small muted ellipsis">${[p.bey1, p.bey2, p.bey3].filter(Boolean).join(' · ')}</div>`
                    : html`<div class="small faint">${p.region || (p.has_account ? '' : 'host')}</div>`}
         </div>
@@ -428,13 +442,14 @@ function tabPlayers(box, { d, reload }) {
     ${t.kind === 'tournament' && t.status === 'registration' ? html`<p class="hint">Beyblady ostatních hráčů se zveřejní po skončení turnaje.</p>` : ''}`
     : html`<div class="empty">Zatím se nikdo nepřihlásil.</div>`)
 
-  on(box, 'click', '[data-rc=scan]', () => scanModal(d, reload))
+  const openRow = (id) => (payOnly ? payModal : checkModal)(d, d.pmap.get(id), reload)
+  on(box, 'click', '[data-rc=scan]', () => scanModal(d, reload, { payOnly }))
   on(box, 'click', '[data-check]', (e, el) => {
     if (e.target.closest('[data-menu], a')) return
-    checkModal(d, d.pmap.get(el.dataset.check), reload)
+    openRow(el.dataset.check)
   })
   on(box, 'keydown', '[data-check]', (e, el) => {
-    if ((e.key === 'Enter' || e.key === ' ') && e.target === el) { e.preventDefault(); checkModal(d, d.pmap.get(el.dataset.check), reload) }
+    if ((e.key === 'Enter' || e.key === ' ') && e.target === el) { e.preventDefault(); openRow(el.dataset.check) }
   })
   on(box, 'click', '[data-menu]', (e, el) => {
     const p = d.pmap.get(el.dataset.menu)

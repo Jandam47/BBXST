@@ -1555,3 +1555,26 @@ main.tv-land .tv-now .pt { font-size: clamp(10px, min(8cqh, 3cqw), 34px); }
 .lv-achk input { accent-color: var(--bolt); width: 15px; height: 15px; margin: 0; }
 .lv-achk.on { color: var(--bolt); border-color: rgba(255,228,31,.5); background: rgba(255,228,31,.08); }
 .lv-achk:focus-within { outline: 2px solid var(--cyan); outline-offset: 2px; }
+
+/* ── vstupné a pokladník (28) ── */
+.fee-tag { color: var(--bolt); }
+.pill.role.cash { border-color: rgba(255,228,31,.5); color: var(--bolt); }
+.cash-pick { display: flex; flex-wrap: wrap; gap: 8px; }
+.cash-opt { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px 6px 8px; border-radius: 999px; cursor: pointer;
+  border: 1px solid var(--line); background: rgba(255,255,255,.03); color: var(--muted); font-size: 15px; user-select: none; }
+.cash-opt input { position: absolute; opacity: 0; pointer-events: none; }
+.cash-opt .av { width: 28px; height: 28px; font-size: 16px; }
+.cash-opt:has(input:checked) { border-color: var(--bolt); background: rgba(255,228,31,.1); color: var(--text); box-shadow: 0 0 12px rgba(255,228,31,.18); }
+.cash-opt:has(input:checked)::after { content: '✓'; color: var(--bolt); font-weight: 700; }
+.cash-opt:has(input:focus-visible) { outline: 2px solid var(--cyan); outline-offset: 2px; }
+.pay-sum { color: var(--muted); }
+.pay-sum b { color: var(--text); }
+.pay-check { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 12px; cursor: pointer;
+  border: 1px dashed rgba(255,228,31,.45); background: rgba(255,228,31,.04); font-weight: 600; }
+.pay-check input { width: 22px; height: 22px; accent-color: var(--bolt); flex: none; }
+.pay-check small { display: block; font-weight: 400; color: var(--faint); margin-top: 2px; }
+.pay-check.on { border-style: solid; border-color: var(--bolt); background: rgba(255,228,31,.1); }
+.pay-tag { color: var(--faint); }
+.pay-tag.on { color: var(--bolt); }
+.fee-card fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
+.fee-card fieldset > span { display: block; margin-bottom: 8px; }

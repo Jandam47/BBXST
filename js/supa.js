@@ -116,6 +116,8 @@ export async function ensureSession() {
 export const isLoggedIn = () => !!state.user && !state.isAnon
 export const myRegFor = (tid) => state.myRegs.find(r => r.tournament_id === tid)
 export const canManage = (t) => !!t && !state.isAnon && (state.level >= 3 || (state.level >= 2 && t.created_by === state.user?.id))
+// vstupné zapisuje pokladník turnaje, organizátor nebo admin
+export const canCash = (t) => !!t?.fee && !state.isAnon && (canManage(t) || (t.cashiers || []).includes(state.user?.id))
 
 // ── notifikace prohlížeče ─────────────────────────────
 export async function askNotify() {

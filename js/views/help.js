@@ -17,6 +17,7 @@ const S = [
       <li>Po přihlášení máš v záložce <b>Můj Status</b> vstupenku s QR kódem. Ulož si ji do telefonu – v hale bývá slabý signál.</li>
       <li><b>Kontrola registrace:</b> na místě ukaž QR kód organizátorovi. Zkontroluje, že máš beyblady z přihlášky, a na vstupence pak svítí <i>✓ Registrace zkontrolována</i>. Když potom beyblady změníš, musí tě zkontrolovat znovu.</li>
       <li>Beyblady můžeš měnit, dokud turnaj nezačne. Pak už ne.</li>
+      <li><b>Vstupné:</b> když se na turnaji platí, uvidíš v záhlaví turnaje 💰 a částku. Zaplatíš na místě pokladníkovi nebo organizátorovi – ukážeš mu QR kód a na vstupence pak svítí <i>💰 Vstupné zaplaceno</i>.</li>
     </ul>`],
   ['play', 'Během turnaje', html`
     <ul>
@@ -91,6 +92,7 @@ const S = [
       <li>Akci založíš na hlavní stránce tlačítkem <b>Založ akci</b> → kolečko: Casual (trénink, meeting), Fashion, Turnaje (Deathmatch, Klasika 3v3, ligový turnaj).</li>
       <li><b>Kontrola registrací</b> (záložka Hráči): načti QR kód nebo klepni na hráče, odškrtej tři beyblady a <i>Potvrdit registraci</i>. Kdo nepřišel → <i>Vyřadit</i>. Zelená = zkontrolováno, žlutá = čeká, červená = vyřazen.</li>
       <li>Turnaj jde spustit, až jsou všichni zkontrolovaní. Výjimečně <i>⚠ Spustit bez kontroly registrací</i>.</li>
+      <li><b>Vstupné:</b> v editoru turnaje zaškrtni <i>Platí se vstupné</i>, napiš částku a vyber, kdo ho vybírá – pokladníka (funkci mu dá admin v profilu) nebo sebe jako organizátora. Při kontrole registrace pak zaškrtneš <i>Zaplatil vstupné</i>. Pokladník vidí v záložce Hráči jen vstupné: načte QR kód nebo klepne na hráče a zaškrtne platbu. Nahoře vidí, kolik hráčů zaplatilo a kolik je vybráno.</li>
       <li>Hráče bez telefonu přidáš v <b>Řízení</b> – rovnou je zkontrolovaný a QR kód najdeš v záložce Hráči.</li>
       <li>V Řízení je i <b>pauza</b> s odpočtem, <b>Obsadit volné arény</b> (přesune čekající zápasy) a uvolnění judge ze zápasu.</li>
     </ul>`],

@@ -35,7 +35,7 @@ Komunikuj **česky**, celé UI je česky.
   (jako v BBXST: vnitřní kruh zuby 0–9 + M, vnější výška 50–85, jen existující kombinace; Turbo / Operate = bit
   s integrovaným ratchetem, normální ratchet ho zase zruší). Pole je `readonly`, `combo({ wheel: true })`.
 - `js/config.js` – **obsahuje Adamovy živé klíče Supabase. Nikdy ho neměň ani nepřepisuj.**
-- `supabase/schema.sql`, `02-parts.sql`, `03-live-score.sql`, `04-security-hardening.sql`, `05-judge-handover.sql`, `06-formats-stats.sql`, `07-parts-update.sql`, `08-judge-per-match.sql`, `09-pause.sql`, `10-fashion.sql`, `11-finishes.sql`, `12-rated.sql`, `13-communities.sql`, `14-training-extras.sql`, `15-training-bots.sql`, `16-training-reset.sql`, `17-chat-bazar.sql`, `18-chat-tournament-state.sql`, `19-account-reports.sql`, `20-push.sql`, `21-checkin-errors-backup.sql`, `22-leagues.sql`, `23-meetings.sql`, `24-judge-count.sql`, `25-reg-check.sql`, `26-judge-scan.sql`, `27-live.sql` – databáze (spuštěné v produkci, nové soubory
+- `supabase/schema.sql`, `02-parts.sql`, `03-live-score.sql`, `04-security-hardening.sql`, `05-judge-handover.sql`, `06-formats-stats.sql`, `07-parts-update.sql`, `08-judge-per-match.sql`, `09-pause.sql`, `10-fashion.sql`, `11-finishes.sql`, `12-rated.sql`, `13-communities.sql`, `14-training-extras.sql`, `15-training-bots.sql`, `16-training-reset.sql`, `17-chat-bazar.sql`, `18-chat-tournament-state.sql`, `19-account-reports.sql`, `20-push.sql`, `21-checkin-errors-backup.sql`, `22-leagues.sql`, `23-meetings.sql`, `24-judge-count.sql`, `25-reg-check.sql`, `26-judge-scan.sql`, `27-live.sql`, `28-cashier.sql` – databáze (spuštěné v produkci, nové soubory
   spouští Adam). Živé skóre: BBXST v judge módu posílá po každém bodu `live_score` → `matches.live_p1/p2`
   (TV rozpis, vstupenka, seznamy); trigger `bbx_clear_live` ho maže po uložení hry.
   Rozehraná hra: BBXST posílá s `live_score` i `p_state` → `matches.live_state` (souboje v orientaci p1/p2,
@@ -167,6 +167,14 @@ Komunikuj **česky**, celé UI je česky.
   `checkin_list` → `d.checkin` (load v tournament.js). Řízení: Spustit turnaj jde až po kontrole všech aktivních,
   jinak „⚠ Spustit bez kontroly registrací“ s varováním. Hráče přidané v Řízení (i testovací) zkontroluje rovnou.
   Vstupenka ukazuje „✓ Registrace zkontrolována“. (`drop_noshows` z 21 zůstává v DB, UI ho nepoužívá.)
+- **Pokladník a vstupné** (28): `profiles.cashier` = funkce Pokladník mimo žebříček rolí (admin v profilu → Funkce,
+  `set_cashier`; chrání trigger `bbx_protect_cashier`). Turnaj: `fee`, `entry_fee` (Kč, nepovinné), `cashiers` (uuid[] – pokladníci
+  z `cashier_list` nebo organizátor turnaje = `created_by`; hlídá trigger `bbx_fee_fields`), karta Vstupné v editoru (jen turnaje).
+  Registrace: `paid_at` / `paid_by` (mění jen `pay_set`, trigger `bbx_protect_paid`, sloupce nejsou veřejně čitelné). Zapisuje
+  `bbx_can_cash` = pokladník turnaje, organizátor (`bbx_can_manage`), admin; `pay_list` → `d.pay` (load v tournament.js, `canCash`
+  v supa.js). Kontrola registrace má „💰 Zaplatil vstupné“; pokladník, který turnaj neřídí, vidí v Hráčích jen vstupné
+  (`payPanel` / `payModal` v regcheck.js, sken QR přes `checkin_lookup`, který pustí i pokladníka). Start turnaje neblokuje,
+  Řízení jen upozorní na nezaplacené. Vstupenka: `my_registration.paid_at`. Záhlaví turnaje: 💰 Vstupné N Kč.
 - **Chyby z telefonů** (21, `js/errlog.js`): `installErrorLog(sb, app)` v app.js i bbxst.html (module skript na konci,
   sahá na globální `sb`) chytá `error` / `unhandledrejection`, router posílá i nenačtené stránky (`logError`). RPC
   `log_client_error` (i anon, stejná chyba = `count`+1, max 60 nových / 10 min), admini 3+ v profilu „Chyby z telefonů“
@@ -272,10 +280,11 @@ Potřebují lokální PostgreSQL 16, Node a pro UI Python Playwright + Chrome a 
 - `node tests/meetings.test.mjs` – meeting osobně / online, akce jen pro organizátory (23).
 - `node tests/judge-count.test.mjs` – počítadlo odjudgovaných zápasů (24).
 - `node tests/live.test.mjs` – Živě: decky po startu, sledování hráčů, push sledujícím (27).
+- `node tests/cashier.test.mjs` – pokladník, vstupné, zápis zaplaceno (28).
 - `node tests/account.test.mjs` – nahlášení a smazání účtu; `node tests/push.test.mjs` – odběry a push události (outbox).
 - `node tests/community.test.mjs` – komunity a komunitní trénink v DB (schválení, členové, trénink, výzvy, souboje, meta).
 - `tests/ui-up.sh && python3 tests/ui_smoke.py && python3 tests/bbxst_judge.py && python3 tests/test_tools.py` – proklik v Chrome
-  (`tests/judge_handover.py`, `tests/formats_stats.py`, `tests/arenas_status.py`, `tests/fashion_ui.py`, `tests/community_ui.py`, `tests/bbxst_training.py`, `tests/training_bot_ui.py`, `tests/chat_bazar_ui.py`, `tests/extras_ui.py`, `tests/checkin_ui.py`, `tests/leagues_ui.py`, `tests/install_ui.py`, `tests/create_wheel_ui.py`, `tests/tv_modes_ui.py`, `tests/points_hist_ui.py`, `tests/ratchet_wheel_ui.py` a `tests/live_ui.py` každý zvlášť po čerstvém `ui-up.sh`: převzetí judge;
+  (`tests/judge_handover.py`, `tests/formats_stats.py`, `tests/arenas_status.py`, `tests/fashion_ui.py`, `tests/community_ui.py`, `tests/bbxst_training.py`, `tests/training_bot_ui.py`, `tests/chat_bazar_ui.py`, `tests/extras_ui.py`, `tests/checkin_ui.py`, `tests/leagues_ui.py`, `tests/install_ui.py`, `tests/create_wheel_ui.py`, `tests/tv_modes_ui.py`, `tests/points_hist_ui.py`, `tests/ratchet_wheel_ui.py`, `tests/live_ui.py` a `tests/cashier_ui.py` každý zvlášť po čerstvém `ui-up.sh`: převzetí judge;
   deathmatch přes testovací nástroje až po finále, vyhodnocení, meta, profil)
   (poslední: zkušební turnaj 16 hráčů přes testovací nástroje až po ukončení).
 Když měníš SQL, přidej nový soubor i do `tests/reset_db.sh`. Po změně logiky nebo DB pusť testy.

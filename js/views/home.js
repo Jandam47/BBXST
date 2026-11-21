@@ -135,6 +135,14 @@ export async function renderEditor(main, [kindArg, id]) {
     const want = new URLSearchParams(location.hash.split('?')[1] || '').get('league')
     if (want && leagues.some(l => l.id === want)) t.league_id = want
   }
+  // vstupné: kdo ho může vybírat = pokladníci (funkce v profilu) + organizátor turnaje
+  const owner = t.created_by || state.user?.id
+  const cashiers = !isEv ? await rpc('cashier_list').catch(() => []) : []
+  const cashPick = !isEv ? [
+    { id: owner, nick: owner === state.user?.id ? 'Já – organizátor' : 'Organizátor turnaje', avatar: '🧑‍💼', org: true },
+    ...cashiers.filter(c => c.id !== owner),
+    ...(t.cashiers || []).filter(x => x !== owner && !cashiers.some(c => c.id === x)).map(x => ({ id: x, nick: 'Dřívější pokladník', avatar: '👤' })),
+  ] : []
   const meet = t.event_type === 'meeting'
   const online = meet && t.meeting_mode === 'online'
   const title = id ? `Upravit ${isEv ? 'akci' : 'turnaj'}`
@@ -193,6 +201,19 @@ export async function renderEditor(main, [kindArg, id]) {
         <p class="hint">Ligový turnaj se po skončení započítá do tabulky ligy: body za účast, postup do top cutu a 1.–4. místo.</p>
       </div>`}
       ${isEv ? '' : html`
+      <div class="card stack fee-card">
+        <h3>Vstupné</h3>
+        <label class="check"><input type="checkbox" name="fee" ${t.fee ? 'checked' : ''}> Platí se vstupné</label>
+        <div id="fee-opts" class="stack" ${t.fee ? '' : 'hidden'}>
+          <label class="f"><span>Kolik (Kč, nepovinné)</span><input class="input" type="number" min="1" max="100000" name="entry_fee" value="${t.entry_fee || ''}" placeholder="např. 100"></label>
+          <fieldset class="f"><span>Kdo vybírá vstupné</span>
+            <div class="cash-pick" role="group" aria-label="Kdo vybírá vstupné">${cashPick.map(c => html`
+              <label class="cash-opt ${c.org ? 'org' : ''}"><input type="checkbox" name="cashier" value="${c.id}" ${(t.cashiers || []).includes(c.id) ? 'checked' : ''}>
+                <span class="av">${c.avatar || '👤'}</span><span>${c.nick}</span></label>`)}</div>
+          </fieldset>
+          <p class="hint">${cashiers.length ? 'Vybraný pokladník při kontrole registrace zaškrtne, kdo zaplatil.' : 'Zatím nikdo nemá funkci Pokladník – přidělí ji admin v profilu hráče. Do té doby vybírá organizátor.'}</p>
+        </div>
+      </div>
       <div class="card stack">
         <h3>Formát</h3>
         ${preF ? html`<input type="hidden" name="format" value="${t.format}">
@@ -250,6 +271,11 @@ export async function renderEditor(main, [kindArg, id]) {
     inp.type = on_ ? 'url' : 'text'; inp.maxLength = on_ ? 300 : 120
     inp.placeholder = on_ ? 'https://discord.gg/… nebo Meet / Teams' : 'Klub, adresa'
   })
+  on(main, 'change', '[name=fee]', (e, el) => {
+    main.querySelector('#fee-opts').hidden = !el.checked
+    // první zapnutí: předvyber organizátora, ať je hned komu platit
+    if (el.checked && !main.querySelector('[name=cashier]:checked')) main.querySelector('[name=cashier]').checked = true
+  })
   on(main, 'change', '#top-preset', (e, el) => { main.querySelector('#top-custom').hidden = el.value !== 'custom' })
   on(main, 'change', '[name=format]', (e, el) => {
     const dm = el.value === 'deathmatch'
@@ -274,6 +300,10 @@ export async function renderEditor(main, [kindArg, id]) {
       if (row.format === 'deathmatch' && !started) Object.assign(row, { top_cut: 0 })
       if (row.top_cut === 1 || row.top_cut < 0) return toast('Top cut musí mít aspoň 2 hráče, nebo 0.', 'err')
       if (leagues.length) row.league_id = d.league_id || null
+      row.fee = !!d.fee
+      row.entry_fee = row.fee && d.entry_fee ? Number(d.entry_fee) : null
+      row.cashiers = row.fee ? [...f.querySelectorAll('[name=cashier]:checked')].map(x => x.value) : []
+      if (row.fee && !row.cashiers.length) return toast('Vyber, kdo bude vybírat vstupné.', 'err')
     } else {
       Object.assign(row, { swiss_rounds: 1, top_cut: 0 })
       if (!started) Object.assign(row, { event_type: d.event_type || 'training',

@@ -14,6 +14,7 @@ export function renderManage(box, { d, reload }) {
   const active = d.players.filter(p => p.status === 'active')
   // kontrola registrací (jen turnaj v registraci) – čekající hráči blokují start
   const waiting = d.checkin && t.kind === 'tournament' && t.status === 'registration' ? active.filter(p => !d.checkin.get(p.id)) : []
+  const unpaid = d.pay && t.status === 'registration' ? active.filter(p => !d.pay.get(p.id)) : []
   const swiss = d.matches.filter(m => m.stage === 'swiss')
   const roundMs = swiss.filter(m => m.round === t.current_round)
   const roundDone = roundMs.every(m => m.status === 'done')
@@ -39,6 +40,7 @@ export function renderManage(box, { d, reload }) {
           : `${t.swiss_rounds} kol swiss · ${t.top_cut ? `top ${t.top_cut}` : 'bez top cutu'}`} · ${plural(t.arena_count, 'aréna', 'arény', 'arén')}${t.unique_parts ? ' · díly se neopakují' : ''}</p>
         ${!dm && t.top_cut > active.length ? html`<div class="notice warn">Top ${t.top_cut} je víc než přihlášených hráčů – před top cutem ho zmenšíš.</div>` : ''}
         ${waiting.length ? html`<div class="notice warn">Zkontrolováno ${active.length - waiting.length} z ${active.length} hráčů. Zkontroluj zbytek v záložce <a href="#/t/${t.id}/players">Hráči</a> – pak půjde turnaj spustit.</div>` : ''}
+        ${unpaid.length ? html`<div class="notice">💰 Vstupné zatím nezaplatilo ${unpaid.length} z ${active.length} hráčů (${unpaid.slice(0, 6).map(p => p.nick).join(', ')}${unpaid.length > 6 ? '…' : ''}). Spustit jde i tak.</div>` : ''}
         <div class="row wrap"><a class="btn" href="#/t/${t.id}/edit">Upravit nastavení</a>
           <button class="btn primary" data-act="start" ${active.length < 2 || waiting.length ? 'disabled' : ''}>Spustit turnaj</button></div>
         ${waiting.length && active.length >= 2 ? html`<button class="btn sm danger-ghost start-unchecked" data-act="start-unchecked">⚠ Spustit bez kontroly registrací</button>` : ''}
@@ -170,7 +172,7 @@ export function renderManage(box, { d, reload }) {
     const unchecked = b.dataset.act === 'start-unchecked'
     if (unchecked) {
       if (!await confirmBox(`⚠ Spustit bez kontroly registrací? ${waiting.length === 1 ? '1 hráč nebyl zkontrolovaný' : `${waiting.length} ${waiting.length <= 4 ? 'hráči nebyli zkontrolovaní' : 'hráčů nebylo zkontrolováno'}`} – nikdo neověřil, že jsou na místě a mají beyblady z přihlášky. Turnaj začne se všemi ${active.length} hráči.`, { ok: 'Spustit bez kontroly', danger: true })) return
-    } else if (!await confirmBox(`Spustit turnaj s ${active.length} hráči? Registrace se uzavře.`, { ok: 'Spustit' })) return
+    } else if (!await confirmBox(`Spustit turnaj s ${active.length} hráči? Registrace se uzavře.${unpaid.length ? ` 💰 Vstupné nezaplatilo ${unpaid.length} hráčů.` : ''}`, { ok: 'Spustit' })) return
     await busy(b, () => act(async () => {
       await rpc('start_tournament', { p_tournament: t.id })
       drawRound(d, reload, 1)
