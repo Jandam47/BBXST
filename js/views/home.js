@@ -114,7 +114,9 @@ export async function renderEditor(main, [kindArg, id]) {
   const qs = new URLSearchParams(location.hash.split('?')[1] || '')
   const preType = !id && t.kind === 'event' && ['training', 'fashion', 'meeting', 'other'].includes(qs.get('type')) ? qs.get('type') : null
   if (preType) Object.assign(t, { event_type: preType, meeting_mode: qs.get('mode') === 'online' ? 'online' : 'live', visibility: 'all' })
-  if (!id && t.kind === 'tournament' && ['swiss', 'deathmatch'].includes(qs.get('f'))) t.format = qs.get('f')
+  // formát (a liga) vybrané v kolečku se v editoru už nepřepínají
+  const preF = !id && t.kind === 'tournament' && ['swiss', 'deathmatch'].includes(qs.get('f'))
+  if (preF) t.format = qs.get('f')
   if (id) {
     t = await q(sb.from('tournaments').select('*').eq('id', id).single())
     if (t.event_type === 'community') { location.hash = `#/t/${id}/manage`; return }
@@ -180,7 +182,7 @@ export async function renderEditor(main, [kindArg, id]) {
           <input class="input" type="number" min="1" max="10" name="fashion_beys" value="${t.fashion_beys || 3}" ${started ? 'disabled' : ''}></label>` : ''}
         <label class="f" id="f-max" ${meet ? 'hidden' : ''}><span>Maximální počet hráčů (nepovinné)</span><input class="input" type="number" min="2" max="512" name="max_players" value="${t.max_players || ''}"></label>
       </div>
-      ${isEv || !leagues.length ? '' : html`
+      ${preF ? html`<input type="hidden" name="league_id" value="${t.league_id || ''}">` : isEv || !leagues.length ? '' : html`
       <div class="card stack lg-pick">
         <h3>Liga</h3>
         <label class="f"><span>Ligový turnaj?</span>
@@ -193,11 +195,14 @@ export async function renderEditor(main, [kindArg, id]) {
       ${isEv ? '' : html`
       <div class="card stack">
         <h3>Formát</h3>
+        ${preF ? html`<input type="hidden" name="format" value="${t.format}">
+        <div class="format-fixed"><b>${FORMATS.find(f => f.key === t.format)?.label}</b>${t.league_id ? html` <span class="lg-tag">🏆 ${leagues.find(l => l.id === t.league_id)?.name || ''}</span>` : ''}
+          <small>${FORMATS.find(f => f.key === t.format)?.desc}</small></div>` : html`
         <div class="formats">
           ${FORMATS.map(f => html`<label class="format-opt">
             <input type="radio" name="format" value="${f.key}" ${t.format === f.key ? 'checked' : ''} ${started ? 'disabled' : ''}>
             <span><b>${f.label}</b><small>${f.desc}</small></span></label>`)}
-        </div>
+        </div>`}
         <label class="check"><input type="checkbox" name="unique_parts" ${t.unique_parts ? 'checked' : ''} ${started ? 'disabled' : ''}> Žádný díl se v decku nesmí opakovat</label>
         <p class="hint" style="margin-top:-6px">Hlídá blade, ratchet, bit i díly CX (lock chip, main, over a assist blade).</p>
         <label class="check"><input type="checkbox" name="rated" ${t.rated !== false ? 'checked' : ''} ${started ? 'disabled' : ''}> Započítávat do hráčského ratingu</label>

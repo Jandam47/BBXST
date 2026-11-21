@@ -1246,3 +1246,6 @@ a.lg-tag:hover { text-decoration: underline; }
 @media (prefers-reduced-motion: reduce) { .cw-wheel.open, .cw-wheel.in, .cw-wheel.out { animation: none; } }
 .t-card .vis-tag { color: var(--warn); }
 .meet-link { color: var(--cyan); }
+.format-fixed { display: grid; gap: 4px; padding: 12px 14px; border: 1px solid rgba(255,228,31,.45); background: var(--ink-2); }
+.format-fixed b { font-family: var(--display); font-size: 18px; }
+.format-fixed small { color: var(--muted); font-size: 14px; }

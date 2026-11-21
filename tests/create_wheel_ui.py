@@ -46,7 +46,9 @@ with sync_playwright() as p:
     assert labels(org) == ['Deathmatch', 'Klasika 3v3'], 'Org nemá ligu'
     org.click('.cw-sec[aria-label="Deathmatch"]'); org.wait_for_selector('#f-t')
     assert org.inner_text('h1') == 'Nový turnaj · Deathmatch'
-    assert org.is_checked('[name=format][value=deathmatch]') and org.locator('#tc-card').is_hidden()
+    assert org.get_attribute('input[type=hidden][name=format]', 'value') == 'deathmatch' and org.locator('#tc-card').is_hidden()
+    assert org.locator('input[type=radio][name=format]').count() == 0 and org.locator('.lg-pick').count() == 0, 'formát se už nepřepíná'
+    org.locator('.format-fixed').scroll_into_view_if_needed(); org.screenshot(path=OUT + '246_format_fixed.png')
 
     # meeting online jen pro organizátory
     org.goto(BASE + '#/'); org.wait_for_selector('[data-act=create]')
@@ -90,9 +92,13 @@ with sync_playwright() as p:
     adm.click('[data-act=create]'); adm.click('.cw-sec[aria-label^="Turnaje"]'); adm.click('.cw-sec[aria-label^="3v3 liga"]')
     adm.wait_for_function("() => document.querySelector('.cw-title').textContent.includes('3v3 liga')")
     assert labels(adm) == ['Hradecká liga', 'Pardubická liga'], labels(adm)
-    adm.click('.cw-sec[aria-label="Pardubická liga"]'); adm.wait_for_selector('.lg-pick select')
+    adm.click('.cw-sec[aria-label="Pardubická liga"]'); adm.wait_for_selector('.format-fixed')
     lid = sql("select id from leagues where name = 'Pardubická liga'")
-    assert adm.eval_on_selector('.lg-pick select', 'e => e.value') == lid and adm.inner_text('h1') == 'Nový ligový turnaj'
+    assert adm.get_attribute('input[type=hidden][name=league_id]', 'value') == lid and adm.inner_text('h1') == 'Nový ligový turnaj'
+    assert 'Pardubická liga' in adm.inner_text('.format-fixed')
+    adm.fill('[name=name]', 'Liga kolo 1'); adm.fill('[name=starts_at]', '2026-12-06T10:00')
+    adm.click('#f-t button.primary.block'); adm.wait_for_selector('.t-head .lg-tag')
+    assert sql("select format || '/' || (league_id = '" + lid + "') from tournaments where name = 'Liga kolo 1'") == 'swiss/true'
     # Esc zavře kolečko
     adm.goto(BASE + '#/'); adm.wait_for_selector('[data-act=create]')
     adm.click('[data-act=create]'); adm.wait_for_selector('.cw-overlay')
