@@ -101,7 +101,12 @@ export function composeName(cat, b) {
 const LABEL = { blade: 'Blade', lock_chip: 'Lock chip', main_blade: 'Main blade', metal_blade: 'Metal blade',
   over_blade: 'Over blade', assist_blade: 'Assist blade', ratchet: 'Ratchet', bit: 'Bit' }
 
-export function combo({ key, label, cats, value = '', placeholder = '', hidden = false }) {
+export function combo({ key, label, cats, value = '', placeholder = '', hidden = false, wheel = false }) {
+  if (wheel) return html`<label class="f combo rw-field" data-combo="${key}" data-cats="${cats.join(',')}" data-wheel ${hidden ? 'hidden' : ''}>
+    <span>${label}</span>
+    <input class="input" value="${value || ''}" placeholder="${placeholder}" readonly inputmode="none" autocomplete="off"
+      aria-haspopup="dialog">
+  </label>`
   return html`<label class="f combo" data-combo="${key}" data-cats="${cats.join(',')}" ${hidden ? 'hidden' : ''}>
     <span>${label}</span>
     <input class="input" value="${value || ''}" placeholder="${placeholder}" autocomplete="off" autocapitalize="off" spellcheck="false"
@@ -157,11 +162,11 @@ export function bindCombos(root, cat, onPick = () => {}) {
 
   root.addEventListener('focusin', (e) => {
     const wrap = e.target.closest('[data-combo]')
-    if (wrap && e.target.tagName === 'INPUT') render(wrap)
+    if (wrap && !wrap.hasAttribute('data-wheel') && e.target.tagName === 'INPUT') render(wrap)
   })
   root.addEventListener('input', (e) => {
     const wrap = e.target.closest('[data-combo]')
-    if (!wrap) return
+    if (!wrap || wrap.hasAttribute('data-wheel')) return
     wrap.classList.remove('ok', 'bad')
     render(wrap)
   })
@@ -210,7 +215,7 @@ export function deckEditor(deck, n = 3) {
         ${combo({ key: 'assist', label: 'Assist blade', cats: ['assist_blade'], value: b.assist, placeholder: 'např. Slash' })}
       </div>
       <div class="grid2">
-        ${combo({ key: 'ratchet', label: 'Ratchet', cats: ['ratchet'], value: b.ratchet, placeholder: 'např. 3-60' })}
+        ${combo({ key: 'ratchet', label: 'Ratchet', cats: ['ratchet'], value: b.ratchet, placeholder: 'vyber na kolečku', wheel: true })}
         ${combo({ key: 'bit', label: 'Bit', cats: ['bit'], value: b.bit, placeholder: 'např. Flat / F' })}
       </div>
       <div class="bey-preview" aria-live="polite"></div>
@@ -235,8 +240,8 @@ export function bindDeckEditor(root, cat, { distinct = true } = {}) {
     const bit = cat.find(['bit'], b.bit)
     const integ = (blade && blade.integrated) || (bit && bit.integrated)
     const rWrap = card.querySelector('[data-combo="ratchet"]'), rIn = rWrap.querySelector('input')
-    rIn.disabled = !!integ
-    rIn.placeholder = integ ? 'v ceně dílu' : 'např. 3-60'
+    rIn.disabled = !!(blade && blade.integrated)   // s ratchetem v bitu jde kolečko otevřít a ratchet vrátit
+    rIn.placeholder = integ ? (bit && bit.integrated ? `v bitu (${bit.name})` : 'v ceně dílu') : 'vyber na kolečku'
     if (integ) { rIn.value = ''; rWrap.classList.remove('bad', 'ok') }
     const name = composeName(cat, b)
     card.querySelector('.bey-preview').innerHTML = name ? `→ <b>${esc(name)}</b>` : '<span class="faint">Doplň díly ze seznamu</span>'
@@ -244,6 +249,30 @@ export function bindDeckEditor(root, cat, { distinct = true } = {}) {
   }
 
   bindCombos(root, cat, (wrap) => refresh(wrap.closest('[data-bey]')))
+  const openWheel = (input) => {
+    if (input.disabled) return
+    const card = input.closest('[data-bey]'), bitIn = card.querySelector('[data-combo="bit"] input')
+    ratchetWheel(cat, input.value.trim(), bitIn.value.trim(), (v) => {
+      const curBit = cat.find(['bit'], bitIn.value)
+      if (v.bit) bitIn.value = v.bit
+      else if (curBit?.integrated) bitIn.value = ''        // normální ratchet → pryč s Turbo / Operate
+      input.value = v.ratchet
+      for (const w of [input.closest('[data-combo]'), bitIn.closest('[data-combo]')]) {
+        const ok = cat.find(w.dataset.cats.split(','), w.querySelector('input').value)
+        w.classList.toggle('ok', !!ok); w.classList.remove('bad')
+      }
+      refresh(card)
+      input.focus({ preventScroll: true })
+    })
+  }
+  root.addEventListener('click', (e) => {
+    const rIn = e.target.closest('[data-wheel] input')
+    if (rIn) { e.preventDefault(); openWheel(rIn) }
+  })
+  root.addEventListener('keydown', (e) => {
+    const rIn = e.target.closest('[data-wheel] input')
+    if (rIn && (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown')) { e.preventDefault(); openWheel(rIn) }
+  })
   root.addEventListener('click', (e) => {
     const btn = e.target.closest('[data-type-btn]')
     if (!btn) return
@@ -272,4 +301,62 @@ export function bindDeckEditor(root, cat, { distinct = true } = {}) {
     if (distinct && new Set(names.map(n => n.toLowerCase())).size < names.length) throw new Error('Každý beyblade musí být jiný.')
     return deck.map(b => Object.fromEntries(Object.entries(b).filter(([, v]) => v !== '')))
   }
+}
+
+// ── kolečko ratchetů (stejně jako v BBXST): vnitřní kruh zuby, vnější výška; Turbo / Operate = ratchet v bitu ──
+const RW_TEETH = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'M']
+const RW_HEIGHTS = ['50', '55', '60', '65', '70', '75', '80', '85']
+export function ratchetWheel(cat, cur, curBit, onPick) {
+  const have = new Set((cat.byCat.ratchet || []).map(r => r.name))
+  const specials = (cat.byCat.bit || []).filter(r => r.integrated)
+  const m = /^([0-9M])-(\d+)$/.exec(cur || '')
+  let t = m?.[1] ?? null, h = m?.[2] ?? null
+  let pickT = false, pickH = false                 // zavře se, až vybereš obě řady (předvyplněné se nepočítá)
+  const bg = document.createElement('div')
+  bg.className = 'modal-bg rw-bg'
+  bg.innerHTML = '<div class="modal rw" role="dialog" aria-modal="true" aria-label="Výběr ratchetu"></div>'
+  const box = bg.firstElementChild
+  const prevFocus = document.activeElement
+  const close = () => { bg.remove(); document.removeEventListener('keydown', onKey, true); prevFocus?.focus?.({ preventScroll: true }) }
+  const done = (v) => { close(); onPick(v) }
+  // Esc zavře jen kolečko, ne okno pod ním (přidání hráče)
+  const onKey = (e) => { if (e.key === 'Escape') { e.stopImmediatePropagation(); e.preventDefault(); close() } }
+  const at = (i, n, r) => { const a = -Math.PI / 2 + (2 * Math.PI * i) / n; return `left:${50 + r * Math.cos(a)}%;top:${50 + r * Math.sin(a)}%` }
+  const draw = () => {
+    const ok = t && h && have.has(`${t}-${h}`)
+    box.innerHTML = `<div class="rw-head"><h3>Ratchet</h3><span class="faint small">vnitřní kruh zuby · vnější výška</span></div>
+      <div class="rw-dial">
+        ${RW_HEIGHTS.map((v, i) => `<button type="button" class="rw-k h ${v === h ? 'on' : ''}" style="${at(i, RW_HEIGHTS.length, 43)}" data-h="${v}"
+            ${[...have].some(x => x.endsWith('-' + v) && (!t || x === `${t}-${v}`)) ? '' : 'disabled'} aria-label="výška ${v}">${v}</button>`).join('')}
+        ${RW_TEETH.map((v, i) => `<button type="button" class="rw-k t ${v === t ? 'on' : ''}" style="${at(i, RW_TEETH.length, 26.5)}" data-t="${v}"
+            ${[...have].some(x => x.startsWith(v + '-')) ? '' : 'disabled'} aria-label="${v === 'M' ? 'zuby M' : `${v} zubů`}">${v}</button>`).join('')}
+        <div class="rw-center"><b>${t ?? '?'}-${h ?? '??'}</b><small>${ok ? 'zuby · výška' : t ? 'vyber výšku' : 'vyber zuby'}</small></div>
+      </div>
+      ${specials.length ? `<div class="rw-specials">${specials.map(r => `<button type="button" class="rw-sp ${norm(curBit) === r.n ? 'on' : ''}" data-sp="${esc(r.name)}">
+        ${esc(r.name)}<small>${r.abbr ? esc(r.abbr) + ' · ' : ''}ratchet je v bitu</small></button>`).join('')}</div>` : ''}
+      <div class="row" style="margin-top:14px">
+        <button type="button" class="btn grow" data-rw-back>Zpět</button>
+        <button type="button" class="btn primary grow" data-rw-ok ${ok ? '' : 'disabled'}>Použít</button>
+      </div>`
+    box.querySelectorAll('[data-t]').forEach(b => b.onclick = () => {
+      t = b.dataset.t; pickT = true
+      if (h && !have.has(`${t}-${h}`)) { h = null; pickH = false }
+      if (pickH && h) return done({ ratchet: `${t}-${h}` })     // obě řady vybrané → hotovo
+      draw()
+    })
+    box.querySelectorAll('[data-h]').forEach(b => b.onclick = () => {
+      h = b.dataset.h; pickH = true
+      if (t && !have.has(`${t}-${h}`)) { t = null; pickT = false }
+      if (pickT && t) return done({ ratchet: `${t}-${h}` })
+      draw()
+    })
+    box.querySelectorAll('[data-sp]').forEach(b => b.onclick = () => done({ ratchet: '', bit: b.dataset.sp }))
+    box.querySelector('[data-rw-ok]').onclick = () => ok && done({ ratchet: `${t}-${h}` })
+    box.querySelector('[data-rw-back]').onclick = close
+  }
+  draw()
+  bg.addEventListener('click', (e) => { if (e.target === bg) close() })
+  document.addEventListener('keydown', onKey, true)
+  document.body.append(bg)
+  setTimeout(() => (box.querySelector('.rw-k.on') || box.querySelector('.rw-k.t:not(:disabled)'))?.focus({ preventScroll: true }), 30)
 }

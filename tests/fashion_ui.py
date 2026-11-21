@@ -32,6 +32,11 @@ def go(page, hash):
 
 def pick(page, bey, key, text):
     sel = f'[data-bey="{bey}"] [data-combo="{key}"]'
+    if key == 'ratchet':   # ratchet se vybírá na kolečku: zuby, pak výška
+        t, h = (text.split('-') if '-' in text else (text[0], text[1:]))
+        page.click(sel + ' input'); page.wait_for_selector('.rw-dial')
+        page.click(f'.rw-k[data-t="{t}"]'); page.click(f'.rw-k[data-h="{h}"]'); page.wait_for_selector('.rw-dial', state='detached')
+        return
     page.click(sel + ' input'); page.fill(sel + ' input', text)
     page.wait_for_selector(sel + ' .combo-list:not([hidden]) li')
     page.keyboard.press('Enter')
