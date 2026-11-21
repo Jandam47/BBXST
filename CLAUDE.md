@@ -53,6 +53,12 @@ Komunikuj **česky**, celé UI je česky.
   vlevo a vpravo u středu, v pořadí. Swiss řádky a Můj Status (`matchRow`): dohrané hry z `points` (`loadPoints`,
   stahuje se znovu jen po nové hře; BO3 = řádek na hru s číslem) + rozehraná z `matches.live_state`. TV: jen
   rozehraná hra pod živým skóre (`load(id, { hist: false })`). 7× +1 se vejde na řádek i na 360 px.
+- **Živě** (`js/views/live.js`, `#/t/<id>/live`, tlačítko Živě vedle TV rozpis, bez přihlášení, bez změn DB): přenos
+  z arén pro diváky doma. Aréna: hráči, skóre, endy strany (X/B/O/S), beye aktuální sady (souboje po 3; zahrané šedě,
+  poslední zvýrazněný, výhra = zelené +body, prohra = červené −, remíza R; nezahrané = „?“, aby se neprozradil deck),
+  historie bodů, fronta. Beye z `live_state` / `points.p1_bey/p2_bey`. Sledovaní hráči (`localStorage bbxu_follow:<turnaj>`,
+  kde a proti komu hrají, posledních 4 výsledků), feed „Dění“ a vyskakovací hláška `.lv-flash` (rozdíl proti minulému
+  načtení: nový souboj, začátek / konec zápasu, sledovaný hráč na aréně), poslední výsledky, pořadí. Realtime + polling 15 s.
 - BBXST judge menu → aréna: vybraný zápas (výchozí ten na řadě / rozehraný) velkým písmem v `.jNext`, zbytek fronty
   pod ním menším (`.jQ`, klepnutím se vybere).
 - BBXST judge → sken QR (26): `judge_scan_qr(token)` pustí jen aktivního hráče v běžícím turnaji (swiss / topcut), který
@@ -262,7 +268,7 @@ Potřebují lokální PostgreSQL 16, Node a pro UI Python Playwright + Chrome a 
 - `node tests/account.test.mjs` – nahlášení a smazání účtu; `node tests/push.test.mjs` – odběry a push události (outbox).
 - `node tests/community.test.mjs` – komunity a komunitní trénink v DB (schválení, členové, trénink, výzvy, souboje, meta).
 - `tests/ui-up.sh && python3 tests/ui_smoke.py && python3 tests/bbxst_judge.py && python3 tests/test_tools.py` – proklik v Chrome
-  (`tests/judge_handover.py`, `tests/formats_stats.py`, `tests/arenas_status.py`, `tests/fashion_ui.py`, `tests/community_ui.py`, `tests/bbxst_training.py`, `tests/training_bot_ui.py`, `tests/chat_bazar_ui.py`, `tests/extras_ui.py`, `tests/checkin_ui.py`, `tests/leagues_ui.py`, `tests/install_ui.py`, `tests/create_wheel_ui.py`, `tests/tv_modes_ui.py`, `tests/points_hist_ui.py` a `tests/ratchet_wheel_ui.py` každý zvlášť po čerstvém `ui-up.sh`: převzetí judge;
+  (`tests/judge_handover.py`, `tests/formats_stats.py`, `tests/arenas_status.py`, `tests/fashion_ui.py`, `tests/community_ui.py`, `tests/bbxst_training.py`, `tests/training_bot_ui.py`, `tests/chat_bazar_ui.py`, `tests/extras_ui.py`, `tests/checkin_ui.py`, `tests/leagues_ui.py`, `tests/install_ui.py`, `tests/create_wheel_ui.py`, `tests/tv_modes_ui.py`, `tests/points_hist_ui.py`, `tests/ratchet_wheel_ui.py` a `tests/live_ui.py` každý zvlášť po čerstvém `ui-up.sh`: převzetí judge;
   deathmatch přes testovací nástroje až po finále, vyhodnocení, meta, profil)
   (poslední: zkušební turnaj 16 hráčů přes testovací nástroje až po ukončení).
 Když měníš SQL, přidej nový soubor i do `tests/reset_db.sh`. Po změně logiky nebo DB pusť testy.

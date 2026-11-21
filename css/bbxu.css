@@ -1365,3 +1365,132 @@ main.tv-land .tv-now .pt { font-size: clamp(10px, min(8cqh, 3cqw), 34px); }
 .rw-sp small { display: block; font-family: inherit; font-weight: 400; font-size: 12px; color: var(--faint); margin-top: 1px; }
 .rw-sp.on { background: var(--bolt); color: #111; }
 .rw-sp.on small { color: rgba(0,0,0,.6); }
+
+/* ══ ŽIVĚ – přenos z arén (#/t/<id>/live) ══ */
+.btn-live { border-color: rgba(255,77,109,.55); color: #ff8098; }
+.btn-live .nicon .i1, .btn-live .nicon .i2 { stroke: #ff5c7c; }
+.lv { --win: var(--ok); --loss: #ff4d6d; display: flex; flex-direction: column; gap: 2vh; }
+.lv-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 14px; flex-wrap: wrap; }
+.lv-head h1 { margin: 0; font-size: clamp(24px, 3vw, 52px); text-shadow: 0 0 22px rgba(0,229,255,.45); }
+.lv-sub { font-family: var(--display); color: var(--muted); font-size: clamp(14px, 1.3vw, 24px); margin-top: 4px; }
+.lv-sub b { color: #ff5c7c; letter-spacing: .08em; }
+.lv-dot { display: inline-block; width: .6em; height: .6em; border-radius: 50%; background: #ff3b5f; margin-right: .4em; vertical-align: .05em;
+  box-shadow: 0 0 10px #ff3b5f; animation: lv-pulse 1.6s ease-in-out infinite; }
+@keyframes lv-pulse { 50% { opacity: .35; } }
+.lv-body { display: flex; flex-direction: column; gap: 16px; }
+.lv-main { order: 1; min-width: 0; }
+.lv-side { display: contents; }
+.lv-side > section { order: 2; }
+.lv-side > section:first-child { order: 0; }       /* sledovaní nahoře (na telefonu) */
+.lv-side h3 { margin: 0 0 8px; font-size: clamp(15px, 1.2vw, 22px); color: var(--muted); }
+@media (min-width: 1000px) and (orientation: landscape) {
+  .lv-body { display: grid; grid-template-columns: minmax(0, 1fr) clamp(300px, 25vw, 520px); gap: 2vw; align-items: start; }
+  .lv-main { order: 0; }
+  .lv-side { display: flex; flex-direction: column; gap: 2vh; order: 1; }
+}
+
+/* arény */
+.lv-arenas { display: grid; grid-template-columns: repeat(var(--cols, 2), minmax(0, 1fr)); gap: clamp(10px, 1.4vw, 24px); align-items: start; }
+@media (max-width: 999px), (orientation: portrait) { .lv-arenas { grid-template-columns: minmax(0, 1fr); } }
+.lv-arena { position: relative; background: var(--ink-2); border: 1px solid var(--line); border-radius: 14px; padding: clamp(10px, 1vw, 20px);
+  display: flex; flex-direction: column; gap: clamp(6px, .7vw, 12px); min-width: 0; }
+.lv-arena.live { border-color: var(--bolt); box-shadow: 0 0 22px rgba(255,228,31,.18); }
+.lv-arena.fol { box-shadow: 0 0 0 2px rgba(95,214,255,.55), 0 0 24px rgba(95,214,255,.25); }
+.lv-arena.idle { opacity: .5; }
+.lv-arena.ping { animation: lv-ping 1.2s ease-out; }
+@keyframes lv-ping { 0% { box-shadow: 0 0 0 0 rgba(255,228,31,.9); } 100% { box-shadow: 0 0 0 18px rgba(255,228,31,0); } }
+.lv-ah { display: flex; align-items: center; gap: 10px; font-size: clamp(12px, .9vw, 18px); color: var(--faint); }
+.lv-ano { font-family: var(--display); font-weight: 700; color: var(--bolt); font-size: 1.5em; min-width: 1.6em; height: 1.6em; border-radius: 50%;
+  border: 1.5px solid currentColor; display: inline-flex; align-items: center; justify-content: center; }
+.lv-lab { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lv-on { color: #ff5c7c; font-weight: 600; white-space: nowrap; }
+.lv-next { color: var(--muted); white-space: nowrap; }
+.lv-vs { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 10px; }
+.lv-p { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.lv-p.r { align-items: flex-end; text-align: right; }
+.lv-nick { font-family: var(--display); font-weight: 700; font-size: clamp(17px, 1.7vw, 36px); line-height: 1.1; overflow-wrap: anywhere; }
+.lv-star { font-style: normal; color: var(--bolt); font-size: .9em; }
+.lv-sc { font-family: var(--display); font-weight: 700; font-size: clamp(30px, 3.4vw, 76px); line-height: 1; white-space: nowrap; text-shadow: 0 0 14px rgba(0,229,255,.4); }
+.lv-sc i { font-style: normal; color: var(--faint); margin: 0 .1em; }
+.lv-sc .faint { font-size: .5em; }
+.lv-fin { display: flex; gap: 4px; flex-wrap: wrap; }
+.lv-p.r .lv-fin { justify-content: flex-end; }
+.lv-fin span { font-family: var(--display); font-weight: 700; font-size: clamp(11px, .8vw, 16px); padding: 0 .45em; border-radius: 5px; background: rgba(255,255,255,.07); color: var(--muted); }
+.lv-fin span b { margin-left: .25em; color: var(--text); }
+.lv-fin .lv-xtreme { background: rgba(255,228,31,.16); color: var(--bolt); }
+.lv-fin .lv-burst { background: rgba(255,77,109,.16); color: #ff8098; }
+.lv-fin .lv-over { background: rgba(0,229,255,.12); color: var(--cyan); }
+/* beye aktuální sady */
+.lv-set { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 10px; align-items: start; }
+.lv-setno { font-size: clamp(10px, .75vw, 14px); color: var(--faint); padding-top: .4em; white-space: nowrap; }
+.lv-beys { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.lv-beys li { display: flex; align-items: center; gap: 6px; min-width: 0; font-size: clamp(12px, .95vw, 20px); padding: .2em .45em; border-radius: 7px; background: rgba(255,255,255,.03); }
+.lv-set > div:last-child .lv-beys li { flex-direction: row-reverse; }
+.lv-bn { min-width: 0; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lv-set > div:last-child .lv-bn { text-align: right; }
+.lv-beys li.done .lv-bn { color: var(--faint); }
+.lv-beys li.last { background: rgba(255,255,255,.07); }
+.lv-beys li.last .lv-bn { color: var(--text); font-weight: 600; }
+.lv-beys li.hid { border: 1px dashed rgba(255,255,255,.14); background: none; color: var(--faint); }
+.lv-r { flex: none; font-family: var(--display); font-weight: 700; font-size: .9em; padding: 0 .4em; border-radius: 5px; font-variant-numeric: tabular-nums; }
+.lv-r.w { color: var(--win); background: rgba(46,240,168,.14); }
+.lv-r.l { color: var(--loss); background: rgba(255,77,109,.14); min-width: 1.6em; text-align: center; }
+.lv-r.d { color: var(--muted); background: rgba(255,255,255,.08); }
+.lv-arena .pt-hist { margin: 0; }
+.lv-arena .pt { font-size: clamp(10.5px, .8vw, 16px); }
+.lv-queue { font-size: clamp(11px, .85vw, 16px); color: var(--faint); border-top: 1px solid var(--line-soft); padding-top: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lv-queue span { color: var(--muted); }
+.lv-empty { text-align: center; padding: 6vh 4vw; }
+.lv-podium { list-style: none; padding: 0; margin: 16px auto 0; max-width: 520px; text-align: left; font-size: clamp(16px, 1.6vw, 30px); }
+.lv-podium li { padding: .35em .5em; border-bottom: 1px solid var(--line-soft); font-family: var(--display); }
+.lv-podium li.p1 { color: var(--bolt); font-size: 1.3em; }
+
+/* boční panel */
+.lv-side > section { background: var(--ink-2); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; }
+.lv-hint p { margin: 0; color: var(--muted); font-size: 14px; }
+.lv-fc { padding: 8px 0; border-top: 1px solid var(--line-soft); cursor: pointer; }
+.lv-fc:first-of-type { border-top: 0; padding-top: 0; }
+.lv-fh { display: flex; justify-content: space-between; gap: 8px; font-size: clamp(15px, 1.1vw, 22px); }
+.lv-fh b { color: var(--p1); }
+.lv-fs { font-size: clamp(13px, .95vw, 18px); color: var(--muted); margin-top: 2px; }
+.lv-fr { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 6px; }
+.lv-fr > span { font-size: 12px; padding: 1px 6px; border-radius: 5px; font-weight: 600; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lv-fr > span small { font-weight: 400; opacity: .75; }
+.lv-fr .w { color: var(--win); background: rgba(46,240,168,.12); }
+.lv-fr .l { color: var(--loss); background: rgba(255,77,109,.12); }
+.lv-feed, .lv-res, .lv-st { list-style: none; margin: 0; padding: 0; }
+.lv-feed li { display: flex; gap: 8px; align-items: baseline; padding: 4px 0; font-size: clamp(13px, .95vw, 18px); border-top: 1px solid var(--line-soft); }
+.lv-feed li:first-child { border-top: 0; }
+.lv-feed li.fol { background: rgba(95,214,255,.06); }
+.lv-fa { flex: none; font-family: var(--display); font-weight: 700; font-size: .8em; color: var(--bolt); }
+.lv-pt { font-family: var(--display); font-weight: 700; padding: 0 .35em; border-radius: 4px; background: rgba(255,255,255,.08); }
+.lv-pt.lv-xtreme { background: rgba(255,228,31,.2); color: var(--bolt); }
+.lv-pt.lv-burst { background: rgba(255,77,109,.18); color: #ff8098; }
+.lv-pt.lv-over { background: rgba(0,229,255,.14); color: var(--cyan); }
+.lv-res li { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 8px; padding: 4px 0; font-size: clamp(13px, .95vw, 18px); color: var(--faint); }
+.lv-res li > span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lv-res li > span:last-child { text-align: right; }
+.lv-res li .w { color: var(--text); font-weight: 600; }
+.lv-st li { display: flex; gap: 8px; align-items: baseline; padding: 3px 0; font-size: clamp(13px, .95vw, 18px); }
+.lv-st li.fol { color: var(--p1); }
+.lv-st li .grow { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lv-fpick { width: 100%; text-align: left; background: none; border: 0; color: inherit; font: inherit; cursor: pointer; }
+.lv-fpick.on { color: var(--p1); }
+.lv-fpick .lv-star { font-size: 20px; }
+
+/* vyskakovací hláška (bod, výsledek, sledovaný hráč) */
+.lv-flash { position: fixed; left: 50%; bottom: 5vh; z-index: 300; transform: translate(-50%, 140%); opacity: 0; pointer-events: none;
+  display: flex; align-items: center; gap: 14px; max-width: 92vw; padding: clamp(10px, 1.2vw, 22px) clamp(16px, 2vw, 36px); border-radius: 16px;
+  background: rgba(7,11,22,.95); border: 1.5px solid var(--cyan); box-shadow: 0 0 40px rgba(0,229,255,.35);
+  font-size: clamp(16px, 1.8vw, 40px); transition: transform .35s cubic-bezier(.2,.9,.3,1.2), opacity .35s; }
+.lv-flash.on { transform: translate(-50%, 0); opacity: 1; }
+.lv-flash .lv-fa { font-size: .65em; }
+.lv-flash.f-xtreme { border-color: var(--bolt); box-shadow: 0 0 50px rgba(255,228,31,.45); }
+.lv-flash.f-burst { border-color: #ff5c7c; box-shadow: 0 0 50px rgba(255,77,109,.4); }
+.lv-flash.k-result, .lv-flash.k-call { border-color: var(--ok); box-shadow: 0 0 40px rgba(46,240,168,.35); }
+@media (prefers-reduced-motion: reduce) { .lv-flash { transition: opacity .2s; transform: translate(-50%, 0); } .lv-dot { animation: none; } .lv-arena.ping { animation: none; outline: 2px solid var(--bolt); } }
+@media (max-width: 560px) {
+  .lv-set { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px; }
+  .lv-setno { grid-column: 1 / -1; order: -1; padding: 0; text-align: center; }
+  .lv-beys li { gap: 4px; padding: .2em .35em; }
+}

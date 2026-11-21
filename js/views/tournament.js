@@ -13,7 +13,7 @@ import { loadParts, deckEditor, bindDeckEditor } from '../parts.js'
 
 const cfg = window.BBX_CONFIG
 
-export async function load(id, { hist = true } = {}) {
+export async function load(id, { hist = true } = {}) {  // hist = historie bodů dohraných her (d.points)
   const [t, players, matches] = await Promise.all([
     q(sb.from('tournaments').select('*').eq('id', id).maybeSingle()),
     rpc('tournament_players', { p_tournament: id }),
@@ -37,11 +37,11 @@ let ptCache = { id: null, key: null, map: null }
 async function loadPoints(id, matches) {
   const key = matches.map(m => m.p1_wins + m.p2_wins + (m.status === 'done' ? 'd' : '')).join()
   if (ptCache.id === id && ptCache.key === key) return ptCache.map
-  const rows = await q(sb.from('games').select('match_id,game_no,points(seq,scorer_slot,pts,finish),matches!inner(tournament_id)')
+  const rows = await q(sb.from('games').select('match_id,game_no,points(seq,scorer_slot,pts,finish,p1_bey,p2_bey),matches!inner(tournament_id)')
     .eq('matches.tournament_id', id))
   const map = new Map()
   for (const g of rows.sort((a, b) => a.game_no - b.game_no)) {
-    const list = (g.points || []).sort((a, b) => a.seq - b.seq).map(p => ({ slot: p.scorer_slot, pts: p.pts, finish: p.finish }))
+    const list = (g.points || []).sort((a, b) => a.seq - b.seq).map(p => ({ slot: p.scorer_slot, pts: p.pts, finish: p.finish, p1_bey: p.p1_bey, p2_bey: p.p2_bey }))
     if (!map.has(g.match_id)) map.set(g.match_id, [])
     map.get(g.match_id).push(list)
   }
@@ -50,9 +50,9 @@ async function loadPoints(id, matches) {
 }
 
 // souboje rozehrané hry (BBXST posílá matches.live_state v orientaci p1/p2)
-const liveBattles = (m) => m.status !== 'done' && m.live_state?.game === m.p1_wins + m.p2_wins
-  ? (m.live_state.battles || []).map(b => ({ slot: b.slot, pts: b.pts, finish: b.finish })) : null
-const ptLabel = (b) => b.pts === 2 && b.finish === 'over' ? '+2 O' : b.pts === 2 && b.finish === 'burst' ? '+2 B' : `+${b.pts}`
+export const liveBattles = (m) => m.status !== 'done' && m.live_state?.game === m.p1_wins + m.p2_wins
+  ? (m.live_state.battles || []).map(b => ({ slot: b.slot, pts: b.pts, finish: b.finish, p1_bey: b.p1_bey, p2_bey: b.p2_bey })) : null
+export const ptLabel = (b) => b.pts === 2 && b.finish === 'over' ? '+2 O' : b.pts === 2 && b.finish === 'burst' ? '+2 B' : `+${b.pts}`
 const ptTitle = { spin: 'Spin finish', over: 'Over finish', burst: 'Burst finish', xtreme: 'Xtreme finish' }
 // řádek žetonů: body hráče vlevo (u středu) a vpravo, v pořadí, jak padaly; remíza = „R“ u obou (posun beyů)
 export function ptHist(battles, label = '') {
@@ -139,7 +139,8 @@ export async function render(main, [id, tabArg]) {
         <div class="row between wrap">${statusPill(t)}
           <span class="row" style="gap:8px">
           ${t.kind === 'tournament' && t.status === 'finished' ? html`<button class="btn sm primary" data-share>Sdílet výsledky</button>` : ''}
-          ${t.kind === 'tournament' && t.status !== 'registration' ? html`<a class="btn sm ghost btn-ico" href="#/t/${t.id}/tv">${raw(icon('tv'))}TV rozpis</a>` : ''}</span></div>
+          ${t.kind === 'tournament' && t.status !== 'registration' ? html`<a class="btn sm ghost btn-ico" href="#/t/${t.id}/tv">${raw(icon('tv'))}TV rozpis</a>` : ''}
+          ${t.kind === 'tournament' && t.status !== 'registration' ? html`<a class="btn sm btn-ico btn-live" href="#/t/${t.id}/live">${raw(icon('live'))}Živě</a>` : ''}</span></div>
         <h1 style="margin-top:10px">${t.name}</h1>
         <div class="meta">
           ${t.starts_at ? html`<span>🗓 ${fmtDate(t.starts_at)}, ${fmtTime(t.starts_at)}${t.ends_at ? `–${fmtTime(t.ends_at)}` : ''}</span>` : ''}

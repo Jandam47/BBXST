@@ -17,6 +17,7 @@ import * as Auth from './views/auth.js'
 import * as Communities from './views/communities.js'
 import * as Help from './views/help.js'
 import * as Leagues from './views/leagues.js'
+import * as Live from './views/live.js'
 
 const cfg = window.BBX_CONFIG
 
@@ -25,6 +26,7 @@ const routes = [
   [/^\/new(?:\/(event))?$/, Home.renderEditor, 'home'],
   [/^\/t\/([0-9a-f-]{36})\/edit$/, (m, [id]) => Home.renderEditor(m, [null, id]), 'home'],
   [/^\/t\/([0-9a-f-]{36})\/tv$/, Tournament.renderTV, 'home'],
+  [/^\/t\/([0-9a-f-]{36})\/live$/, Live.render, 'home'],
   [/^\/t\/([0-9a-f-]{36})(?:\/([a-z]+))?$/, Tournament.render, 'home'],
   [/^\/players$/, Players.render, 'players'],
   [/^\/communities$/, Communities.renderList, 'players'],

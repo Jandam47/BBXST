@@ -47,6 +47,8 @@ export const ICONS = {
   hanger: svg(`<path class="i1" d="M12 8.5 3.6 15.2a1.3 1.3 0 0 0 .8 2.3h15.2a1.3 1.3 0 0 0 .8-2.3L12 8.5z"/>
     <path class="i2" d="M10 6a2 2 0 1 1 2.6 1.9c-.4.1-.6.4-.6.8v.8"/>`),
   // televize
+  // živé vysílání: bod se vlnami
+  live: svg(`<circle class="i2" cx="12" cy="12" r="2.2"/><path class="i1" d="M8.2 8.2a5.4 5.4 0 0 0 0 7.6M15.8 8.2a5.4 5.4 0 0 1 0 7.6M5.4 5.4a9.3 9.3 0 0 0 0 13.2M18.6 5.4a9.3 9.3 0 0 1 0 13.2"/>`),
   tv: svg(`<rect class="i1" x="3" y="6" width="18" height="12" rx="1.5"/><path class="i2" d="m8.5 2.8 3.5 3.2 3.5-3.2M8 21h8"/>`),
 }
 
