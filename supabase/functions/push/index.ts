@@ -33,7 +33,7 @@ Deno.serve(async (req) => {
   if (msg.sent_at) return new Response('already sent', { status: 200 })
 
   const { data: subs } = await sb.from('push_subscriptions').select('*').in('user_id', msg.user_ids)
-  webpush.setVapidDetails(c.vapid_subject || 'https://jandam47.github.io/BBXST/', c.vapid_public, c.vapid_private)
+  webpush.setVapidDetails(c.vapid_subject || 'https://bbxu.cz', c.vapid_public, c.vapid_private)
   const payload = JSON.stringify({ title: msg.title, body: msg.body, url: msg.url, tag: msg.tag })
 
   let sent = 0, failed = 0

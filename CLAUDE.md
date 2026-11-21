@@ -1,6 +1,8 @@
 # BBXU (BBX Unity) – pokyny pro Claude
 
 Turnajová platforma pro Beyblade X (komunita Pardubice). Autor a hlavní admin: Adam (Jandam47).
+Web běží na vlastní doméně **https://bbxu.cz** (GitHub Pages, soubor `CNAME`; dřív jandam47.github.io/BBXST/ – GitHub přesměrovává).
+Všechny cesty v aplikaci jsou relativní – nic nepiš s `/BBXST/` ani s plnou adresou webu.
 Komunikuj **česky**, celé UI je česky.
 
 ## Co je co
