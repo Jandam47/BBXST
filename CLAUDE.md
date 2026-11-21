@@ -30,7 +30,7 @@ Komunikuj **česky**, celé UI je česky.
   (zdroj kyoganken.sakura.ne.jp/beyx/weight1.htm), Hasbro názvy jsou v `aliases`. Nové díly = nový SQL soubor
   s `insert … on conflict do update` (viz `07-parts-update.sql`); web se kvůli dílům nasazovat nemusí.
 - `js/config.js` – **obsahuje Adamovy živé klíče Supabase. Nikdy ho neměň ani nepřepisuj.**
-- `supabase/schema.sql`, `02-parts.sql`, `03-live-score.sql`, `04-security-hardening.sql`, `05-judge-handover.sql`, `06-formats-stats.sql`, `07-parts-update.sql`, `08-judge-per-match.sql`, `09-pause.sql`, `10-fashion.sql`, `11-finishes.sql`, `12-rated.sql`, `13-communities.sql`, `14-training-extras.sql`, `15-training-bots.sql`, `16-training-reset.sql`, `17-chat-bazar.sql`, `18-chat-tournament-state.sql`, `19-account-reports.sql`, `20-push.sql`, `21-checkin-errors-backup.sql`, `22-leagues.sql`, `23-meetings.sql`, `24-judge-count.sql`, `25-reg-check.sql` – databáze (spuštěné v produkci, nové soubory
+- `supabase/schema.sql`, `02-parts.sql`, `03-live-score.sql`, `04-security-hardening.sql`, `05-judge-handover.sql`, `06-formats-stats.sql`, `07-parts-update.sql`, `08-judge-per-match.sql`, `09-pause.sql`, `10-fashion.sql`, `11-finishes.sql`, `12-rated.sql`, `13-communities.sql`, `14-training-extras.sql`, `15-training-bots.sql`, `16-training-reset.sql`, `17-chat-bazar.sql`, `18-chat-tournament-state.sql`, `19-account-reports.sql`, `20-push.sql`, `21-checkin-errors-backup.sql`, `22-leagues.sql`, `23-meetings.sql`, `24-judge-count.sql`, `25-reg-check.sql`, `26-judge-scan.sql` – databáze (spuštěné v produkci, nové soubory
   spouští Adam). Živé skóre: BBXST v judge módu posílá po každém bodu `live_score` → `matches.live_p1/p2`
   (TV rozpis, vstupenka, seznamy); trigger `bbx_clear_live` ho maže po uložení hry.
   Rozehraná hra: BBXST posílá s `live_score` i `p_state` → `matches.live_state` (souboje v orientaci p1/p2,
@@ -48,6 +48,10 @@ Komunikuj **česky**, celé UI je česky.
   Při otočení / změně velikosti se překreslí.
 - BBXST judge menu → aréna: vybraný zápas (výchozí ten na řadě / rozehraný) velkým písmem v `.jNext`, zbytek fronty
   pod ním menším (`.jQ`, klepnutím se vybere).
+- BBXST judge → sken QR (26): `judge_scan_qr(token)` pustí jen aktivního hráče v běžícím turnaji (swiss / topcut), který
+  má teď nedohraný zápas; vrátí turnaj, zápas a soupeře (`opp_reg`, `opp_nick`). Lišta ukáže „Hráč · Turnaj · aréna N ·
+  naskenuj soupeře X“; druhý sken musí být přesně ten soupeř (jinak „Tohle není soupeř!“), pak se zápas rovnou načte.
+  Chyby: není v aktivním turnaji (nezačal / skončil / zrušený), odstoupil, nemá teď zápas, jiný turnaj, stejný hráč.
 - Fronta arény: `arenaQueue` v core.js a SQL `judge_arena_queue` (stejné pravidlo): rozehraný zápas první,
   pak čekající podle `wave`; zápas hráče, který právě judguje jiný rozehraný zápas, se posune o místo níž.
   Používá ji Můj Status (Tvoje aréna + pořadí v aréně), Judge menu, TV rozpis (obdélník na arénu), Řízení

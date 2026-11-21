@@ -132,14 +132,40 @@ with sync_playwright() as p:
     print('QR match row:', r2)
     assert r2 == '0|7|done', 'levý hráč byl p2 → skóre 0:7'
 
-    # jiný turnaj → chyba
+    # hráč bez zápasu (odehrál) → chyba hned po prvním skenu
+    page.evaluate('jHide(); unloadJudge()')
+    page.evaluate(f"judgeScan(1, 'BBXU1|{t_id}|{tok1}')"); page.wait_for_selector('#jOverlay:not(.hidden)')
+    assert 'nemá zápas' in page.inner_text('#jBox'), page.inner_text('#jBox')
     page.evaluate('jHide()')
+    # hráč v turnaji, který neběží (registrace) → není v aktivním turnaji
+    reg_t = sql("select id from tournaments where name = 'Zimní Pardubice Open'")
+    tokr = sql(f"select qr_token from registrations where tournament_id = '{reg_t}' limit 1")
+    page.evaluate(f"judgeScan(1, 'BBXU1|{reg_t}|{tokr}')"); page.wait_for_selector('#jOverlay:not(.hidden)')
+    assert 'není v aktivním turnaji' in page.inner_text('#jBox'), page.inner_text('#jBox')
+    page.screenshot(path=OUT + '36a_bbxst_not_active.png')
+    page.evaluate('jHide()')
+    # první sken → v liště turnaj a soupeř; druhý sken jiného hráče → „Tohle není soupeř“
+    m3 = sql(f"select p1_reg, p2_reg from matches where tournament_id = '{t_id}' and status <> 'done' and not is_bye and p1_reg is not null and p2_reg is not null order by arena, wave limit 1").split('|')
+    a_tok = sql(f"select qr_token from registrations where id = '{m3[0]}'")
+    b_nick = sql(f"select nick from registrations where id = '{m3[1]}'")
+    # jiný hráč, který taky zrovna hraje (zápas s někým dalším)
+    oth = sql(f"select string_agg(id::text, '|') from (select id from registrations where tournament_id = '{t_id}' and status = 'active' and id not in ('{m3[0]}', '{m3[1]}') limit 2) x").split('|')
+    sql(f"insert into matches (tournament_id, stage, round, pos, key, p1_reg, p2_reg, status, arena, wave) values ('{t_id}', 'swiss', 99, 1, 'TEST-W', '{oth[0]}', '{oth[1]}', 'pending', 2, 99)")
+    wrong = sql(f"select qr_token from registrations where id = '{oth[0]}'")
+    page.evaluate(f"judgeScan(1, 'BBXU1|{t_id}|{a_tok}')"); page.wait_for_function(f"document.getElementById('judgeInfo').textContent.includes('{b_nick}')")
+    page.screenshot(path=OUT + '36b_bbxst_scan_first.png')
+    if wrong:
+        page.evaluate(f"judgeScan(2, 'BBXU1|{t_id}|{wrong}')"); page.wait_for_selector('#jOverlay:not(.hidden)')
+        assert 'není soupeř' in page.inner_text('#jBox') and b_nick in page.inner_text('#jBox'), page.inner_text('#jBox')
+        page.screenshot(path=OUT + '36c_bbxst_wrong_opponent.png')
+        page.evaluate('jHide()')
+    sql(f"delete from matches where key = 'TEST-W' and tournament_id = '{t_id}'")
+    # jiný turnaj → chyba
     other_t = sql("select id from tournaments where name = 'Bye Cup'")
-    page.evaluate(f"judgeScan(1, 'BBXU1|{t_id}|{tok1}')"); page.wait_for_timeout(500)
     page.evaluate(f"judgeScan(2, 'BBXU1|{other_t}|{tok2}')"); page.wait_for_selector('#jOverlay:not(.hidden)')
     assert 'stejném turnaji' in page.inner_text('#jBox')
     page.screenshot(path=OUT + '36_bbxst_wrong_tournament.png')
-    page.evaluate('jHide()')
+    page.evaluate('jHide(); unloadJudge()')
 
     # ruční výběr zápasu
     page.evaluate('cancelMatch()'); page.wait_for_timeout(200)

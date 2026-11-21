@@ -1928,7 +1928,8 @@ function renderJudgeBar() {
     info.title = info.textContent
     btn.textContent = "ZRUŠIT"; btn.onclick = cancelMatch
   } else {
-    info.textContent = judge.sides[1] || judge.sides[2] ? "Naskenuj druhého hráče" : "Naskenuj QR obou hráčů"
+    const one = judge.sides[1] || judge.sides[2]
+    info.textContent = one ? (one.opp_nick ? `${one.nick} · ${one.tournament_name} · ${one.match?.arena ? `aréna ${one.match.arena} · ` : ""}naskenuj soupeře ${one.opp_nick}` : "Naskenuj druhého hráče") : "Naskenuj QR obou hráčů"
     btn.textContent = "VYBRAT ZÁPAS"; btn.onclick = () => openManualMatch()
   }
 }
@@ -1969,25 +1970,24 @@ function renderJudgePlayers() {
   }
 }
 
-/* ── QR sken ── */
+/* ── QR sken ── jen hráč, který teď v běžícím turnaji hraje; druhý sken musí být jeho soupeř */
 async function judgeScan(side, text) {
   const m = /^BBXU1\|([0-9a-f-]{36})\|([0-9a-f-]{36})$/i.exec(String(text).trim())
   if (!m) return jAlert("Tohle není QR kód z BBXU. Hráč ho najde v BBXU u svého turnaje (Moje vstupenka).")
   const other = judge.sides[side === 1 ? 2 : 1]
-  if (other && other.tournament_id !== m[1]) return jAlert("Hráči nejsou ve stejném turnaji! Zkontroluj, že oba ukazují QR ze správného turnaje.")
+  if (other && other.tournament_id !== m[1]) return jAlert(`Hráči nejsou ve stejném turnaji! <b>${esc(other.nick)}</b> hraje <b>${esc(other.tournament_name || "jiný turnaj")}</b>.`)
   let info
-  try { info = await rpc("judge_lookup_qr", { p_token: m[2] }) }
+  try { info = await rpc("judge_scan_qr", { p_token: m[2] }) }
   catch (e) { return jAlert(isNetErr(e) ? "Bez připojení nejde QR ověřit. Zkus to znovu, až bude signál." : esc(e.message)) }
   if (other && other.reg === info.reg) return jAlert("Tohle je stejný hráč jako na druhé straně.")
+  // druhý hráč musí být soupeř, kterého prvnímu přidělil turnaj
+  if (other && other.opp_reg && other.opp_reg !== info.reg) {
+    return jAlert(`Tohle není soupeř! <b>${esc(other.nick)}</b> teď hraje proti <b>${esc(other.opp_nick)}</b>${other.match?.arena ? ` (aréna ${other.match.arena})` : ""}.<br>Naskenoval jsi <b>${esc(info.nick)}</b>.`)
+  }
   judge.sides[side] = { ...info, beys: info.beys || [] }
   renderJudgePlayers(); renderJudgeBar()
   if (judge.sides[1] && judge.sides[2]) {
-    try {
-      const match = await rpc("judge_find_match", { p_reg_a: judge.sides[1].reg, p_reg_b: judge.sides[2].reg })
-      loadMatch(match, judge.sides[1].reg)
-    } catch (e) {
-      jAlert(esc(e.message))
-    }
+    loadMatch((other?.match) || info.match, judge.sides[1].reg)
   }
 }
 
