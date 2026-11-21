@@ -159,7 +159,9 @@ Komunikuj **česky**, celé UI je česky.
   index.html přepíše na `index.html` (inline skript v hlavičce, ten zachytí i `beforeinstallprompt` → `window.__bip`).
   Profil (i host) → karta „Aplikace na plochu“: BBXU přes `__bip.prompt()`, BBXST odkazem `bbxst.html?install=1`, kde se
   ukáže jen tehdy výzva k instalaci (iPhone / bez nabídky prohlížeče = návod). V BBXST je `history` jiná proměnná –
-  používej `window.history`. Přihlášení vrací na adresu bez `index.html` (`redirectTo` v auth.js).
+  používej `window.history`. Přihlášení vrací na adresu bez `index.html` (`redirectTo` v auth.js). Manifesty se
+  načítají s `?v=N` (zvyš při změně, ať telefony nečtou starý z cache). Nainstalované BBXST startuje na výšku
+  (`orientation: portrait`), otočení tlačítkem v kolečku funguje v celé obrazovce i v nainstalované aplikaci.
 - **Měsíční kontrola dílů**: naplánovaná úloha (2. den v měsíci) porovná kyoganken s `bey_parts` a případně otevře PR
   s novým `NN-parts-RRRR-MM.sql` (do DB nic nezapisuje).
 - `vendor/` – supabase-js, qrcode-generator, html5-qrcode (lokálně, kvůli slabé síti v hale).

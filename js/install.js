@@ -11,14 +11,16 @@ export const isIOS = /iPhone|iPad|iPod/.test(ua) || (navigator.platform === 'Mac
 const standalone = () => matchMedia('(display-mode: standalone), (display-mode: fullscreen)').matches || navigator.standalone === true
 const IOS_STEPS = 'v Safari klepni na Sdílet (čtvereček se šipkou) → Přidat na plochu'
 
+let installedNow = false   // jen v tomhle otevření – trvalý příznak by lhal po odinstalaci
+
 export function installCard(box) {
   const draw = () => {
     const bip = window.__bip
     const inBbxu = standalone()
-    const done = localStorage.getItem('bbxu_installed') === '1'
+    const done = installedNow
     mount(box, html`
       <h3 style="margin:0">Aplikace na plochu</h3>
-      <p class="small muted" style="margin:4px 0 12px">Každá aplikace má vlastní ikonu a otevře se bez lišty prohlížeče. BBXST běží na šířku přes celou obrazovku.</p>
+      <p class="small muted" style="margin:4px 0 12px">Každá aplikace má vlastní ikonu a otevře se bez lišty prohlížeče. BBXST se otevře přes celou obrazovku na výšku, otočit jde tlačítkem v jeho menu.</p>
       <div class="inst-row">
         <img src="icons/bbxu-192.png" alt="" width="44" height="44">
         <div class="grow"><b>BBX Unity</b><small>turnaje, registrace, profil, chat</small></div>
@@ -42,7 +44,7 @@ export function installCard(box) {
     bip.prompt()
     const { outcome } = await bip.userChoice.catch(() => ({}))
     window.__bip = null
-    if (outcome === 'accepted') { localStorage.setItem('bbxu_installed', '1'); toast('BBX Unity je na ploše.', 'ok') }
+    if (outcome === 'accepted') { installedNow = true; toast('BBX Unity je na ploše.', 'ok') }
     draw()
   })
   on(box, 'click', '[data-inst=bbxu-help]', () => {
@@ -51,7 +53,7 @@ export function installCard(box) {
       : 'V menu prohlížeče (⋮ vpravo nahoře) zvol Nainstalovat aplikaci nebo Přidat na plochu. Když tam není, aplikaci už nejspíš máš.'
   })
   const redraw = () => box.isConnected ? draw() : (removeEventListener('bbx:installable', redraw), removeEventListener('appinstalled', installed))
-  const installed = () => { localStorage.setItem('bbxu_installed', '1'); redraw() }
+  const installed = () => { installedNow = true; redraw() }
   addEventListener('bbx:installable', redraw)
   addEventListener('appinstalled', installed)
   draw()

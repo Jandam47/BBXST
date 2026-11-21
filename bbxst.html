@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Beyblade X – Score Tracker</title>
 
-<link rel="manifest" href="bbxst.webmanifest">
+<link rel="manifest" href="bbxst.webmanifest?v=2">
 <script>addEventListener('beforeinstallprompt', function (e) { window.__bip = e; dispatchEvent(new Event('bbx:installable')) })</script>
 <meta name="theme-color" content="#000000">
 <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
@@ -1572,8 +1572,10 @@ document.addEventListener("fullscreenchange", () => {
 // Detekce podpory orientation.lock (jen jednou při načtení)
 const orientationLockSupported = !!(screen.orientation && screen.orientation.lock)
 
+// otáčet jde v režimu celé obrazovky i v aplikaci nainstalované na plochu (ta startuje na výšku)
+const installedApp = () => matchMedia("(display-mode: fullscreen), (display-mode: standalone)").matches
 function updateRotateSector() {
-  const canRotate = !!document.fullscreenElement && orientationLockSupported
+  const canRotate = (!!document.fullscreenElement || installedApp()) && orientationLockSupported
   const sector  = document.getElementById("rotateSector")
   const overlay = document.getElementById("rotateDisabledOverlay")
 
@@ -1582,7 +1584,7 @@ function updateRotateSector() {
 }
 
 function handleRotateClick() {
-  const canRotate = !!document.fullscreenElement && orientationLockSupported
+  const canRotate = (!!document.fullscreenElement || installedApp()) && orientationLockSupported
   if (!canRotate) return
   closeWheel()
   rotateScreen()
@@ -3026,7 +3028,7 @@ installErrorLog(typeof sb !== 'undefined' ? sb : null, 'bbxst')
   o.innerHTML = '<div style="max-width:420px;width:100%;background:#020609;border:1px solid #00e5ff;box-shadow:0 0 24px rgba(0,229,255,.35);padding:18px 20px;color:#e8f6ff">' +
     '<div style="display:flex;gap:14px;align-items:center"><img src="icons/icon-192.png" alt="" width="52" height="52" style="border-radius:12px">' +
     '<div><div style="font-family:Orbitron,sans-serif;font-weight:900;font-size:20px;color:#00e5ff">BBXST</div>' +
-    '<div style="font-size:16px;opacity:.8">Počítadlo skóre na plochu – otevře se na šířku přes celou obrazovku.</div></div></div>' +
+    '<div style="font-size:16px;opacity:.8">Počítadlo skóre na plochu – otevře se přes celou obrazovku, otočit jde tlačítkem v menu.</div></div></div>' +
     '<p id="instMsg" style="font-size:16px;margin:14px 0 0;line-height:1.35"></p>' +
     '<div style="display:flex;gap:10px;margin-top:16px">' +
     '<button id="instNo" style="flex:1;padding:12px;background:transparent;border:1px solid #3a4a55;color:#e8f6ff;font:600 17px Rajdhani,sans-serif">Teď ne</button>' +
