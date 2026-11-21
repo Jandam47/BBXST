@@ -4,12 +4,13 @@
 // ════════════════════════════════════════════════════════════════
 import { sb, state, q, rpc, errMsg, isLoggedIn } from '../supa.js'
 import { html, mount, on, toast, timeAgo, modal, busy, confirmBox, fmtTime, fmtDateTime } from '../ui.js'
+import { reportModal } from '../report.js'
 
 const STATE_LABEL = { closed: 'Uzavřený', hidden: 'Schovaný' }
 
 const SEEN_KEY = 'bbxu_chat_seen'
 const seen = () => { try { return JSON.parse(localStorage.getItem(SEEN_KEY)) || {} } catch { return {} } }
-const markSeen = (room, id) => { try { const s = seen(); s[room] = Math.max(s[room] || 0, id); localStorage.setItem(SEEN_KEY, JSON.stringify(s)) } catch {} }
+const markSeen = (room, id) => { try { const s = seen(); s[room] = Math.max(s[room] || 0, id); localStorage.setItem(SEEN_KEY, JSON.stringify(s)) } catch {} ; window.dispatchEvent(new Event('bbx:seen')) }
 
 // přepínač Chat | Bazar
 export const chatTabs = (on_) => html`<nav class="tabs people-tabs" aria-label="Chat a bazar">
@@ -118,7 +119,8 @@ async function roomView(main, roomId, ctx) {
       <a class="av" href="#/p/${m.user_id}">${m.avatar || '👤'}</a>
       <div class="bubble">
         <div class="who"><span>${m.nick}</span><time datetime="${m.created_at}">${timeAgo(m.created_at)}</time>
-          ${own || info.can_moderate ? html`<button class="del" data-del="${m.id}" aria-label="Smazat zprávu">✕</button>` : ''}</div>
+          ${own || info.can_moderate ? html`<button class="del" data-del="${m.id}" aria-label="Smazat zprávu">✕</button>` : ''}
+          ${!own && state.profile?.nick ? html`<button class="del flag" data-report="${m.id}" aria-label="Nahlásit zprávu" title="Nahlásit">⚑</button>` : ''}</div>
         <div class="body">${m.body}</div>
       </div></div>`
   }
@@ -166,6 +168,7 @@ async function roomView(main, roomId, ctx) {
     catch (err) { toast(errMsg(err), 'err') }
   })
   on(main, 'click', '[data-guests]', () => guestsModal(roomId))
+  on(main, 'click', '[data-report]', (e, b) => reportModal('chat_message', b.dataset.report))
   on(main, 'click', '[data-state]', async (e, b) => {
     const st = b.dataset.state
     if (st === 'delete' && !await confirmBox('Smazat chat k turnaji i se všemi zprávami? Nejde to vrátit.', { ok: 'Smazat', danger: true })) return

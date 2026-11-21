@@ -1052,3 +1052,30 @@ button.chip.on { background: var(--bolt); color: var(--bolt-ink); border-color: 
 .chat-state.hidden { color: var(--magenta); }
 .chat-note.state { color: var(--text); border-left: 3px solid var(--muted); padding-left: 8px; }
 .chat-manage { gap: 6px; margin: 0 0 8px; }
+
+/* odznak nepřečtených na záložce */
+.tabbar a .ico { position: relative; }
+.nbadge { position: absolute; top: -6px; right: -12px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px;
+  background: var(--bolt); color: var(--bolt-ink); font-size: 11px; font-weight: 800; line-height: 18px; text-align: center;
+  box-shadow: 0 0 0 2px #04070f; font-family: var(--body, inherit); }
+
+/* nahlášení, pravidla bazaru, smazání účtu */
+.msg .who .flag { color: var(--faint); }
+.msg .who .flag:hover { color: var(--magenta); }
+.bz-report { margin-top: 10px; color: var(--muted); }
+.bz-rules { margin-top: 12px; border: 1px solid var(--line-soft); padding: 8px 12px; background: var(--panel); }
+.bz-rules summary { cursor: pointer; font-weight: 600; color: var(--muted); }
+.bz-rules ol { margin: 8px 0 2px; padding-left: 20px; display: grid; gap: 4px; font-size: 14px; }
+.rep-quote { margin: 0; padding: 8px 12px; border-left: 3px solid var(--magenta); background: rgba(255,255,255,.03); }
+.rep-quote .rq-body { white-space: pre-wrap; word-break: break-word; }
+.rep-quote footer { margin-top: 6px; }
+.danger-zone { margin-top: 32px; padding-top: 12px; border-top: 1px solid var(--line-soft); }
+.msg .del + .flag { margin-left: 4px; }
+
+/* sdílení výsledků */
+.share-img { width: 100%; max-height: 56vh; object-fit: contain; display: block; background: #000; border: 1px solid var(--line-soft); }
+.share-text { margin-top: 10px; }
+.share-text summary { cursor: pointer; color: var(--muted); }
+.share-text pre { white-space: pre-wrap; font-family: var(--body); font-size: 14px; background: var(--ink-2); padding: 10px; margin: 6px 0 0; }
+
+.push-card { margin-top: 24px; }

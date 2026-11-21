@@ -6,6 +6,8 @@ import { html, mount, on, formData, toast, modal, busy, confirmBox, fmtDate, raw
 import { ROLES, REGIONS, roleLevel } from '../core.js'
 import { avatarPicker } from './auth.js'
 import { communityBadges, adminRequests } from './communities.js'
+import { adminReports } from '../report.js'
+import { pushStatus, enablePush, disablePush } from '../push.js'
 
 export async function renderMe(main) {
   if (isLoggedIn()) return render(main, [state.user.id])
@@ -100,6 +102,7 @@ export async function render(main, [id], ctx) {
       <button class="btn sm ghost" data-act="pw">Změnit heslo</button>
       <button class="btn sm ghost" data-act="logout">Odhlásit</button></div>` : ''}
     ${own && state.level >= 4 ? html`<section id="admin-req" class="admin-box"></section>` : ''}
+    ${own && state.level >= 3 ? html`<section id="admin-rep" class="admin-box"></section>` : ''}
 
     <div class="stats">
       <div class="stat"><div class="v">${tours.length}</div><div class="k">${tours.length === 1 ? 'turnaj' : tours.length >= 2 && tours.length <= 4 ? 'turnaje' : 'turnajů'}</div></div>
@@ -161,8 +164,15 @@ export async function render(main, [id], ctx) {
         <span class="num">${m.best_of > 1 ? `${m.my_wins}:${m.opp_wins}` : `${m.my_score}:${m.opp_score}`}</span>
       </a>`)}</div>` : ''}
 
-    ${events.length ? html`<h2>Akce</h2><div class="list">${events.map(t => html`<a class="li" href="#/t/${t.id}"><span class="grow">${t.name}</span><span class="small faint">${kindLabel(t)} · ${fmtDate(t.starts_at)}</span></a>`)}</div>` : ''}`)
+    ${events.length ? html`<h2>Akce</h2><div class="list">${events.map(t => html`<a class="li" href="#/t/${t.id}"><span class="grow">${t.name}</span><span class="small faint">${kindLabel(t)} · ${fmtDate(t.starts_at)}</span></a>`)}</div>` : ''}
+    ${own ? html`<section class="card push-card" id="push-card" aria-live="polite"><div class="spinner" aria-label="Načítám"></div></section>` : ''}
+    ${own ? html`<section class="danger-zone">
+      <h2>Účet</h2>
+      <p class="small muted">Smazáním účtu zmizí profil, zprávy, inzeráty i fotky. Výsledky turnajů zůstanou, ale bez tvého jména.</p>
+      <button class="btn sm danger" data-act="delete-account">Smazat účet</button></section>` : ''}`)
   if (own && state.level >= 4) adminRequests(main.querySelector('#admin-req'))
+  if (own && state.level >= 3) adminReports(main.querySelector('#admin-rep'))
+  if (own) pushCard(main.querySelector('#push-card'))
 
   on(main, 'click', '#bk [data-k]', (e, b) => {
     main.querySelectorAll('#bk button').forEach(x => x.classList.toggle('on', x === b))
@@ -176,9 +186,36 @@ export async function render(main, [id], ctx) {
     try { await rpc('set_user_role', { p_user: id, p_role: target }); toast('Funkce změněna.', 'ok'); render(main, [id]) }
     catch (err) { cb.checked = !cb.checked; toast(errMsg(err), 'err') }
   })
-  on(main, 'click', '[data-act=logout]', async () => { await sb.auth.signOut(); toast('Odhlášeno.'); location.hash = '#/' })
+  on(main, 'click', '[data-act=logout]', async () => { await disablePush(); await sb.auth.signOut(); toast('Odhlášeno.'); location.hash = '#/' })
   on(main, 'click', '[data-act=pw]', () => import('./auth.js').then(m => m.newPasswordModal()))
   on(main, 'click', '[data-act=edit]', () => editModal(p, () => render(main, [id])))
+  on(main, 'click', '[data-act=delete-account]', () => deleteAccountModal(p))
+}
+
+// smazání účtu: potvrzení nickem, nejdřív fotky z bazaru (dokud je hráč přihlášený), pak účet
+function deleteAccountModal(p) {
+  modal(html`
+    <h2>Smazat účet</h2>
+    <p>Tohle nejde vrátit. Smaže se profil, rating, zprávy v chatu, inzeráty v bazaru i s fotkami a členství v komunitách.
+      Ve výsledcích turnajů zůstaneš jako „Smazaný hráč“.</p>
+    <form id="f-del" class="stack" style="margin-top:10px">
+      <label class="f"><span>Pro potvrzení napiš svůj nick: <b>${p.nick}</b></span><input class="input" name="nick" autocomplete="off" required></label>
+      <div class="row" style="gap:8px"><button type="button" class="btn grow" data-close>Zpět</button><button class="btn danger grow">Smazat účet</button></div>
+    </form>`, {
+    onMount: (box, close) => on(box, 'submit', '#f-del', (e, f) => {
+      e.preventDefault()
+      if (f.nick.value.trim().toLowerCase() !== p.nick.toLowerCase()) return toast('Nick nesedí.', 'err')
+      busy(f.querySelector('button.danger'), async () => {
+        try {
+          const photos = await rpc('bazar_my_photos')
+          await rpc('delete_my_account', { p_nick: f.nick.value.trim() })
+          if (photos?.length) await sb.storage.from('bazar').remove(photos).catch(() => {})
+          close(); await sb.auth.signOut().catch(() => {})
+          toast('Účet je smazaný. Díky, že jsi hrál s námi.', 'ok', 6000); location.hash = '#/'
+        } catch (err) { toast(errMsg(err), 'err') }
+      })
+    }),
+  })
 }
 
 function editModal(p, done) {
@@ -206,4 +243,29 @@ function editModal(p, done) {
       })
     },
   })
+}
+
+// upozornění i při zavřené aplikaci (toto zařízení)
+async function pushCard(box) {
+  const st = await pushStatus()
+  const msg = {
+    'ios-install': 'Na iPhonu to jde jen z aplikace na ploše: v Safari dej Sdílet → Přidat na plochu, otevři BBX Unity odtud a zapni upozornění tady.',
+    unsupported: 'Tenhle prohlížeč upozornění při zavřené aplikaci neumí. Zkus Chrome nebo aplikaci přidanou na plochu.',
+    denied: 'Upozornění máš pro BBX Unity zakázaná. Povol je v nastavení prohlížeče (ikona zámku u adresy) a vrať se sem.',
+  }[st.support]
+  mount(box, html`
+    <div class="row between wrap" style="gap:10px">
+      <div class="grow" style="min-width:200px"><h3 style="margin:0">Upozornění na telefonu</h3>
+        <p class="small muted" style="margin:4px 0 0">${msg || (st.on
+          ? `Zapnuté na tomhle zařízení${st.devices > 1 ? ` (celkem ${st.devices} zařízení)` : ''}. Přijde ti aréna, start turnaje, výzva, zpráva v bazaru i info k turnaji – i když máš BBX Unity zavřené.`
+          : 'Aréna, start turnaje, výzva na trénink, zpráva v bazaru a info k turnaji i při zavřené aplikaci.')}</p></div>
+      ${!msg ? html`<button class="btn ${st.on ? 'ghost' : 'primary'}" data-push="${st.on ? 'off' : 'on'}">${st.on ? 'Vypnout' : 'Zapnout'}</button>` : ''}
+    </div>`)
+  on(box, 'click', '[data-push]', (e, b) => busy(b, async () => {
+    try {
+      if (b.dataset.push === 'on') { localStorage.removeItem('bbxu_push_off'); await enablePush(); toast('Upozornění jsou zapnutá.', 'ok') }
+      else { localStorage.setItem('bbxu_push_off', '1'); await disablePush(); toast('Upozornění na tomhle zařízení jsou vypnutá.', 'ok') }
+      pushCard(box)
+    } catch (err) { toast(err.message || errMsg(err), 'err') }
+  }))
 }

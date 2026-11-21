@@ -9,6 +9,8 @@ import * as Players from './views/players.js'
 import * as Profile from './views/profile.js'
 import * as Chat from './views/chat.js'
 import * as Bazar from './views/bazar.js'
+import { watchUnread } from './unread.js'
+import { syncPush } from './push.js'
 import * as Meta from './views/meta.js'
 import * as Auth from './views/auth.js'
 import * as Communities from './views/communities.js'
@@ -215,12 +217,16 @@ async function boot() {
   watchFashion()
   watchTraining()
   watchBazar()
+  watchUnread()
+  syncPush()
   onState((evt) => {
     renderChrome()
     watchMyMatches()
     watchFashion()
     watchTraining()
     watchBazar()
+    if (evt !== 'TOKEN_REFRESHED') watchUnread()
+    if (evt === 'SIGNED_IN') syncPush()
     if (evt === 'PASSWORD_RECOVERY') Auth.newPasswordModal()
     if (evt === 'SIGNED_IN' && isLoggedIn() && state.profile && !state.profile.nick && !document.querySelector('#f-onb')) Auth.onboardingModal()
     if (evt === 'SIGNED_OUT') route()

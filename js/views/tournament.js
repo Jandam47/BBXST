@@ -90,7 +90,9 @@ export async function render(main, [id, tabArg]) {
     mount(main, html`
       <header class="t-head">
         <div class="row between wrap">${statusPill(t)}
-          ${t.kind === 'tournament' && t.status !== 'registration' ? html`<a class="btn sm ghost btn-ico" href="#/t/${t.id}/tv">${raw(icon('tv'))}TV rozpis</a>` : ''}</div>
+          <span class="row" style="gap:8px">
+          ${t.kind === 'tournament' && t.status === 'finished' ? html`<button class="btn sm primary" data-share>Sdílet výsledky</button>` : ''}
+          ${t.kind === 'tournament' && t.status !== 'registration' ? html`<a class="btn sm ghost btn-ico" href="#/t/${t.id}/tv">${raw(icon('tv'))}TV rozpis</a>` : ''}</span></div>
         <h1 style="margin-top:10px">${t.name}</h1>
         <div class="meta">
           ${t.starts_at ? html`<span>🗓 ${fmtDate(t.starts_at)}, ${fmtTime(t.starts_at)}${t.ends_at ? `–${fmtTime(t.ends_at)}` : ''}</span>` : ''}
@@ -121,6 +123,7 @@ export async function render(main, [id, tabArg]) {
   }
 
   draw()
+  on(main, 'click', '[data-share]', () => import('../share.js').then(m => m.shareResultsModal(d)))
   const off = liveChannel(id, () => {
     // nepřekresluj, když má uživatel rozepsaný formulář
     if (main.querySelector('form[data-keep]') && document.activeElement?.closest('form[data-keep]')) return

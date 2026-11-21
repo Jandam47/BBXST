@@ -104,6 +104,7 @@ with sync_playwright() as p:
     h1.fill('#f-ad input[name=price]', '250')
     h1.fill('#f-ad textarea[name=description]', 'Nerozbalený, předání na turnaji.')
     h1.set_input_files('#ph-in', [photo('#123456', 'front'), photo('#552244', 'back')])
+    h1.check('#f-ad input[name=rules]')
     h1.wait_for_selector('.bz-thumb img >> nth=1')
     h1.screenshot(path=OUT + '184_bazar_form.png')
     h1.click('#f-ad button.primary'); h1.wait_for_url(re.compile(r'#/bazar/[0-9a-f-]{36}$'))

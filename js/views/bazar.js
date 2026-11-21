@@ -5,14 +5,25 @@
 import { sb, state, rpc, errMsg, isLoggedIn } from '../supa.js'
 import { html, mount, on, toast, timeAgo, modal, busy, confirmBox, fmtDate } from '../ui.js'
 import { chatTabs } from './chat.js'
+import { reportModal } from '../report.js'
 
 const BUCKET = 'bazar'
 const MAX_PHOTOS = 3
 const photoUrl = (path) => sb.storage.from(BUCKET).getPublicUrl(path).data.publicUrl
 const price = (p) => p == null ? 'Dohodou' : `${Number(p).toLocaleString('cs-CZ')} Kč`
+const RULES = [
+  'Prodávej jen věci kolem Beyblade – beye, díly, launchery, arény a příslušenství.',
+  'Repliky a kopie označ jako repliky. Vydávat padělek za originál je podvod.',
+  'Fotky musí být tvoje a ukazovat skutečný kus, který prodáváš.',
+  'Obchod je jen mezi tebou a kupujícím, BBX Unity za něj neručí. Nejbezpečnější je předání osobně na akci.',
+  'Mladší 15 let prodávají a kupují jen se souhlasem rodiče.',
+  'Piš slušně. Nevhodné inzeráty a zprávy admin smaže, při opakování i s účtem. Cokoliv podezřelého nahlas.',
+]
+const RULES_KEY = 'bbxu_bazar_rules'
+const rulesHtml = () => html`<details class="bz-rules"><summary>Pravidla bazaru</summary><ol>${RULES.map(r => html`<li>${r}</li>`)}</ol></details>`
 const SEEN_KEY = 'bbxu_bazar_seen'
 const seen = () => { try { return JSON.parse(localStorage.getItem(SEEN_KEY)) || {} } catch { return {} } }
-const markSeen = (ad, id) => { try { const s = seen(); s[ad] = Math.max(s[ad] || 0, id || 0); localStorage.setItem(SEEN_KEY, JSON.stringify(s)) } catch {} }
+const markSeen = (ad, id) => { try { const s = seen(); s[ad] = Math.max(s[ad] || 0, id || 0); localStorage.setItem(SEEN_KEY, JSON.stringify(s)) } catch {} ; window.dispatchEvent(new Event('bbx:seen')) }
 
 export async function render(main, [adId], ctx) {
   if (!isLoggedIn()) {
@@ -39,6 +50,7 @@ async function listView(main, ctx) {
       <div class="seg" role="tablist" style="margin-top:12px">
         <button type="button" data-f="all" class="${filter === 'all' ? 'on' : ''}">Všechny</button>
         <button type="button" data-f="mine" class="${filter === 'mine' ? 'on' : ''}">Moje (${list.filter(a => a.mine).length})</button></div>
+      ${rulesHtml()}
       ${rows.length ? html`<div class="bz-grid">${rows.map(a => {
         const unread = a.last_comment && a.last_comment > (s[a.id] || 0)
         return html`<a class="bz-card ${a.status}" href="#/bazar/${a.id}">
@@ -70,7 +82,8 @@ async function adView(main, adId, ctx) {
 
   const commentHtml = (c) => html`<div class="msg ${c.author_id === me ? 'own' : ''}">
     <a class="av" href="#/p/${c.author_id}">${c.avatar || '👤'}</a>
-    <div class="bubble"><div class="who"><span>${c.nick}</span><time datetime="${c.created_at}">${timeAgo(c.created_at)}</time></div>
+    <div class="bubble"><div class="who"><span>${c.nick}</span><time datetime="${c.created_at}">${timeAgo(c.created_at)}</time>
+      ${c.author_id !== me ? html`<button class="del flag" data-report-c="${c.id}" aria-label="Nahlásit komentář" title="Nahlásit">⚑</button>` : ''}</div>
       <div class="body">${c.body}</div></div></div>`
 
   const draw = () => {
@@ -95,6 +108,7 @@ async function adView(main, adId, ctx) {
           ${mine ? html`<button class="btn sm" data-edit>Upravit</button>
             <button class="btn sm" data-status="${ad.status === 'active' ? 'sold' : 'active'}">${ad.status === 'active' ? 'Označit jako prodané' : 'Znovu prodávám'}</button>` : ''}
           <button class="btn sm danger" data-delete>Smazat</button></div>` : ''}
+        ${!mine ? html`<button class="btn sm ghost bz-report" data-report-ad>⚑ Nahlásit inzerát</button>` : ''}
       </article>
 
       <h2 style="margin-top:20px">${mine ? 'Zprávy od zájemců' : 'Napsat prodejci'}</h2>
@@ -132,6 +146,8 @@ async function adView(main, adId, ctx) {
     })
   })
   on(main, 'click', '[data-edit]', () => adForm(d.ad, async () => { await load(); draw() }))
+  on(main, 'click', '[data-report-ad]', () => reportModal('bazar_ad', adId))
+  on(main, 'click', '[data-report-c]', (e, b) => reportModal('bazar_comment', b.dataset.reportC))
   on(main, 'click', '[data-status]', async (e, b) => {
     busy(b, async () => { try { await rpc('bazar_set_status', { p_id: adId, p_status: b.dataset.status }); await load(); draw() } catch (err) { toast(errMsg(err), 'err') } })
   })
@@ -178,6 +194,7 @@ function adForm(ad, done) {
       <label class="f"><span>Popis (nepovinné)</span><textarea class="input" name="description" maxlength="1000" placeholder="Stav, předání, výměna…">${ad?.description || ''}</textarea></label>
       <div class="f"><span>Fotky (1–${MAX_PHOTOS})</span><div class="bz-photos" id="ph"></div>
         <input type="file" id="ph-in" accept="image/*" multiple hidden></div>
+      ${ad ? '' : html`${rulesHtml()}<label class="check"><input type="checkbox" name="rules" required ${localStorage.getItem(RULES_KEY) ? 'checked' : ''}> Souhlasím s pravidly bazaru</label>`}
       <div class="row" style="justify-content:flex-end;gap:8px"><button type="button" class="btn ghost" data-close>Zrušit</button>
         <button class="btn primary">${ad ? 'Uložit' : 'Vystavit'}</button></div>
     </form>`)
@@ -204,6 +221,7 @@ function adForm(ad, done) {
   on(box, 'submit', '#f-ad', (e, f) => {
     e.preventDefault()
     if (!photos.length) return toast('Přidej aspoň jednu fotku.', 'err')
+    if (!ad) { try { localStorage.setItem(RULES_KEY, '1') } catch {} }
     busy(f.querySelector('button.primary'), async () => {
       const uploaded = []
       try {

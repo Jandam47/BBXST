@@ -30,7 +30,7 @@ Komunikuj **česky**, celé UI je česky.
   (zdroj kyoganken.sakura.ne.jp/beyx/weight1.htm), Hasbro názvy jsou v `aliases`. Nové díly = nový SQL soubor
   s `insert … on conflict do update` (viz `07-parts-update.sql`); web se kvůli dílům nasazovat nemusí.
 - `js/config.js` – **obsahuje Adamovy živé klíče Supabase. Nikdy ho neměň ani nepřepisuj.**
-- `supabase/schema.sql`, `02-parts.sql`, `03-live-score.sql`, `04-security-hardening.sql`, `05-judge-handover.sql`, `06-formats-stats.sql`, `07-parts-update.sql`, `08-judge-per-match.sql`, `09-pause.sql`, `10-fashion.sql`, `11-finishes.sql`, `12-rated.sql`, `13-communities.sql`, `14-training-extras.sql`, `15-training-bots.sql`, `16-training-reset.sql`, `17-chat-bazar.sql`, `18-chat-tournament-state.sql` – databáze (spuštěné v produkci, nové soubory
+- `supabase/schema.sql`, `02-parts.sql`, `03-live-score.sql`, `04-security-hardening.sql`, `05-judge-handover.sql`, `06-formats-stats.sql`, `07-parts-update.sql`, `08-judge-per-match.sql`, `09-pause.sql`, `10-fashion.sql`, `11-finishes.sql`, `12-rated.sql`, `13-communities.sql`, `14-training-extras.sql`, `15-training-bots.sql`, `16-training-reset.sql`, `17-chat-bazar.sql`, `18-chat-tournament-state.sql`, `19-account-reports.sql`, `20-push.sql` – databáze (spuštěné v produkci, nové soubory
   spouští Adam). Živé skóre: BBXST v judge módu posílá po každém bodu `live_score` → `matches.live_p1/p2`
   (TV rozpis, vstupenka, seznamy); trigger `bbx_clear_live` ho maže po uložení hry.
   Rozehraná hra: BBXST posílá s `live_score` i `p_state` → `matches.live_state` (souboje v orientaci p1/p2,
@@ -108,6 +108,26 @@ Komunikuj **česky**, celé UI je česky.
   `bazar_comments` = soukromé vlákno zájemce ↔ prodejce (`buyer_id`), čtení + realtime přes RLS, psaní
   `bazar_comment` (prodejce odpovídá s `p_buyer`). Upozornění na novou zprávu v app.js `watchBazar`.
   Router v app.js dává každému pohledu nové čisté `<main>` (posluchače `on(main, …)` nepřežijí navigaci).
+  Pravidla bazaru (`RULES` v bazar.js) – rozbalovací v seznamu, souhlas povinný u nového inzerátu.
+- **Odznak nepřečtených** (`js/unread.js`): na záložce Chat počet místností s novou zprávou + inzerátů s novým
+  komentářem (porovnání s „přečteno“ v localStorage, `bbx:seen`), živě přes realtime, i `navigator.setAppBadge`.
+- **Nahlášení** (19, `js/report.js`): ⚑ u zprávy v chatu / komentáře v bazaru, „Nahlásit inzerát“; `report_create`
+  (jen obsah, který hráč vidí, kopie obsahu do `snapshot`), admini (úroveň 3+) v profilu „Nahlášený obsah“
+  (`report_list`, `report_resolve` smazat / ponechat, `report_count`).
+- **Smazání účtu** (19): profil → Účet → Smazat účet (potvrzení nickem). `delete_my_account` smaže auth.users
+  (kaskádou profil, zprávy, bazar, členství, odběry); registrace zůstanou anonymně („Smazaný hráč XXXX“).
+  Ne hlavní admin, ne leader komunity. Fotky z bazaru klient smaže přes `bazar_my_photos`.
+- **Sdílení výsledků** (`js/share.js`): skončený turnaj → „Sdílet výsledky“ = obrázek 1080×1350 (canvas: top 8,
+  deck vítěze) + text; Web Share s obrázkem, stažení, kopírování textu.
+- **Push notifikace** (20, `js/push.js`, `supabase/functions/push/index.ts`): odběr zařízení `push_subscribe`
+  (profil → Upozornění na telefonu; po přihlášení s povoleným oprávněním se odběr obnoví sám – `syncPush`,
+  při odhlášení se ruší). Triggery volají `bbx_push(uživatelé, titulek, text, odkaz, tag)` → `push_outbox` →
+  pg_net → Edge Function `push` (verify_jwt false, hlavička `x-bbx-secret`), ta rozešle Web Push (npm:web-push,
+  VAPID) a smaže neplatné odběry. Adresa, heslo i VAPID klíče jsou jen v soukromé `bbx_settings` (`push_url`,
+  `push_secret`, `vapid_public`, `vapid_private`, `vapid_subject`; funkce je čte přes service role), veřejný klíč i v push.js.
+  Události: zápas na aréně, start turnaje, výzva / přijetí na tréninku, bazar, info k turnaji (přihlášeným),
+  obecné informace (všem s odběrem), fashion (molo, rozstřel, boss), nové nahlášení (adminům). Autor akce nic
+  nedostane. sw.js: `push` → showNotification, `notificationclick` → otevře odkaz (#/… nebo bbxst.html…).
 - `vendor/` – supabase-js, qrcode-generator, html5-qrcode (lokálně, kvůli slabé síti v hale).
 - `sw.js` – service worker (síť první, cache jako záloha).
 - Vzhled: cyberpunk (černé pozadí s mřížkou, azurová `--cyan` + purpurová `--magenta`, žlutá `--bolt` jen pro
@@ -165,9 +185,10 @@ Potřebují lokální PostgreSQL 16, Node a pro UI Python Playwright + Chrome a 
 - `tests/reset_db.sh && node tests/db.test.mjs` – celý turnaj proti DB se stubem Supabase (role, RLS, RPC).
 - `node tests/fashion.test.mjs` – fashion show v DB (po reset_db / ui-up): judge, hodnocení, rozstřel, boss, vyhlášení.
 - `node tests/chat.test.mjs` – chat (místnosti, přístup, hosté) a bazar (fotky, soukromá vlákna) v DB.
+- `node tests/account.test.mjs` – nahlášení a smazání účtu; `node tests/push.test.mjs` – odběry a push události (outbox).
 - `node tests/community.test.mjs` – komunity a komunitní trénink v DB (schválení, členové, trénink, výzvy, souboje, meta).
 - `tests/ui-up.sh && python3 tests/ui_smoke.py && python3 tests/bbxst_judge.py && python3 tests/test_tools.py` – proklik v Chrome
-  (`tests/judge_handover.py`, `tests/formats_stats.py`, `tests/arenas_status.py`, `tests/fashion_ui.py`, `tests/community_ui.py`, `tests/bbxst_training.py`, `tests/training_bot_ui.py` a `tests/chat_bazar_ui.py` každý zvlášť po čerstvém `ui-up.sh`: převzetí judge;
+  (`tests/judge_handover.py`, `tests/formats_stats.py`, `tests/arenas_status.py`, `tests/fashion_ui.py`, `tests/community_ui.py`, `tests/bbxst_training.py`, `tests/training_bot_ui.py`, `tests/chat_bazar_ui.py` a `tests/extras_ui.py` každý zvlášť po čerstvém `ui-up.sh`: převzetí judge;
   deathmatch přes testovací nástroje až po finále, vyhodnocení, meta, profil)
   (poslední: zkušební turnaj 16 hráčů přes testovací nástroje až po ukončení).
 Když měníš SQL, přidej nový soubor i do `tests/reset_db.sh`. Po změně logiky nebo DB pusť testy.
@@ -177,5 +198,4 @@ V Řízení turnaje (jen admin): přidání N testovacích hráčů bez účtu (
 dílů) a náhodné dohrání otevřených zápasů včetně soubojů s beyi (kvůli vyhodnocení). Jen přes existující RPC (`add_walkin`, `submit_game`), bez změn DB.
 
 ## Zatím chybí / nápady
-- Push notifikace při zavřené aplikaci (Edge Function + Web Push) – teď jen když je BBXU otevřené.
 - Převod starých dat z Google Sheets.
