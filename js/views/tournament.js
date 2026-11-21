@@ -13,7 +13,7 @@ import { loadParts, deckEditor, bindDeckEditor } from '../parts.js'
 
 const cfg = window.BBX_CONFIG
 
-export async function load(id) {
+export async function load(id, { hist = true } = {}) {
   const [t, players, matches] = await Promise.all([
     q(sb.from('tournaments').select('*').eq('id', id).maybeSingle()),
     rpc('tournament_players', { p_tournament: id }),
@@ -28,7 +28,46 @@ export async function load(id) {
   if (t && t.kind === 'tournament' && t.status === 'registration' && state.user && !state.isAnon) {
     checkin = new Map((await rpc('checkin_list', { p_tournament: id }).catch(() => [])).map(x => [x.reg, x.checked_in_at]))
   }
-  return { t, players, matches, myReg, pmap, checkin, league, busy: busyRegs(matches, players) }
+  const points = hist && t?.kind === 'tournament' && t.status !== 'registration' ? await loadPoints(id, matches).catch(() => null) : null
+  return { t, players, matches, myReg, pmap, checkin, league, points, busy: busyRegs(matches, players) }
+}
+
+// historie bodů dohraných her: match_id → [[souboje 1. hry], [2. hry], …]; znovu se stahuje jen po nové hře
+let ptCache = { id: null, key: null, map: null }
+async function loadPoints(id, matches) {
+  const key = matches.map(m => m.p1_wins + m.p2_wins + (m.status === 'done' ? 'd' : '')).join()
+  if (ptCache.id === id && ptCache.key === key) return ptCache.map
+  const rows = await q(sb.from('games').select('match_id,game_no,points(seq,scorer_slot,pts,finish),matches!inner(tournament_id)')
+    .eq('matches.tournament_id', id))
+  const map = new Map()
+  for (const g of rows.sort((a, b) => a.game_no - b.game_no)) {
+    const list = (g.points || []).sort((a, b) => a.seq - b.seq).map(p => ({ slot: p.scorer_slot, pts: p.pts, finish: p.finish }))
+    if (!map.has(g.match_id)) map.set(g.match_id, [])
+    map.get(g.match_id).push(list)
+  }
+  ptCache = { id, key, map }
+  return map
+}
+
+// souboje rozehrané hry (BBXST posílá matches.live_state v orientaci p1/p2)
+const liveBattles = (m) => m.status !== 'done' && m.live_state?.game === m.p1_wins + m.p2_wins
+  ? (m.live_state.battles || []).map(b => ({ slot: b.slot, pts: b.pts, finish: b.finish })) : null
+const ptLabel = (b) => b.pts === 2 && b.finish === 'over' ? '+2 O' : b.pts === 2 && b.finish === 'burst' ? '+2 B' : `+${b.pts}`
+const ptTitle = { spin: 'Spin finish', over: 'Over finish', burst: 'Burst finish', xtreme: 'Xtreme finish' }
+// řádek žetonů: body hráče vlevo (u středu) a vpravo, v pořadí, jak padaly; remízy se nepíšou
+export function ptHist(battles, label = '') {
+  if (!battles?.some(b => b.slot && b.pts)) return ''
+  const side = (n) => battles.filter(b => b.slot === n && b.pts)
+    .map(b => html`<span class="pt pt${b.pts}" title="${ptTitle[b.finish] || ''}">${ptLabel(b)}</span>`)
+  return html`<div class="pt-hist">${label ? html`<span class="pt-g">${label}</span>` : ''}<div class="l">${side(1)}</div><div class="r">${side(2)}</div></div>`
+}
+// všechny hry zápasu: dohrané z DB + rozehraná (u BO3 s číslem hry)
+function matchHist(d, m) {
+  const games = [...(d.points?.get(m.id) || [])]
+  const live = liveBattles(m)
+  if (live) games.push(live)
+  const multi = m.best_of > 1 && games.length > 1
+  return games.map((g, i) => ptHist(g, multi ? `${i + 1}.` : ''))
 }
 
 // fronta zápasů na aréně (rozehraný první, hráč, který judguje, o místo níž)
@@ -348,6 +387,7 @@ export function matchRow(d, m, meReg) {
       <div class="side l ${w1 ? 'win' : done && !m.is_bye ? 'lose' : ''}"><div class="nick">${p1}</div></div>
       <div class="score">${score}</div>
       <div class="side r ${w2 ? 'win' : done && !m.is_bye ? 'lose' : ''}"><div class="nick">${p2}</div></div>
+      ${m.is_bye ? '' : matchHist(d, m)}
       <div class="info"><span>${matchLabel(m, d.t.top_cut, d.t.format)}${m.best_of > 1 ? ` · BO${m.best_of}${!done && started ? ` (hry ${m.p1_wins}:${m.p2_wins})` : ''}` : ''}</span>
         <span>${m.status === 'live' ? html`<span class="pill live" style="font-size:11px;padding:1px 8px">hraje se</span>` : ''}
         ${m.arena && !done ? `aréna ${m.arena}${m.wave > 1 ? ` (${m.wave}. na řadě)` : ''}` : ''}</span></div>
@@ -621,7 +661,7 @@ export async function renderTV(main, [id]) {
   if (Fashion.isFashion(k)) return Fashion.renderTV(main, [id])
   if (Training.isTraining(k)) return Training.renderTV(main, [id])
   document.body.classList.add('tv')
-  let d = await load(id)
+  let d = await load(id, { hist: false })
   const clock = () => new Date().toLocaleTimeString('cs-CZ', { hour: '2-digit', minute: '2-digit' })
 
   const draw = () => {
@@ -651,6 +691,7 @@ export async function renderTV(main, [id]) {
                 ? html`<span class="sc"><b>${cur.live_p1}<i>:</i>${cur.live_p2}</b>${series(cur)}</span>`
                 : html`<span class="vs">${cur.status === 'live' ? 'hraje' : 'na řadě'}${cur.status === 'live' ? series(cur) : ''}</span>`}
               <span class="n r">${nickOf(d, cur.p2_reg)}</span>
+              ${ptHist(liveBattles(cur))}
             </div>` : html`<div class="tv-free">volno</div>`}
             ${rest.map((m, i) => html`<div class="tv-next"><span class="i">${i + 2}.</span><span class="n l">${nickOf(d, m.p1_reg)}</span><span class="vs">vs</span><span class="n r">${nickOf(d, m.p2_reg)}</span></div>`)}
             ${more > 0 ? html`<div class="tv-more">+ ${more} ${more === 1 ? 'další zápas' : more <= 4 ? 'další zápasy' : 'dalších zápasů'}</div>` : ''}
@@ -682,10 +723,10 @@ export async function renderTV(main, [id]) {
   draw()
   lastKey = landscape() ? `L${fitGrid(Math.max(1, d.t.arena_count)).cols}` : 'P'
   window.addEventListener('resize', onResize)
-  const off = liveChannel(id, async () => { d = await load(id); draw() })
+  const off = liveChannel(id, async () => { d = await load(id, { hist: false }); draw() })
   const tick = setInterval(() => { const r = main.querySelector('.tv-head .r'); if (r) r.textContent = r.textContent.replace(/\d{1,2}:\d{2}$/, clock()) }, 15000)
   // pojistka, kdyby realtime vypadl
-  const poll = setInterval(async () => { try { d = await load(id); draw() } catch {} }, 60000)
+  const poll = setInterval(async () => { try { d = await load(id, { hist: false }); draw() } catch {} }, 60000)
   window.addEventListener('bbx:countdown-over', draw)
   return () => { off(); clearInterval(tick); clearInterval(poll); window.removeEventListener('resize', onResize); window.removeEventListener('bbx:countdown-over', draw); document.body.classList.remove('tv') }
 }
