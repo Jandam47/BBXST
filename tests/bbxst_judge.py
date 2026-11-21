@@ -147,8 +147,13 @@ with sync_playwright() as p:
     tiles = page.locator('.aTile').count()
     assert tiles >= 1, 'chybí dlaždice arén'
     page.screenshot(path=OUT + '37_bbxst_arenas.png')
-    page.locator('.aTile:not(.empty)').first.click(); page.wait_for_selector('#mQ .jMatch')
+    page.locator('.aTile:not(.empty)').first.click(); page.wait_for_selector('.jNext .jnName.n1')
     page.screenshot(path=OUT + '37b_bbxst_arena_queue.png')
+    if page.locator('.jQ').count():
+        first = page.inner_text('.jNext .jnName.n1'); nxt = page.inner_text('.jQ .jqNames .n1')
+        page.locator('.jQ').first.click(); page.wait_for_function("n => document.querySelector('.jNext .jnName.n1').textContent === n", arg=nxt)
+        assert page.locator(f'.jQ:has-text("{first}")').count() == 1, 'předchozí zápas je zpátky ve frontě'
+        page.screenshot(path=OUT + '37c_bbxst_arena_pick.png')
     page.click('#mBack'); page.wait_for_selector('#mTiles')
     b.close()
 

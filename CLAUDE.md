@@ -42,6 +42,8 @@ Komunikuj **česky**, celé UI je česky.
   při načteném zápasu) volá `pass_match` (uvolní zápas i arénu, skóre zůstane), ZRUŠIT volá
   `pass_match(…, true)` (zahodí hru). Body ani výsledek nepošle judge, kterému zápas někdo převzal
   (`bbx_check_match_judge`, trigger na `games`); organizátor turnaje smí vždy.
+- BBXST judge menu → aréna: vybraný zápas (výchozí ten na řadě / rozehraný) velkým písmem v `.jNext`, zbytek fronty
+  pod ním menším (`.jQ`, klepnutím se vybere).
 - Fronta arény: `arenaQueue` v core.js a SQL `judge_arena_queue` (stejné pravidlo): rozehraný zápas první,
   pak čekající podle `wave`; zápas hráče, který právě judguje jiný rozehraný zápas, se posune o místo níž.
   Používá ji Můj Status (Tvoje aréna + pořadí v aréně), Judge menu, TV rozpis (obdélník na arénu), Řízení

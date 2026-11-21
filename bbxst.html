@@ -813,6 +813,26 @@ body.judge.has-match.can-swap .swapBtn, body.training.has-tmatch.can-swap .swapB
 .tFree { font-size: 15px; color: rgba(200,240,255,0.6); margin-top: auto; }
 .jMatch .n1 { color: var(--cyan); font-weight: 700; } .jMatch .n2 { color: var(--red); font-weight: 700; }
 .jMatch .meta { font-size: 13px; color: rgba(200,240,255,0.55); }
+/* fronta arény v judge menu: kdo hraje velkým, zbytek fronty menším */
+.jNext { text-align: center; padding: 14px 12px 12px; border-radius: 14px; border: 1px solid var(--gold);
+  background: radial-gradient(ellipse at 50% 0%, rgba(255,215,0,0.12), #0a1520 70%); box-shadow: 0 0 18px rgba(255,215,0,0.22); }
+.jNext.live { border-color: var(--cyan); background: radial-gradient(ellipse at 50% 0%, rgba(0,255,255,0.12), #0a1520 70%); box-shadow: 0 0 18px rgba(0,255,255,0.2); }
+.jnTag { display: inline-block; font-family: 'Orbitron', sans-serif; font-weight: 700; font-size: 12px; letter-spacing: 3px;
+  color: var(--gold); margin-bottom: 6px; }
+.jNext.live .jnTag { color: var(--cyan); letter-spacing: 1px; }
+.jnName { font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 30px; line-height: 1.1; overflow-wrap: anywhere; }
+.jnName.n1 { color: var(--cyan); text-shadow: 0 0 12px rgba(0,255,255,0.4); }
+.jnName.n2 { color: var(--red); text-shadow: 0 0 12px rgba(255,40,80,0.4); }
+.jnVs { font-family: 'Orbitron', sans-serif; font-size: 13px; color: rgba(200,240,255,0.45); margin: 2px 0; letter-spacing: 2px; }
+.jnMeta { margin-top: 6px; font-size: 14px; color: rgba(200,240,255,0.6); }
+.jQueueH { margin: 14px 0 4px; font-size: 12px; letter-spacing: 2px; text-transform: uppercase; color: rgba(200,240,255,0.45); }
+.jQueue { max-height: 32vh; overflow-y: auto; }
+.jQ { display: flex; align-items: baseline; gap: 8px; padding: 7px 8px; border-bottom: 1px solid #12283a; cursor: pointer; font-size: 15px; }
+.jQ:hover { background: #0d1c28; }
+.jqNo { color: rgba(200,240,255,0.45); min-width: 22px; }
+.jqNames { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.jqNames .n1 { color: var(--cyan); } .jqNames .n2 { color: var(--red); }
+.jqMeta { font-size: 12px; color: rgba(200,240,255,0.45); white-space: nowrap; }
 .jBox a { color: var(--cyan); }
 </style>
 </head>
@@ -2133,21 +2153,35 @@ async function openManualMatch(pre = {}) {
       bindT(); bindTiles()
     }
 
-    // fronta jedné arény
+    // fronta jedné arény: vybraný zápas (výchozí ten na řadě) velkým písmem, zbytek fronty pod ním menším
     const drawArena = () => {
       stopArenaPoll()
       const queue = arenas.find(a => a.no === arena)?.queue || []
+      if (sel >= queue.length) sel = 0
+      const phase = (m) => m.stage === "swiss" ? (m.format === "deathmatch" ? "Deathmatch" : "Swiss") + " · kolo " + m.round : m.stage === "gf" ? (m.top_cut === 2 ? "Finále" : "Grand finále") : esc(m.key)
+      const state = (m, i) => m.status === "live"
+        ? (m.judge_id ? `● hraje se${m.live_p1 != null ? ` ${m.live_p1}:${m.live_p2}` : ""}${m.judge_nick ? ` · řídí ${esc(m.judge_nick)}` : ""}` : `◆ volné místo${m.live_p1 != null ? ` ${m.live_p1}:${m.live_p2}` : ""}`)
+        : i === 0 ? "NA ŘADĚ" : `${i + 1}. v pořadí`
+      const f = queue[sel]
       jShow(`<h3>ARÉNA ${arena}</h3>${tSelect()}
-        <div id="mQ">${queue.length ? queue.map((m, i) => `
-          <div class="jMatch ${i === sel ? "sel" : ""}" data-i="${i}">
-            <span class="n1">${esc(m.p1.nick)}</span> vs <span class="n2">${esc(m.p2.nick)}</span>
-            <div class="meta">${m.stage === "swiss" ? (m.format === "deathmatch" ? "Deathmatch" : "Swiss") + " · kolo " + m.round : m.stage === "gf" ? (m.top_cut === 2 ? "Finále" : "Grand finále") : esc(m.key)}${m.best_of > 1 ? ` · BO${m.best_of} (${m.p1_wins}:${m.p2_wins})` : ""}${m.status === "live" ? (m.judge_id ? " · hraje se" : " · volné místo") + (m.live_p1 != null ? ` ${m.live_p1}:${m.live_p2}` : "") + (m.judge_nick ? ` · řídí ${esc(m.judge_nick)}` : "") : i === 0 ? " · na řadě" : ""}</div>
-          </div>`).join("") : `<p>Na téhle aréně teď nic nečeká.</p>`}</div>
+        ${f ? `<div class="jNext ${f.status === "live" ? "live" : ""}">
+            <div class="jnTag">${state(f, sel)}</div>
+            <div class="jnName n1">${esc(f.p1.nick)}</div>
+            <div class="jnVs">VS</div>
+            <div class="jnName n2">${esc(f.p2.nick)}</div>
+            <div class="jnMeta">${phase(f)}${f.best_of > 1 ? ` · BO${f.best_of} (${f.p1_wins}:${f.p2_wins})` : ""}</div>
+          </div>
+          ${queue.length > 1 ? `<div class="jQueueH">Fronta arény</div>
+          <div id="mQ" class="jQueue">${queue.map((m, i) => i === sel ? "" : `
+            <div class="jQ" data-i="${i}"><span class="jqNo">${i + 1}.</span>
+              <span class="jqNames"><span class="n1">${esc(m.p1.nick)}</span> vs <span class="n2">${esc(m.p2.nick)}</span></span>
+              <span class="jqMeta">${m.status === "live" ? (m.judge_id ? "hraje se" : "volné místo") : phase(m)}</span></div>`).join("")}</div>` : ""}`
+          : `<p>Na téhle aréně teď nic nečeká.</p>`}
         <div class="jRow"><button class="qr-btn cancel" id="mBack">◂ ARÉNY</button>
           <button class="qr-btn confirm" id="mOk" ${queue.length ? "" : "disabled"}>POTVRDIT ZÁPAS</button></div>`)
       bindT()
       document.getElementById("mBack").onclick = () => { arena = null; drawTiles(); startPoll() }
-      document.querySelectorAll(".jMatch").forEach(el => el.onclick = () => { sel = Number(el.dataset.i); drawArena() })
+      document.querySelectorAll(".jQ").forEach(el => el.onclick = () => { sel = Number(el.dataset.i); drawArena() })
       const ok = document.getElementById("mOk")
       if (ok) ok.onclick = () => { const m = queue[sel]; jHide(); loadMatch(m) }
     }
