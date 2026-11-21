@@ -70,6 +70,8 @@ Komunikuj **česky**, celé UI je česky.
   `fashion_board`. `fashion_finish`: shoda na 1. místě → rozstřel (`fashion_vote`, +1), znovu shoda → náhodný
   boss of fashion z judgů (`fashion_boss_pick`). Ostatní shody = dělené místo (1, 2, 2, 4). `fashion_board` vrací
   místa postupně: 4.+ hned po `reveal_at`, 3. za 5 s, 2. za 10 s, 1. za 15 s (TV vyhlášení), body až na konci.
+  Přihláška má „Převést deck z turnaje“ (`importDecks` v fashion.js): turnaje, kde je hráč přihlášený (bez zrušených,
+  nejbližší k datu fashion první, „stejný den“), deck přes `my_registration`, vezme se prvních `fashion_beys` beyů.
   Achievementy 1.–3. místa: `player_achievements` (profil); turnajové tituly se počítají jen z turnajů.
   Notifikace (jdi hodnotit / jsi na molu / rozstřel / boss) v `app.js` → `watchFashion`.
 - Komunity (13, `js/views/communities.js`, `#/communities`, `#/c/<id>`, přepínač Hráči | Komunity): zakládá

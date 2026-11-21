@@ -1252,3 +1252,9 @@ a.lg-tag:hover { text-decoration: underline; }
 .stat.judge-stat { grid-column: 1 / -1; display: flex; align-items: baseline; justify-content: center; gap: 10px; }
 .stat.judge-stat .v { color: var(--cyan); }
 .stat.judge-stat .k { font-size: 14px; }
+
+/* fashion: převzetí decku z turnaje */
+.fx-import-btn { border-color: rgba(255,43,214,.5); color: var(--magenta); }
+.fx-imp-row { width: 100%; font: inherit; color: inherit; background: transparent; cursor: pointer; border: 0; border-bottom: 1px solid var(--line-soft); }
+.fx-imp-row:last-child { border-bottom: 0; }
+.fx-imp-row:hover, .fx-imp-row:focus-visible { background: var(--panel-2); }

@@ -59,6 +59,15 @@ with sync_playwright() as p:
     c2, pl = ctx(b, 'hrac1@test.cz')
     go(pl, f'#/t/{t_id}'); pl.wait_for_selector('#f-reg [data-deck]')
     assert pl.locator('[data-bey]').count() == 2
+    # převzetí decku z turnaje, kde je hráč přihlášený
+    pl.wait_for_selector('[data-act=import]'); pl.click('[data-act=import]'); pl.wait_for_selector('.fx-imp-row')
+    shot(pl, '90b_fashion_import', full=False)
+    tid0 = pl.get_attribute('.fx-imp-row', 'data-tid')
+    want = sql(f"select deck->0->>'blade' from registrations where tournament_id = '{tid0}' and user_id = (select id from profiles where nick = 'Hrac1')")
+    pl.click('.fx-imp-row'); pl.wait_for_selector('.modal', state='detached')
+    got = pl.eval_on_selector('[data-bey="0"] [data-combo="blade"] input', 'e => e.value')
+    assert want and got.lower() == want.lower(), (got, want)
+    assert pl.locator('[data-bey]').count() == 2 and pl.locator('[data-bey].complete').count() == 2
     pick(pl, 0, 'blade', 'dran sw'); pick(pl, 0, 'ratchet', '360'); pick(pl, 0, 'bit', 'flat')
     pick(pl, 1, 'blade', 'dran sw'); pick(pl, 1, 'ratchet', '360'); pick(pl, 1, 'bit', 'flat')
     shot(pl, '91_fashion_register')

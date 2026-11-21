@@ -253,14 +253,27 @@ async function regForm(box, d, reload, existing) {
       <label class="f"><span>Nick</span>
         <input class="input" name="nick" minlength="2" maxlength="24" required value="${v.nick || state.profile?.nick || ''}" ${nickLocked ? 'readonly' : ''}>
         ${nickLocked ? html`<div class="hint">Nick z tvého účtu.</div>` : ''}</label>
-      ${deckEditor(v.deck, t.fashion_beys)}
+      <div class="fx-import" id="fx-import"></div>
+      <div id="fx-deck">${deckEditor(v.deck, t.fashion_beys)}</div>
       <p class="hint">Vyplň ${plural(t.fashion_beys, 'beyblade', 'beyblady', 'beybladů')}, které ukážeš na molu. Do startu show je můžeš kdykoliv upravit.</p>
       <div class="row">
         ${existing ? html`<button type="button" class="btn grow" data-act="cancel">Zpět</button>` : ''}
         <button class="btn primary grow">${existing ? 'Uložit' : 'Potvrdit přihlášku'}</button>
       </div>
     </form>`)
-  const getDeck = bindDeckEditor(box.querySelector('[data-deck]'), cat, { distinct: false })
+  let getDeck = bindDeckEditor(box.querySelector('[data-deck]'), cat, { distinct: false })
+  // převzít deck z turnaje, kde je hráč přihlášený (fashion bývá součástí turnaje)
+  const deckBox = box.querySelector('#fx-deck')
+  const setDeck = (deck) => {
+    mount(deckBox, deckEditor(deck, t.fashion_beys))
+    getDeck = bindDeckEditor(deckBox.querySelector('[data-deck]'), cat, { distinct: false })
+  }
+  importDecks(t).then(list => {
+    if (!list.length || !box.isConnected) return
+    const imp = box.querySelector('#fx-import')
+    mount(imp, html`<button type="button" class="btn block fx-import-btn" data-act="import">⇩ Převést deck z turnaje</button>`)
+    on(imp, 'click', '[data-act=import]', () => importModal(t, list, setDeck))
+  })
   on(box, 'click', '[data-act=cancel]', () => reload())
   on(box, 'submit', '#f-reg', async (e, f) => {
     e.preventDefault()
@@ -285,6 +298,37 @@ async function regForm(box, d, reload, existing) {
       } catch (err) { toast(errMsg(err), 'err') }
     })
   })
+}
+
+// turnaje, kde je hráč přihlášený (bez zrušených), nejbližší k datu fashion první
+async function importDecks(t) {
+  const ids = state.myRegs.filter(r => r.status === 'active' && r.tournament_id !== t.id).map(r => r.tournament_id)
+  if (!ids.length) return []
+  const ts = await q(sb.from('tournaments').select('id,name,starts_at,status').in('id', ids).eq('kind', 'tournament').neq('status', 'canceled')).catch(() => [])
+  const at = new Date(t.starts_at || Date.now()).getTime()
+  const day = (x) => x ? new Date(x).toDateString() : ''
+  return ts.map(x => ({ ...x, same: day(x.starts_at) === day(t.starts_at) }))
+    .sort((a, b) => (b.same - a.same) || Math.abs(new Date(a.starts_at || 0) - at) - Math.abs(new Date(b.starts_at || 0) - at))
+}
+
+function importModal(t, list, setDeck) {
+  const { box, close } = modal(html`
+    <h2 style="margin-top:0">Převést deck z turnaje</h2>
+    <p class="muted small">Beyblady z vybraného turnaje se vyplní do přihlášky${t.fashion_beys < 3 ? ` (prvních ${t.fashion_beys})` : t.fashion_beys > 3 ? ' – zbylé doplň ručně' : ''}. Pak je ještě můžeš upravit.</p>
+    <div class="list" style="margin-top:12px">${list.map(x => html`<button type="button" class="li fx-imp-row" data-tid="${x.id}">
+      <span class="grow" style="min-width:0;text-align:left"><span class="ellipsis" style="font-weight:600;display:block">${x.name}</span>
+        <small class="faint">${x.starts_at ? `${fmtDate(x.starts_at)} ${fmtTime(x.starts_at)}` : 'bez termínu'}${x.status === 'finished' ? ' · skončil' : ['swiss', 'topcut'].includes(x.status) ? ' · hraje se' : ''}</small></span>
+      ${x.same ? html`<span class="pill live">stejný den</span>` : ''}</button>`)}</div>
+    <button class="btn ghost block" data-close style="margin-top:12px">Zpět</button>`)
+  on(box, 'click', '[data-tid]', (e, b) => busy(b, async () => {
+    try {
+      const [reg] = await rpc('my_registration', { p_tournament: b.dataset.tid })
+      const deck = Array.isArray(reg?.deck) ? reg.deck : []
+      if (!deck.length) return toast('V tomhle turnaji nemáš vyplněný deck.', 'err')
+      setDeck(deck.slice(0, t.fashion_beys))
+      close(); toast(`Deck z turnaje ${list.find(x => x.id === b.dataset.tid)?.name} je v přihlášce.`, 'ok')
+    } catch (err) { toast(errMsg(err), 'err') }
+  }))
 }
 
 // ────────────────────────────────────────────────────────────────
