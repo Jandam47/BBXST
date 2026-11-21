@@ -58,7 +58,7 @@ Komunikuj **česky**, celé UI je česky.
   si hráči určují na začátku sady a nemění ho): v aktuální sadě (souboje po 3) zahrané šedě s výsledkem (zelené
   +body / červené − / R), zbylé svítí; čekající zápas ukáže oba decky. Historie bodů, fronta. Sledovaní hráči
   (`localStorage bbxu_follow:<turnaj>`; s účtem tlačítko „Upozornit na telefon“ = `live_follow_set` / `live_follow_list`
-  + push z triggeru `bbx_push_follow`: jde na arénu, výsledek). Feed „Dění“ + vyskakovací `.lv-flash` (rozdíl proti
+  + push z triggeru `bbx_push_follow`: jde na arénu, výsledek). Feed „Dění“ (zaškrtávací arény, `bbxu_live_feed_off:<turnaj>`, sledovaní hráči vždy) + vyskakovací `.lv-flash` (rozdíl proti
   minulému načtení), statistiky turnaje v rozbalovacím okénku (endy, nejúspěšnější beye, nejvíc Xtreme / bodů),
   pavouk (`bracketHtml` z tournament.js, „Skrýt odehrané“), poslední výsledky, pořadí. **Režie**: jedna aréna přes celou
   plochu, lišta arén + AUTO (aréna s posledním děním, drží aspoň 12 s). Volby v `localStorage bbxu_live_*`.

@@ -83,6 +83,16 @@ with sync_playwright() as p:
     ph.goto(BASE + f'#/t/{tid}/live'); ph.wait_for_selector('.lv-arena.live')
     assert ph.evaluate("document.documentElement.scrollWidth <= innerWidth + 1"), 'telefon: bez vodorovného rolování'
     ph.screenshot(path=OUT + '301_live_phone.png', full_page=True)
+    # Dění: výběr arén – bod na jiné aréně zmizí po odškrtnutí, sledovaný hráč zůstane
+    other = sql(f"select id || '|' || arena from matches where tournament_id = '{tid}' and status = 'pending' and arena is not null and id <> '{live}' order by arena limit 1").split('|')
+    sql(f"""update matches set status = 'live', live_p1 = 1, live_p2 = 0,
+            live_state = '{{"game":0,"left":1,"battles":[{{"slot":1,"pts":1,"finish":"spin"}}]}}' where id = '{other[0]}'""")
+    pg.wait_for_selector(f'.lv-feed li:has(.lv-fa:text-is("A{other[1]}"))', timeout=25000)
+    pg.uncheck(f'[data-feed-arena="{other[1]}"]')
+    pg.wait_for_selector(f'.lv-feed li:has(.lv-fa:text-is("A{other[1]}"))', state='detached')
+    assert pg.locator('.lv-feed li.fol').count() >= 1, 'sledovaný hráč zůstává'
+    pg.reload(); pg.wait_for_selector('.lv-afilter')
+    assert not pg.is_checked(f'[data-feed-arena="{other[1]}"]'), 'volba se pamatuje'
     # dohraný zápas → výsledek ve feedu
     w = sql(f"select p1_reg from matches where id = '{live}'")
     sql(f"""update matches set status = 'done', winner_reg = '{w}', p1_score = 7, p2_score = 3, p1_wins = 1, finished_at = now(),

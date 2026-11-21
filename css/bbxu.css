@@ -1548,3 +1548,10 @@ main.tv-land .tv-now .pt { font-size: clamp(10px, min(8cqh, 3cqw), 34px); }
 .lv-dir .lv-setno { font-size: clamp(12px, 1vw, 20px); }
 .lv-dir .pt { font-size: clamp(12px, 1.3vw, 26px); }
 .lv-dir .lv-queue { font-size: clamp(13px, 1.1vw, 22px); }
+/* Dění: výběr arén */
+.lv-afilter { display: flex; flex-wrap: wrap; gap: 6px; margin: 2px 0 8px; }
+.lv-achk { display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: 8px; cursor: pointer; user-select: none;
+  font-family: var(--display); font-weight: 700; font-size: 13px; color: var(--faint); border: 1px solid var(--line); background: rgba(255,255,255,.03); }
+.lv-achk input { accent-color: var(--bolt); width: 15px; height: 15px; margin: 0; }
+.lv-achk.on { color: var(--bolt); border-color: rgba(255,228,31,.5); background: rgba(255,228,31,.08); }
+.lv-achk:focus-within { outline: 2px solid var(--cyan); outline-offset: 2px; }

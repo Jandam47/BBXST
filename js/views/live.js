@@ -54,6 +54,9 @@ export async function render(main, [id]) {
   let dirShown = null, dirAt = 0
   let hideDone = pref('hide_done', true)
   let statsOpen = pref('stats_open', false)
+  // Dění: arény, které se v seznamu (a ve vyskakovacích hláškách) neukazují; sledovaní hráči vždy
+  let feedOff = new Set(pref('feed_off:' + id, []))
+  const inFeed = (e) => e.fol || !e.arena || !feedOff.has(e.arena)
   const feed = []                  // živé dění od otevření stránky
   let prev = null                  // minulý stav kvůli rozpoznání nových bodů a výsledků
   const nick = (reg) => d.pmap.get(reg)?.nick || '?'
@@ -98,8 +101,8 @@ export async function render(main, [id]) {
     }
     prev = now
     for (const e of events) { e.at = hhmm(); feed.unshift(e) }
-    feed.splice(30)
-    const big = events.filter(e => e.big).slice(-1)[0]
+    feed.splice(60)
+    const big = events.filter(e => e.big && inFeed(e)).slice(-1)[0]
     if (big) flash(big)
   }
 
@@ -247,6 +250,8 @@ export async function render(main, [id]) {
       .sort((a, b) => new Date(b.finished_at || 0) - new Date(a.finished_at || 0)).slice(0, 6)
     const anyLive = arenas.some(x => x.q.length)
     const fol = [...follow].filter(r => d.pmap.has(r))
+    const arenaNos = Array.from({ length: t.arena_count }, (_, i) => i + 1)
+    const shownFeed = feed.filter(inFeed)
     const hasBracket = d.matches.some(m => m.stage !== 'swiss')
     const showDir = dir != null && running && anyLive
     const dirA = showDir ? directorArena(arenas) : null
@@ -291,8 +296,10 @@ export async function render(main, [id]) {
               ${fol.length ? fol.map(r => followCard(r, st))
                 : html`<p class="lv-hint">Klepni na <b>★ Sledovat hráče</b> a uvidíš, kde a jak hrají tví hráči. Vyskočí ti, až půjdou na arénu.</p>`}
             </section>
-            ${running ? html`<section><h3>Dění</h3>${feed.length ? html`<ul class="lv-feed">${feed.slice(0, 8).map(e => html`<li class="k-${e.kind} ${e.fol ? 'fol' : ''}"><span class="faint num">${e.at}</span>${e.arena ? html`<span class="lv-fa">A${e.arena}</span>` : ''}<span>${e.text}</span></li>`)}</ul>`
-              : html`<p class="faint small">Tady se objeví každý bod a výsledek, jak padají.</p>`}</section>` : ''}
+            ${running ? html`<section class="lv-feedsec"><h3>Dění</h3>
+              ${arenaNos.length > 1 ? html`<div class="lv-afilter" role="group" aria-label="Arény v Dění">${arenaNos.map(a => html`<label class="lv-achk ${feedOff.has(a) ? '' : 'on'}"><input type="checkbox" data-feed-arena="${a}" ${feedOff.has(a) ? '' : 'checked'}>A${a}</label>`)}</div>` : ''}
+              ${shownFeed.length ? html`<ul class="lv-feed">${shownFeed.slice(0, 8).map(e => html`<li class="k-${e.kind} ${e.fol ? 'fol' : ''}"><span class="faint num">${e.at}</span>${e.arena ? html`<span class="lv-fa">A${e.arena}</span>` : ''}<span>${e.text}</span></li>`)}</ul>`
+              : html`<p class="faint small">${feed.length ? 'Z vybraných arén zatím nic.' : 'Tady se objeví každý bod a výsledek, jak padají.'}</p>`}</section>` : ''}
             ${t.status !== 'registration' ? html`<section class="lv-statsec"><details ${statsOpen ? 'open' : ''} data-stats>
               <summary><h3>Statistiky turnaje</h3></summary>${statsOpen ? stats() : ''}</details></section>` : ''}
             ${results.length ? html`<section><h3>Poslední výsledky</h3><ul class="lv-res">${results.map(m => {
@@ -360,6 +367,11 @@ export async function render(main, [id]) {
   on(main, 'click', '[data-push]', (e, b) => togglePush(b))
   on(main, 'click', '[data-dirmode]', () => { dir = dir == null ? 'auto' : null; dirShown = null; setPref('dir:' + id, dir); draw() })
   on(main, 'click', '[data-dir]', (e, b) => { dir = b.dataset.dir === 'auto' ? 'auto' : Number(b.dataset.dir); dirShown = null; setPref('dir:' + id, dir); draw() })
+  on(main, 'change', '[data-feed-arena]', (e, el) => {
+    const a = Number(el.dataset.feedArena)
+    el.checked ? feedOff.delete(a) : feedOff.add(a)
+    setPref('feed_off:' + id, [...feedOff]); draw()
+  })
   on(main, 'change', '[data-hide-done]', (e, el) => { hideDone = el.checked; setPref('hide_done', hideDone); draw() })
   main.addEventListener('toggle', (e) => {
     if (!e.target.matches?.('[data-stats]')) return
