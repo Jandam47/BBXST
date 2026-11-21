@@ -1249,3 +1249,6 @@ a.lg-tag:hover { text-decoration: underline; }
 .format-fixed { display: grid; gap: 4px; padding: 12px 14px; border: 1px solid rgba(255,228,31,.45); background: var(--ink-2); }
 .format-fixed b { font-family: var(--display); font-size: 18px; }
 .format-fixed small { color: var(--muted); font-size: 14px; }
+.stat.judge-stat { grid-column: 1 / -1; display: flex; align-items: baseline; justify-content: center; gap: 10px; }
+.stat.judge-stat .v { color: var(--cyan); }
+.stat.judge-stat .k { font-size: 14px; }

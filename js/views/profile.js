@@ -103,7 +103,7 @@ function h2hBlock(h, p, own) {
 }
 
 export async function render(main, [id], ctx) {
-  const [p, stats, bs, ach, comms, h2h, lgs] = await Promise.all([
+  const [p, stats, bs, ach, comms, h2h, lgs, judged] = await Promise.all([
     q(sb.from('profiles').select('*').eq('id', id).maybeSingle()),
     rpc('player_stats', { p_user: id }),
     rpc('player_bey_stats', { p_user: id }).catch(() => ({})),
@@ -111,6 +111,7 @@ export async function render(main, [id], ctx) {
     rpc('player_communities', { p_user: id }).catch(() => []),
     rpc('player_h2h', { p_user: id }).catch(() => ({ opponents: [] })),
     rpc('player_leagues', { p_user: id }).catch(() => ({ roles: [], standings: [] })),
+    rpc('player_judged', { p_user: id }).catch(() => ({ matches: 0, tournaments: 0 })),
   ])
   if (ctx && !ctx.isCurrent()) return
   if (!p || !p.nick) { mount(main, html`<div class="empty">${p && id === state.user?.id ? html`<button class="btn primary" onclick="location.reload()">Dokonči profil</button>` : 'Profil nenalezen.'}</div>`); return }
@@ -149,6 +150,10 @@ export async function render(main, [id], ctx) {
       <div class="stat"><div class="v">${r.wins}–${r.losses}</div><div class="k">zápasy V–P</div></div>
       <div class="stat"><div class="v">${r.titles}</div><div class="k">${r.titles === 1 ? 'titul' : r.titles >= 2 && r.titles <= 4 ? 'tituly' : 'titulů'}</div></div>
       <div class="stat"><div class="v">${r.podiums}</div><div class="k">na bedně</div></div>
+      ${judged.matches || roleLevel(p.role) >= 1 ? html`<div class="stat judge-stat">
+        <div class="v">${judged.matches}</div>
+        <div class="k">${judged.matches === 1 ? 'odjudgovaný zápas' : judged.matches >= 2 && judged.matches <= 4 ? 'odjudgované zápasy' : 'odjudgovaných zápasů'}${judged.tournaments ? ` · ${plural(judged.tournaments, 'turnaj', 'turnaje', 'turnajů')}` : ''}</div>
+      </div>` : ''}
     </div>
 
     ${h2hBlock(h2h, p, own)}
