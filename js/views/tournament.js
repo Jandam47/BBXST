@@ -2,7 +2,7 @@
 //  Detail turnaje / akce: můj status, hráči, swiss, pavouk, judge menu, TV
 // ════════════════════════════════════════════════════════════════
 import { sb, state, rpc, q, errMsg, canManage, ensureSession, refreshMe, askNotify } from '../supa.js'
-import { html, raw, mount, on, formData, toast, modal, busy, confirmBox, qrSvg, qrPng, statusPill, fmtDate, fmtTime, pauseLeft, fmtLeft, finishLine } from '../ui.js'
+import { html, raw, mount, on, formData, toast, modal, busy, confirmBox, qrSvg, qrPng, statusPill, fmtDate, fmtTime, pauseLeft, fmtLeft, finishLine, kindLabel } from '../ui.js'
 import { computeStandings, matchLabel, qrPayload, nextPow2, phaseName, arenaQueue, busyRegs } from '../core.js'
 import { renderManage } from './manage.js'
 import { icon } from '../icons.js'
@@ -102,8 +102,11 @@ export async function render(main, [id, tabArg]) {
         <h1 style="margin-top:10px">${t.name}</h1>
         <div class="meta">
           ${t.starts_at ? html`<span>🗓 ${fmtDate(t.starts_at)}, ${fmtTime(t.starts_at)}${t.ends_at ? `–${fmtTime(t.ends_at)}` : ''}</span>` : ''}
-          ${t.location ? html`<span>📍 ${t.location}</span>` : ''}
-          ${t.kind === 'tournament' ? html`<span>⚔ ${t.format === 'deathmatch' ? `Deathmatch${t.status !== 'registration' ? ` (${t.swiss_rounds} kol)` : ''}` : `${t.swiss_rounds} kol swiss`}${t.top_cut ? (t.top_cut === 2 ? ', finále' : `, top ${t.top_cut}`) : ''}${t.unique_parts ? ' · díly se neopakují' : ''}${t.rated === false ? ' · bez ratingu' : ''}</span>` : html`<span>Akce</span>`}
+          ${t.event_type === 'meeting' && t.meeting_mode === 'online'
+            ? html`<span>🌐 Online${/^https?:\/\//i.test(t.location || '') ? html` · <a class="meet-link" href="${t.location}" target="_blank" rel="noopener noreferrer">Připojit se</a>` : ''}</span>`
+            : t.location ? html`<span>📍 ${t.location}</span>` : ''}
+          ${t.visibility === 'staff' ? html`<span class="vis-tag" style="color:var(--warn)">🔒 Jen pro organizátory</span>` : ''}
+          ${t.kind === 'tournament' ? html`<span>⚔ ${t.format === 'deathmatch' ? `Deathmatch${t.status !== 'registration' ? ` (${t.swiss_rounds} kol)` : ''}` : `${t.swiss_rounds} kol swiss`}${t.top_cut ? (t.top_cut === 2 ? ', finále' : `, top ${t.top_cut}`) : ''}${t.unique_parts ? ' · díly se neopakují' : ''}${t.rated === false ? ' · bez ratingu' : ''}</span>` : html`<span>${kindLabel(t)}</span>`}
           ${d.league ? html`<a class="lg-tag" href="#/l/${d.league.id}">🏆 ${d.league.name}</a>` : ''}
           ${t.status === 'swiss' ? html`<span style="color:var(--bolt)">Kolo ${t.current_round} z ${t.swiss_rounds}</span>` : ''}
         </div>

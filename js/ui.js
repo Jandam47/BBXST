@@ -172,8 +172,9 @@ function tickCountdowns() {
 setInterval(tickCountdowns, 1000)
 
 // druh akce
-export const EVENT_TYPES = [['training', 'Trénink'], ['fashion', 'Fashion'], ['other', 'Ostatní']]
+export const EVENT_TYPES = [['training', 'Trénink'], ['meeting', 'Meeting'], ['fashion', 'Fashion'], ['other', 'Ostatní']]
 export const kindLabel = (t) => t.kind !== 'event' ? 'Turnaj' : t.event_type === 'fashion' ? 'Fashion' : t.event_type === 'other' ? 'Akce'
+  : t.event_type === 'meeting' ? `Meeting · ${t.meeting_mode === 'online' ? 'online' : 'osobně'}`
   : t.event_type === 'community' ? `Komunitní trénink${t.community ? ` · ${t.community}` : ''}` : 'Trénink'
 
 // druhy endů (BBXST: +3 xtreme, +2 burst / over, +1 spin)

@@ -6,14 +6,17 @@ import { html, mount, on, formData, toast, busy, statusPill, fmtDate, fmtTime, t
 import { DEFAULT_BO, FORMATS } from '../core.js'
 import { trainingForm } from './communities.js'
 import { backupDue } from '../admin.js'
+import { createTree, openCreateWheel } from '../create-wheel.js'
 
 export async function renderList(main, _p, ctx) {
-  const [all, leads, invites, lastBackup] = await Promise.all([
+  const [all, leads, invites, lastBackup, leagues] = await Promise.all([
     rpc('tournament_list'),
     isLoggedIn() ? rpc('my_lead_communities').catch(() => []) : [],
     isLoggedIn() ? rpc('my_training_invites').catch(() => []) : [],
     state.level >= 4 ? rpc('backup_status').catch(() => undefined) : undefined,
+    state.level >= 2 ? rpc('my_leagues').catch(() => []) : [],
   ])
+  const tree = createTree({ level: state.level, leads, leagues, onCommunity: () => trainingForm(leads, leads[0]?.id) })
   if (!ctx.isCurrent()) return
   const mine = new Set(state.myRegs.map(r => r.tournament_id))
   let query = '', filter = 'upcoming'
@@ -56,7 +59,8 @@ export async function renderList(main, _p, ctx) {
       <div class="meta">
         <span>${kindLabel(t)}</span>
         ${t.league ? html`<span class="lg-tag">🏆 ${t.league}</span>` : ''}
-        ${t.location ? html`<span>📍 ${t.location}</span>` : ''}
+        ${t.event_type === 'meeting' && t.meeting_mode === 'online' ? html`<span>🌐 online</span>` : t.location ? html`<span>📍 ${t.location}</span>` : ''}
+        ${t.visibility === 'staff' ? html`<span class="vis-tag">🔒 jen organizátoři</span>` : ''}
         <span>👥 ${plural(Number(t.players), 'hráč', 'hráči', 'hráčů')}${t.max_players ? ` / ${t.max_players}` : ''}</span>
         ${mine.has(t.id) ? html`<span style="color:var(--bolt)">✓ Jsi přihlášený</span>` : ''}
       </div>
@@ -74,8 +78,7 @@ export async function renderList(main, _p, ctx) {
       <h1>Turnaje a akce</h1>
       <div class="row">
         <a class="btn sm ghost help-btn" href="#/help" aria-label="Nápověda – jak na to">?</a>
-        ${leads.length ? html`<button class="btn sm" data-act="training">+ Trénink</button>` : ''}
-        ${state.level >= 2 ? html`<a class="btn sm" href="#/new/event">+ Akce</a><a class="btn primary sm" href="#/new">+ Turnaj</a>` : ''}
+        ${tree ? html`<button class="btn primary sm create-btn" data-act="create" aria-haspopup="dialog">+ Založ akci</button>` : ''}
       </div>
     </div>
     <input class="input" style="margin-top:14px" type="search" placeholder="Hledat podle názvu, místa nebo organizátora" id="t-q" aria-label="Hledat turnaj">
@@ -89,7 +92,7 @@ export async function renderList(main, _p, ctx) {
     ${!isLoggedIn() ? html`<p class="hint" style="text-align:center;margin-top:24px">Máš účet? <a href="#/login">Přihlas se</a> – výsledky se ti budou ukládat do profilu.</p>` : ''}`)
 
   on(main, 'input', '#t-q', (e, el) => { query = el.value; draw() })
-  on(main, 'click', '[data-act=training]', () => trainingForm(leads, leads[0]?.id))
+  on(main, 'click', '[data-act=create]', () => openCreateWheel(tree))
   on(main, 'click', '[data-f]', (e, el) => {
     filter = el.dataset.f
     main.querySelectorAll('.tabs [data-f]').forEach(a => a.classList.toggle('on', a.dataset.f === filter))
@@ -107,6 +110,11 @@ export async function renderEditor(main, [kindArg, id]) {
   let t = { kind: kindArg === 'event' ? 'event' : 'tournament', name: '', description: '', location: '', starts_at: null,
             swiss_rounds: 4, top_cut: 8, arena_count: 4, win_score: 7, bo_config: DEFAULT_BO, max_players: null,
             format: 'swiss', unique_parts: true, rated: true, event_type: 'training', fashion_beys: 3 }
+  // předvolba z kolečka „Založ akci“ (#/new?f=deathmatch, #/new/event?type=meeting&mode=online)
+  const qs = new URLSearchParams(location.hash.split('?')[1] || '')
+  const preType = !id && t.kind === 'event' && ['training', 'fashion', 'meeting', 'other'].includes(qs.get('type')) ? qs.get('type') : null
+  if (preType) Object.assign(t, { event_type: preType, meeting_mode: qs.get('mode') === 'online' ? 'online' : 'live', visibility: 'all' })
+  if (!id && t.kind === 'tournament' && ['swiss', 'deathmatch'].includes(qs.get('f'))) t.format = qs.get('f')
   if (id) {
     t = await q(sb.from('tournaments').select('*').eq('id', id).single())
     if (t.event_type === 'community') { location.hash = `#/t/${id}/manage`; return }
@@ -125,12 +133,18 @@ export async function renderEditor(main, [kindArg, id]) {
     const want = new URLSearchParams(location.hash.split('?')[1] || '').get('league')
     if (want && leagues.some(l => l.id === want)) t.league_id = want
   }
+  const meet = t.event_type === 'meeting'
+  const online = meet && t.meeting_mode === 'online'
+  const title = id ? `Upravit ${isEv ? 'akci' : 'turnaj'}`
+    : !isEv ? (t.league_id ? 'Nový ligový turnaj' : t.format === 'deathmatch' ? 'Nový turnaj · Deathmatch' : 'Nový turnaj · Klasika 3v3')
+    : preType === 'meeting' ? `Nový meeting · ${online ? 'online' : 'osobně'}`
+    : preType === 'fashion' ? 'Nová fashion show' : preType === 'training' ? 'Nový casual trénink' : 'Nová akce'
   const topPreset = [0, 4, 8, 16, 32].includes(t.top_cut) ? String(t.top_cut) : 'custom'
   const bo = { ...DEFAULT_BO, ...(t.bo_config || {}) }
 
   mount(main, html`
     <a class="small muted" href="${id ? `#/t/${id}` : '#/'}">← Zpět</a>
-    <h1 style="margin-top:8px">${id ? 'Upravit' : 'Nový'} ${isEv ? 'akci' : 'turnaj'}</h1>
+    <h1 style="margin-top:8px">${title}</h1>
     <form class="stack" id="f-t" style="margin-top:16px">
       <div class="card stack">
         <label class="f"><span>Název</span><input class="input" name="name" required minlength="3" maxlength="80" value="${t.name}"></label>
@@ -138,19 +152,33 @@ export async function renderEditor(main, [kindArg, id]) {
           <label class="f"><span>Začátek</span><input class="input" type="datetime-local" name="starts_at" value="${toLocalInput(t.starts_at)}" required></label>
           <label class="f"><span>Konec (nepovinné)</span><input class="input" type="datetime-local" name="ends_at" value="${toLocalInput(t.ends_at)}"></label>
         </div>
-        <label class="f"><span>Místo</span><input class="input" name="location" maxlength="120" value="${t.location || ''}" placeholder="Klub, adresa"></label>
-        <label class="f"><span>Popis</span><textarea class="input" name="description" maxlength="2000" placeholder="Pravidla, startovné, co si vzít s sebou…">${t.description || ''}</textarea></label>
+        <label class="f" id="f-loc"><span>${online ? 'Odkaz na schůzku' : 'Místo'}</span><input class="input" name="location" maxlength="${online ? 300 : 120}" type="${online ? 'url' : 'text'}" value="${t.location || ''}" placeholder="${online ? 'https://discord.gg/… nebo Meet / Teams' : 'Klub, adresa'}"></label>
+        <label class="f"><span>Popis</span><textarea class="input" name="description" maxlength="2000" placeholder="${meet ? 'Program, o čem se bude mluvit…' : 'Pravidla, startovné, co si vzít s sebou…'}">${t.description || ''}</textarea></label>
         ${isEv ? html`
+        <div id="f-meet" class="stack" ${meet ? '' : 'hidden'}>
+          <fieldset class="f ev-type"><span>Jak</span>
+            <div class="seg" role="radiogroup" aria-label="Jak se meeting koná">
+              <label class="seg-opt"><input type="radio" name="meeting_mode" value="live" ${!online ? 'checked' : ''}><span>Osobně</span></label>
+              <label class="seg-opt"><input type="radio" name="meeting_mode" value="online" ${online ? 'checked' : ''}><span>Online</span></label>
+            </div></fieldset>
+          <fieldset class="f ev-type"><span>Kdo meeting uvidí</span>
+            <div class="seg" role="radiogroup" aria-label="Kdo meeting uvidí">
+              <label class="seg-opt"><input type="radio" name="visibility" value="all" ${t.visibility !== 'staff' ? 'checked' : ''}><span>Všichni</span></label>
+              <label class="seg-opt"><input type="radio" name="visibility" value="staff" ${t.visibility === 'staff' ? 'checked' : ''}><span>Organizátoři</span></label>
+            </div>
+            <div class="hint">„Organizátoři“ = meeting vidí a přihlásí se na něj jen organizátoři a admini.</div></fieldset>
+        </div>
+        ${preType ? html`<input type="hidden" name="event_type" value="${preType}">` : html`
         <fieldset class="f ev-type"><span>Druh akce</span>
           <div class="seg" role="radiogroup" aria-label="Druh akce">
             ${EVENT_TYPES.map(([k, l]) => html`<label class="seg-opt"><input type="radio" name="event_type" value="${k}" ${t.event_type === k ? 'checked' : ''} ${started ? 'disabled' : ''}><span>${l}</span></label>`)}
             ${leads.length ? html`<label class="seg-opt"><input type="radio" name="event_type" value="community"><span>Komunitní</span></label>` : ''}
           </div>
           <div class="hint" id="ev-hint">${evHint(t.event_type)}</div>
-        </fieldset>
+        </fieldset>`}
         <label class="f" id="f-fbeys" ${t.event_type === 'fashion' ? '' : 'hidden'}><span>Kolik beybladů ukáže každý hráč</span>
           <input class="input" type="number" min="1" max="10" name="fashion_beys" value="${t.fashion_beys || 3}" ${started ? 'disabled' : ''}></label>` : ''}
-        <label class="f"><span>Maximální počet hráčů (nepovinné)</span><input class="input" type="number" min="2" max="512" name="max_players" value="${t.max_players || ''}"></label>
+        <label class="f" id="f-max" ${meet ? 'hidden' : ''}><span>Maximální počet hráčů (nepovinné)</span><input class="input" type="number" min="2" max="512" name="max_players" value="${t.max_players || ''}"></label>
       </div>
       ${isEv || !leagues.length ? '' : html`
       <div class="card stack lg-pick">
@@ -207,7 +235,15 @@ export async function renderEditor(main, [kindArg, id]) {
       return trainingForm(leads, leads[0]?.id)
     }
     main.querySelector('#f-fbeys').hidden = el.value !== 'fashion'
+    main.querySelector('#f-meet').hidden = el.value !== 'meeting'
+    main.querySelector('#f-max').hidden = el.value === 'meeting'
     main.querySelector('#ev-hint').textContent = evHint(el.value)
+  })
+  on(main, 'change', '[name=meeting_mode]', (e, el) => {
+    const on_ = el.value === 'online', inp = main.querySelector('#f-loc input')
+    main.querySelector('#f-loc span').textContent = on_ ? 'Odkaz na schůzku' : 'Místo'
+    inp.type = on_ ? 'url' : 'text'; inp.maxLength = on_ ? 300 : 120
+    inp.placeholder = on_ ? 'https://discord.gg/… nebo Meet / Teams' : 'Klub, adresa'
   })
   on(main, 'change', '#top-preset', (e, el) => { main.querySelector('#top-custom').hidden = el.value !== 'custom' })
   on(main, 'change', '[name=format]', (e, el) => {
@@ -237,19 +273,24 @@ export async function renderEditor(main, [kindArg, id]) {
       Object.assign(row, { swiss_rounds: 1, top_cut: 0 })
       if (!started) Object.assign(row, { event_type: d.event_type || 'training',
                                          fashion_beys: Math.min(10, Math.max(1, Number(d.fashion_beys) || 3)) })
+      const et = started ? t.event_type : (d.event_type || 'training')
+      if (et === 'meeting') {
+        Object.assign(row, { meeting_mode: d.meeting_mode === 'online' ? 'online' : 'live', visibility: d.visibility === 'staff' ? 'staff' : 'all', max_players: null })
+        if (row.meeting_mode === 'online' && row.location && !/^https?:\/\//i.test(row.location)) return toast('Odkaz na online schůzku musí začínat https://', 'err')
+      }
     }
     await busy(f.querySelector('button.primary'), async () => {
       try {
         const saved = id
           ? await q(sb.from('tournaments').update(row).eq('id', id).select('id').single())
           : await q(sb.from('tournaments').insert(row).select('id').single())
-        toast(id ? 'Uloženo.' : (isEv ? 'Akce je vypsaná.' : 'Turnaj je vypsaný.'), 'ok')
+        toast(id ? 'Uloženo.' : (isEv ? (row.event_type === 'meeting' ? 'Meeting je vypsaný.' : 'Akce je vypsaná.') : 'Turnaj je vypsaný.'), 'ok')
         location.hash = '#/t/' + saved.id
       } catch (err) { toast(errMsg(err), 'err') }
     })
   })
 }
 
-const evHint = (k) => k === 'fashion'
+const evHint = (k) => k === 'meeting' ? 'Setkání osobně nebo online – hráči se jen přihlásí.' : k === 'fashion'
   ? 'Soutěž o nejlepší sestavu: hráči se přihlásí s beyblady, design judge je hodnotí a na TV se vyhlásí top 3.'
   : k === 'other' ? 'Cokoliv dalšího – hráči se jen přihlásí.' : 'Trénink – hráči se jen přihlásí, bez výsledků.'

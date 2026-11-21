@@ -76,8 +76,9 @@ with sync_playwright() as p:
 
     # ── zástupce založí trénink z hlavní stránky (+ Trénink) ──
     p1 = players[1]
-    go(p1, '#/'); p1.wait_for_selector('[data-act=training]')
-    p1.click('[data-act=training]'); p1.wait_for_selector('#f-tr')
+    go(p1, '#/'); p1.wait_for_selector('[data-act=create]')
+    p1.click('[data-act=create]'); p1.wait_for_selector('#f-tr')   # jediná možnost = rovnou formulář
+    assert p1.locator('.cw-overlay').count() == 0
     p1.fill('#f-tr [name=name]', 'Středeční trénink')
     p1.fill('#f-tr [name=location]', 'Deskovka')
     p1.click('#f-tr button.primary'); p1.wait_for_selector('[data-act=join]')

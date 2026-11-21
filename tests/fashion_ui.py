@@ -41,13 +41,13 @@ with sync_playwright() as p:
 
     # ── organizátor založí Fashion ──
     c, org = ctx(b, 'org@test.cz')
-    org.click('text=+ Akce'); org.wait_for_selector('#f-t')
+    org.click('[data-act=create]'); org.wait_for_selector('.cw-wheel')
+    org.click('.cw-sec[aria-label="Fashion"]'); org.wait_for_selector('#f-t')
+    assert org.inner_text('h1') == 'Nová fashion show' and org.locator('input[type=radio][name=event_type]').count() == 0
     org.fill('input[name=name]', 'Fashion Night Pardubice')
     org.fill('input[name=starts_at]', '2026-12-05T17:00')
     org.fill('input[name=location]', 'Klub Deskovka, Pardubice')
     org.fill('textarea[name=description]', 'Přines svoje nejhezčí beyblady a cosplay. Hodnotí design judge.')
-    assert org.locator('#f-fbeys').is_hidden()
-    org.click('.seg-opt:has-text("Fashion")')
     assert org.locator('#f-fbeys').is_visible()
     org.fill('input[name=fashion_beys]', '2')
     shot(org, '90_fashion_new')

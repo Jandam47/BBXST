@@ -1213,3 +1213,36 @@ a.lg-tag:hover { text-decoration: underline; }
 .inst-row img { width: 44px; height: 44px; border-radius: 10px; flex: none; }
 .inst-row .grow { display: grid; min-width: 0; }
 .inst-row small { color: var(--muted); font-size: 13px; }
+
+/* ── Založ akci – kolečko (23) ───────────────────── */
+.cw-overlay { position: fixed; inset: 0; z-index: 90; display: grid; place-items: center; padding: 16px;
+  background: rgba(3,5,11,.86); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+.cw-box { display: grid; justify-items: center; gap: 10px; width: 100%; }
+.cw-title { margin: 0; font-family: var(--display); font-size: 20px; font-weight: 700; color: var(--text); text-align: center; min-height: 26px; }
+.cw-hint { margin: 0; font-size: 13px; color: var(--faint); }
+.cw-wheel { width: min(92vw, 360px); height: auto; overflow: visible; }
+.cw-wheel.open { animation: cw-open .22s ease-out; }
+.cw-wheel.in { animation: cw-in .2s ease-out; }
+.cw-wheel.out { animation: cw-out .2s ease-out; }
+@keyframes cw-open { from { opacity: 0; transform: scale(.7) rotate(-25deg); } }
+@keyframes cw-in { from { opacity: 0; transform: scale(.82) rotate(18deg); } }
+@keyframes cw-out { from { opacity: 0; transform: scale(1.12) rotate(-18deg); } }
+.cw-wheel { transform-origin: 50% 50%; }
+.cw-sec { cursor: pointer; outline: none; }
+.cw-sec path { fill: color-mix(in srgb, var(--c) 12%, #070b16); stroke: var(--c); stroke-width: 1.2;
+  transition: fill .15s, filter .15s; }
+.cw-sec:hover path, .cw-sec:focus-visible path { fill: color-mix(in srgb, var(--c) 30%, #070b16); filter: drop-shadow(0 0 8px var(--c)); }
+.cw-sec:active path { fill: color-mix(in srgb, var(--c) 45%, #070b16); }
+.cw-sec text { fill: var(--text); font-family: var(--display); font-weight: 700; font-size: 15px; text-anchor: middle; pointer-events: none; }
+.cw-sec text.sm { font-size: 12px; }
+.cw-sec text.more { fill: var(--c); font-size: 10px; letter-spacing: 2px; }
+.cw-sec .nicon { pointer-events: none; }
+.cw-sec .nicon .i1, .cw-sec .nicon .i2 { stroke: var(--c); }
+.cw-center { cursor: pointer; outline: none; }
+.cw-center circle { fill: var(--ink); stroke: var(--line); stroke-width: 1.5; transition: stroke .15s; }
+.cw-center:hover circle, .cw-center:focus-visible circle { stroke: var(--c); filter: drop-shadow(0 0 6px var(--c)); }
+.cw-center text { fill: var(--muted); font-size: 26px; text-anchor: middle; pointer-events: none; }
+.create-btn { gap: 6px; }
+@media (prefers-reduced-motion: reduce) { .cw-wheel.open, .cw-wheel.in, .cw-wheel.out { animation: none; } }
+.t-card .vis-tag { color: var(--warn); }
+.meet-link { color: var(--cyan); }
