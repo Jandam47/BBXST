@@ -15,11 +15,13 @@ sql(f"update tournaments set arena_count = 3 where id = '{tid}'")
 live = sql(f"select id from matches where tournament_id = '{tid}' and status = 'live' limit 1")
 p1 = sql(f"select r.nick from matches m join registrations r on r.id = m.p1_reg where m.id = '{live}'")
 p2 = sql(f"select r.nick from matches m join registrations r on r.id = m.p2_reg where m.id = '{live}'")
+D1 = sql(f"select bey1 || '|' || bey2 || '|' || bey3 from matches m join registrations r on r.id = m.p1_reg where m.id = '{live}'").split('|')
+D2 = sql(f"select bey1 || '|' || bey2 || '|' || bey3 from matches m join registrations r on r.id = m.p2_reg where m.id = '{live}'").split('|')
 B = [
-  {"slot": 1, "pts": 1, "finish": "spin",   "p1_bey": "Dran Sword 3-60F",  "p2_bey": "Shark Edge 1-60LF"},
-  {"slot": 2, "pts": 3, "finish": "xtreme", "p1_bey": "Wizard Rod 9-60B",  "p2_bey": "Leon Claw 5-60P"},
-  {"slot": 0, "pts": 0, "finish": None,     "p1_bey": "Hells Scythe 4-60T", "p2_bey": "Knight Shield 3-80N"},
-  {"slot": 1, "pts": 2, "finish": "burst",  "p1_bey": "Dran Sword 3-60F",  "p2_bey": "Leon Claw 5-60P"},
+  {"slot": 1, "pts": 1, "finish": "spin",   "p1_bey": D1[0], "p2_bey": D2[0]},
+  {"slot": 2, "pts": 3, "finish": "xtreme", "p1_bey": D1[1], "p2_bey": D2[1]},
+  {"slot": 0, "pts": 0, "finish": None,     "p1_bey": D1[2], "p2_bey": D2[2]},
+  {"slot": 1, "pts": 2, "finish": "burst",  "p1_bey": D1[1], "p2_bey": D2[2]},
 ]
 def set_live(battles):
     s1 = sum(b['pts'] for b in battles if b['slot'] == 1); s2 = sum(b['pts'] for b in battles if b['slot'] == 2)
@@ -40,10 +42,11 @@ with sync_playwright() as p:
     assert pg.inner_text(card + ' .lv-sc').replace('\n', '').replace(' ', '') == '3:3', pg.inner_text(card + ' .lv-sc')
     left = pg.evaluate(f"[...document.querySelectorAll('{card} .lv-set > div:first-child li')].map(l => [l.className, l.innerText.replace(/\\n/g,' ')])")
     right = pg.evaluate(f"[...document.querySelectorAll('{card} .lv-set > div:last-child li')].map(l => [l.className, l.innerText.replace(/\\n/g,' ')])")
-    # 4. souboj = 2. sada: jen jeden zahraný bey, zbytek „?“
-    assert left[0] == ['last', 'Dran Sword 3-60F +2 B'], left
-    assert left[1][0] == 'hid' and left[2][0] == 'hid', left
-    assert right[0][0] == 'last' and '−' in right[0][1], right
+    # 4. souboj = 2. sada: zahraný bey šedě s výsledkem, zbylé dva z decku svítí
+    assert left[0] == ['done last', f'{D1[1]} +2 B'], left
+    assert [x[0] for x in left[1:]] == ['next', 'next'] and {x[1] for x in left[1:]} == {D1[0], D1[2]}, left
+    assert right[0][0] == 'done last' and '−' in right[0][1], right
+    assert len(right) == 3, right
     assert 'sada 2' in pg.inner_text(card + ' .lv-setno')
     fin = pg.inner_text(card + ' .lv-p.l .lv-fin').replace('\n', ' ')
     assert 'B' in fin and 'S' in fin, fin
@@ -53,11 +56,26 @@ with sync_playwright() as p:
     pg.wait_for_selector('.lv-fc'); assert 'Hraje' in pg.inner_text('.lv-fc'), pg.inner_text('.lv-fc')
     assert pg.locator('.lv-arena.fol').count() == 1
     # nový souboj: Xtreme pro sledovaného → feed + vyskakovací hláška (polling 15 s)
-    set_live(B + [{"slot": 1, "pts": 3, "finish": "xtreme", "p1_bey": "Wizard Rod 9-60B", "p2_bey": "Hells Chain 5-60HN"}])
+    set_live(B + [{"slot": 1, "pts": 3, "finish": "xtreme", "p1_bey": D1[0], "p2_bey": D2[0]}])
     pg.wait_for_selector('.lv-flash.on', timeout=25000)
     assert 'Xtreme' in pg.inner_text('.lv-flash'), pg.inner_text('.lv-flash')
     assert 'Xtreme' in pg.inner_text('.lv-feed')
+    # statistiky: otevřít / zavřít okénko
+    assert pg.locator('.lv-stats').count() == 0
+    pg.click('[data-stats] > summary'); pg.wait_for_selector('.lv-stats .lv-bar')
+    assert 'soubojů' in pg.inner_text('.lv-sn')
     pg.screenshot(path=OUT + '300_live_tv.png')
+    # push bez účtu → výzva k přihlášení
+    pg.click('[data-push]'); pg.wait_for_selector('.toast:has-text("účtem")')
+    # režie: jedna aréna přes celou plochu, výběr arény, auto
+    pg.click('[data-dirmode]'); pg.wait_for_selector('.lv-dirbar')
+    assert pg.locator('.lv-arena').count() == 1
+    pg.click('.lv-mini[data-dir="1"]'); pg.wait_for_selector('.lv-arena[data-arena="1"]')
+    assert pg.locator('.lv-arena').count() == 1
+    a_live = sql(f"select arena from matches where id = '{live}'")
+    pg.click('.lv-mini[data-dir="auto"]'); pg.wait_for_selector(f'.lv-arena[data-arena="{a_live}"]')
+    pg.screenshot(path=OUT + '302_live_director.png')
+    pg.click('[data-dirmode]'); pg.wait_for_selector('.lv-dirbar', state='detached')
     assert pg.evaluate("document.documentElement.scrollWidth <= innerWidth + 1"), 'bez vodorovného rolování'
     # po stránce bez rolování do strany i na telefonu
     c2 = b.new_context(viewport={'width': 390, 'height': 844}, device_scale_factor=2, service_workers='block')
@@ -72,6 +90,16 @@ with sync_playwright() as p:
     pg.wait_for_selector('.lv-feed li.k-result', timeout=25000)
     assert 'porazil' in pg.inner_text('.lv-feed li.k-result')
     assert p1 in pg.inner_text('.lv-res')
+    # pavouk top cutu se skrytím dohraných
+    tc = sql("select id from tournaments where name = 'Bye Cup'")
+    pg.goto(BASE + f'#/t/{tc}/live'); pg.wait_for_selector('.lv-bracket')
+    shown = pg.locator('.lv-bracket .b-match').count()
+    total = int(sql(f"select count(*) from matches where tournament_id = '{tc}' and stage <> 'swiss'"))
+    undone = int(sql(f"select count(*) from matches where tournament_id = '{tc}' and stage <> 'swiss' and status <> 'done'"))
+    assert shown == undone, (shown, undone)
+    pg.uncheck('[data-hide-done]'); pg.wait_for_timeout(200)
+    assert pg.locator('.lv-bracket .b-match').count() == total
+    pg.screenshot(path=OUT + '303_live_bracket.png')
     c.close(); c2.close(); b.close()
 
 if errors: print(*errors, sep='\n'); raise SystemExit(1)

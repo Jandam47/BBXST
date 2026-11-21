@@ -33,7 +33,7 @@ Komunikuj **česky**, celé UI je česky.
   (jako v BBXST: vnitřní kruh zuby 0–9 + M, vnější výška 50–85, jen existující kombinace; Turbo / Operate = bit
   s integrovaným ratchetem, normální ratchet ho zase zruší). Pole je `readonly`, `combo({ wheel: true })`.
 - `js/config.js` – **obsahuje Adamovy živé klíče Supabase. Nikdy ho neměň ani nepřepisuj.**
-- `supabase/schema.sql`, `02-parts.sql`, `03-live-score.sql`, `04-security-hardening.sql`, `05-judge-handover.sql`, `06-formats-stats.sql`, `07-parts-update.sql`, `08-judge-per-match.sql`, `09-pause.sql`, `10-fashion.sql`, `11-finishes.sql`, `12-rated.sql`, `13-communities.sql`, `14-training-extras.sql`, `15-training-bots.sql`, `16-training-reset.sql`, `17-chat-bazar.sql`, `18-chat-tournament-state.sql`, `19-account-reports.sql`, `20-push.sql`, `21-checkin-errors-backup.sql`, `22-leagues.sql`, `23-meetings.sql`, `24-judge-count.sql`, `25-reg-check.sql`, `26-judge-scan.sql` – databáze (spuštěné v produkci, nové soubory
+- `supabase/schema.sql`, `02-parts.sql`, `03-live-score.sql`, `04-security-hardening.sql`, `05-judge-handover.sql`, `06-formats-stats.sql`, `07-parts-update.sql`, `08-judge-per-match.sql`, `09-pause.sql`, `10-fashion.sql`, `11-finishes.sql`, `12-rated.sql`, `13-communities.sql`, `14-training-extras.sql`, `15-training-bots.sql`, `16-training-reset.sql`, `17-chat-bazar.sql`, `18-chat-tournament-state.sql`, `19-account-reports.sql`, `20-push.sql`, `21-checkin-errors-backup.sql`, `22-leagues.sql`, `23-meetings.sql`, `24-judge-count.sql`, `25-reg-check.sql`, `26-judge-scan.sql`, `27-live.sql` – databáze (spuštěné v produkci, nové soubory
   spouští Adam). Živé skóre: BBXST v judge módu posílá po každém bodu `live_score` → `matches.live_p1/p2`
   (TV rozpis, vstupenka, seznamy); trigger `bbx_clear_live` ho maže po uložení hry.
   Rozehraná hra: BBXST posílá s `live_score` i `p_state` → `matches.live_state` (souboje v orientaci p1/p2,
@@ -53,12 +53,16 @@ Komunikuj **česky**, celé UI je česky.
   vlevo a vpravo u středu, v pořadí. Swiss řádky a Můj Status (`matchRow`): dohrané hry z `points` (`loadPoints`,
   stahuje se znovu jen po nové hře; BO3 = řádek na hru s číslem) + rozehraná z `matches.live_state`. TV: jen
   rozehraná hra pod živým skóre (`load(id, { hist: false })`). 7× +1 se vejde na řádek i na 360 px.
-- **Živě** (`js/views/live.js`, `#/t/<id>/live`, tlačítko Živě vedle TV rozpis, bez přihlášení, bez změn DB): přenos
-  z arén pro diváky doma. Aréna: hráči, skóre, endy strany (X/B/O/S), beye aktuální sady (souboje po 3; zahrané šedě,
-  poslední zvýrazněný, výhra = zelené +body, prohra = červené −, remíza R; nezahrané = „?“, aby se neprozradil deck),
-  historie bodů, fronta. Beye z `live_state` / `points.p1_bey/p2_bey`. Sledovaní hráči (`localStorage bbxu_follow:<turnaj>`,
-  kde a proti komu hrají, posledních 4 výsledků), feed „Dění“ a vyskakovací hláška `.lv-flash` (rozdíl proti minulému
-  načtení: nový souboj, začátek / konec zápasu, sledovaný hráč na aréně), poslední výsledky, pořadí. Realtime + polling 15 s.
+- **Živě** (`js/views/live.js`, `#/t/<id>/live`, tlačítko Živě vedle TV rozpis, bez přihlášení): přenos z arén pro
+  diváky doma. Aréna: hráči, skóre, endy strany (X/B/O/S), deck obou hráčů (`live_decks` z 27, až po startu – pořadí
+  si hráči určují na začátku sady a nemění ho): v aktuální sadě (souboje po 3) zahrané šedě s výsledkem (zelené
+  +body / červené − / R), zbylé svítí; čekající zápas ukáže oba decky. Historie bodů, fronta. Sledovaní hráči
+  (`localStorage bbxu_follow:<turnaj>`; s účtem tlačítko „Upozornit na telefon“ = `live_follow_set` / `live_follow_list`
+  + push z triggeru `bbx_push_follow`: jde na arénu, výsledek). Feed „Dění“ + vyskakovací `.lv-flash` (rozdíl proti
+  minulému načtení), statistiky turnaje v rozbalovacím okénku (endy, nejúspěšnější beye, nejvíc Xtreme / bodů),
+  pavouk (`bracketHtml` z tournament.js, „Skrýt odehrané“), poslední výsledky, pořadí. **Režie**: jedna aréna přes celou
+  plochu, lišta arén + AUTO (aréna s posledním děním, drží aspoň 12 s). Volby v `localStorage bbxu_live_*`.
+  Realtime + polling 15 s.
 - BBXST judge menu → aréna: vybraný zápas (výchozí ten na řadě / rozehraný) velkým písmem v `.jNext`, zbytek fronty
   pod ním menším (`.jQ`, klepnutím se vybere).
 - BBXST judge → sken QR (26): `judge_scan_qr(token)` pustí jen aktivního hráče v běžícím turnaji (swiss / topcut), který
@@ -265,6 +269,7 @@ Potřebují lokální PostgreSQL 16, Node a pro UI Python Playwright + Chrome a 
 - `node tests/leagues.test.mjs` – ligy: práva správce / organizátorů, ligové turnaje, bodování a bilance (22).
 - `node tests/meetings.test.mjs` – meeting osobně / online, akce jen pro organizátory (23).
 - `node tests/judge-count.test.mjs` – počítadlo odjudgovaných zápasů (24).
+- `node tests/live.test.mjs` – Živě: decky po startu, sledování hráčů, push sledujícím (27).
 - `node tests/account.test.mjs` – nahlášení a smazání účtu; `node tests/push.test.mjs` – odběry a push události (outbox).
 - `node tests/community.test.mjs` – komunity a komunitní trénink v DB (schválení, členové, trénink, výzvy, souboje, meta).
 - `tests/ui-up.sh && python3 tests/ui_smoke.py && python3 tests/bbxst_judge.py && python3 tests/test_tools.py` – proklik v Chrome

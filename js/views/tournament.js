@@ -548,21 +548,22 @@ async function tabReport(box, { d }) {
 // ────────────────────────────────────────────────────────────────
 //  TOP CUT – pavouk
 // ────────────────────────────────────────────────────────────────
-function tabBracket(box, { d }) {
-  const { t, myReg } = d
-  const br = d.matches.filter(m => m.stage !== 'swiss')
+// pavouk top cutu (záložka Top cut i Živě); hideDone = schovat dohrané zápasy
+export function bracketHtml(d, { hideDone = false, mineId = null, follow = null } = {}) {
+  const { t } = d
+  const br = d.matches.filter(m => m.stage !== 'swiss' && !(hideDone && m.status === 'done'))
   const N = nextPow2(Math.max(2, t.top_cut || 2))
   const seedOf = (reg) => d.pmap.get(reg)?.seed
   const slot = (m, n) => {
     const reg = m[`p${n}_reg`], bye = m[`p${n}_bye`]
     const win = m.status === 'done' && reg && m.winner_reg === reg
     const score = m.best_of > 1 ? m[`p${n}_wins`] : m.status === 'live' && m.live_p1 != null ? m[`live_p${n}`] : m[`p${n}_score`]
-    return html`<div class="b-p ${win ? 'win' : ''} ${bye && !reg ? 'bye' : ''}">
+    return html`<div class="b-p ${win ? 'win' : ''} ${bye && !reg ? 'bye' : ''} ${follow && reg && follow.has(reg) ? 'fol' : ''}">
       <span class="ellipsis">${reg ? html`${seedOf(reg) ? html`<span class="faint">${seedOf(reg)} </span>` : ''}${nickOf(d, reg)}` : bye ? 'bye' : '—'}</span>
       <span class="s num">${m.status !== 'pending' && reg && !m.is_bye ? score : ''}</span></div>`
   }
   const bm = (m) => html`
-    <div class="b-match ${m.status === 'live' ? 'live' : ''} ${myReg && (m.p1_reg === myReg.id || m.p2_reg === myReg.id) ? 'mine' : ''}">
+    <div class="b-match ${m.status === 'live' ? 'live' : ''} ${mineId && (m.p1_reg === mineId || m.p2_reg === mineId) ? 'mine' : ''}">
       ${slot(m, 1)}${slot(m, 2)}
       <div class="b-meta"><span>${m.best_of > 1 ? `BO${m.best_of}` : ''}</span>
         <span>${m.status === 'live' ? 'hraje se' : m.status === 'pending' && m.arena ? `aréna ${m.arena}` : m.is_bye && m.status === 'done' ? 'postup bez boje' : ''}</span></div>
@@ -570,23 +571,28 @@ function tabBracket(box, { d }) {
   const col = (title, ms) => ms.length ? html`<div class="b-col"><h4>${title}</h4>${ms.sort((a, b) => a.pos - b.pos).map(bm)}</div>` : ''
   const wbR = [...new Set(br.filter(m => m.stage === 'wb').map(m => m.round))].sort((a, b) => a - b)
   const lbR = [...new Set(br.filter(m => m.stage === 'lb').map(m => m.round))].sort((a, b) => a - b)
+  const gf = br.filter(m => m.stage === 'gf')
+  if (!wbR.length && !lbR.length && !gf.length) return html`<p class="faint">Všechny zápasy pavouka jsou dohrané.</p>`
+  return html`${wbR.length || gf.length ? html`<h3 class="b-h">Winners</h3>
+    <div class="bracket-wrap"><div class="bracket">
+      ${wbR.map(r => col(matchLabel({ stage: 'wb', round: r }, N), br.filter(m => m.stage === 'wb' && m.round === r)))}
+      ${col(t.top_cut === 2 ? 'Finále' : 'Grand finále', gf)}
+    </div></div>` : ''}
+    ${lbR.length ? html`<h3 class="b-h">Losers</h3>
+    <div class="bracket-wrap"><div class="bracket">
+      ${lbR.map(r => col(matchLabel({ stage: 'lb', round: r }, N), br.filter(m => m.stage === 'lb' && m.round === r)))}
+    </div></div>` : ''}`
+}
 
+function tabBracket(box, { d }) {
+  const { t, myReg } = d
   const podium = t.status === 'finished'
     ? d.players.filter(p => p.final_place && p.final_place <= 4).sort((a, b) => a.final_place - b.final_place) : []
-
   mount(box, html`
     ${podium.length ? html`<div class="list" style="margin-bottom:18px">${podium.map(p => html`
       <div class="li"><span class="place p${p.final_place}">${p.final_place}.</span><span class="av">${p.avatar || '👤'}</span>
         <b class="grow">${p.nick}</b></div>`)}</div>` : ''}
-    <h2 style="margin-top:0">Winners</h2>
-    <div class="bracket-wrap"><div class="bracket">
-      ${wbR.map(r => col(matchLabel({ stage: 'wb', round: r }, N), br.filter(m => m.stage === 'wb' && m.round === r)))}
-      ${col(t.top_cut === 2 ? 'Finále' : 'Grand finále', br.filter(m => m.stage === 'gf'))}
-    </div></div>
-    ${lbR.length ? html`<h2>Losers</h2>
-    <div class="bracket-wrap"><div class="bracket">
-      ${lbR.map(r => col(matchLabel({ stage: 'lb', round: r }, N), br.filter(m => m.stage === 'lb' && m.round === r)))}
-    </div></div>` : ''}`)
+    <div class="bracket-tab">${bracketHtml(d, { mineId: myReg?.id })}</div>`)
 }
 
 // ────────────────────────────────────────────────────────────────

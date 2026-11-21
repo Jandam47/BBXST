@@ -1,12 +1,14 @@
 // ════════════════════════════════════════════════════════════════
 //  ŽIVĚ – přenos z arén pro diváky doma (#/t/<id>/live)
-//  Arény: kdo hraje, skóre, beye aktuální sady (zahrané šedě + body / −),
-//  endy každé strany, historie bodů. Sledovaní hráči (localStorage), živý feed
-//  bodů a výsledků, poslední výsledky, průběžné pořadí. Bez přihlášení.
-//  Beye se ukazují až po zahrání (nezahrané v sadě = „?“), ať se neprozradí deck.
+//  Arény: kdo hraje, skóre, deck obou hráčů (zahrané v sadě šedě + body / −, zbylé svítí),
+//  endy každé strany, historie bodů. Sledovaní hráči (localStorage, s účtem i push – 27),
+//  živý feed, poslední výsledky, pořadí, pavouk (skrýt dohrané), statistiky, režie (výběr arény).
+//  Bez přihlášení; decky přes live_decks (až po startu turnaje).
 // ════════════════════════════════════════════════════════════════
-import { html, raw, mount, on, modal, fmtLeft } from '../ui.js'
-import { load, queueOf, liveChannel, standingsFor, paused, ptHist, liveBattles, ptLabel } from './tournament.js'
+import { html, raw, mount, on, modal, fmtLeft, toast, busy } from '../ui.js'
+import { rpc, state, isLoggedIn, errMsg } from '../supa.js'
+import { enablePush, pushSupport } from '../push.js'
+import { load, queueOf, liveChannel, standingsFor, paused, ptHist, liveBattles, ptLabel, bracketHtml } from './tournament.js'
 import { matchLabel, phaseName } from '../core.js'
 import { icon } from '../icons.js'
 
@@ -15,6 +17,8 @@ const finOf = (b) => b.finish || (b.pts === 3 ? 'xtreme' : b.pts === 1 ? 'spin' 
 const followKey = (id) => `bbxu_follow:${id}`
 const readFollow = (id) => { try { return new Set(JSON.parse(localStorage.getItem(followKey(id))) || []) } catch { return new Set() } }
 const saveFollow = (id, set) => { try { localStorage.setItem(followKey(id), JSON.stringify([...set])) } catch {} }
+const pref = (k, def) => { try { const v = localStorage.getItem('bbxu_live_' + k); return v === null ? def : JSON.parse(v) } catch { return def } }
+const setPref = (k, v) => { try { localStorage.setItem('bbxu_live_' + k, JSON.stringify(v)) } catch {} }
 const hhmm = (d = new Date()) => d.toLocaleTimeString('cs-CZ', { hour: '2-digit', minute: '2-digit' })
 
 // souboje hry, která je teď na řadě (rozehraná z live_state, jinak poslední dohraná)
@@ -35,6 +39,21 @@ export async function render(main, [id]) {
   document.body.classList.add('tv')
   let d = await load(id)
   let follow = readFollow(id)
+  let decks = new Map()             // reg → [bey1, bey2, bey3] (live_decks, až po startu)
+  const loadDecks = async () => {
+    if (decks.size || d.t.status === 'registration') return
+    try { decks = new Map((await rpc('live_decks', { p_tournament: id })).map(x => [x.reg, x.beys])) } catch {}
+  }
+  await loadDecks()
+  const pushKey = 'follow_push:' + id
+  let pushOn = pref(pushKey, false) && isLoggedIn() && !state.isAnon
+  if (pushOn) {                     // sledované ze serveru (i z jiného zařízení) se přidají k místním
+    try { for (const r of await rpc('live_follow_list', { p_tournament: id })) follow.add(r); saveFollow(id, follow) } catch {}
+  }
+  let dir = pref('dir:' + id, null)              // režie: null = vypnuto, 'auto' nebo číslo arény
+  let dirShown = null, dirAt = 0
+  let hideDone = pref('hide_done', true)
+  let statsOpen = pref('stats_open', false)
   const feed = []                  // živé dění od otevření stránky
   let prev = null                  // minulý stav kvůli rozpoznání nových bodů a výsledků
   const nick = (reg) => d.pmap.get(reg)?.nick || '?'
@@ -93,16 +112,19 @@ export async function render(main, [id]) {
     clearTimeout(flashT); flashT = setTimeout(() => el.classList.remove('on'), 4500)
   }
 
-  // ── jedna strana arény: beye aktuální sady ──
-  function sideBeys(set, s) {
-    const slots = set.map((b, i) => {
-      const bey = b[`p${s}_bey`] || '—', last = i === set.length - 1
+  // ── jedna strana arény: deck hráče; zahrané v aktuální sadě šedě s výsledkem, zbylé svítí ──
+  function sideBeys(set, s, reg) {
+    const deck = (decks.get(reg) || []).filter(Boolean)
+    const played = set.map(b => b[`p${s}_bey`])
+    const rows = set.map((b, i) => {
       const res = !b.slot ? html`<span class="lv-r d">R</span>`
         : b.slot === s ? html`<span class="lv-r w">${ptLabel(b)}</span>` : html`<span class="lv-r l">−</span>`
-      return html`<li class="${last ? 'last' : 'done'}"><span class="lv-bn">${bey}</span>${res}</li>`
+      return html`<li class="done ${i === set.length - 1 ? 'last' : ''}"><span class="lv-bn">${b[`p${s}_bey`] || '—'}</span>${res}</li>`
     })
-    for (let i = set.length; i < 3; i++) slots.push(html`<li class="hid"><span class="lv-bn">?</span></li>`)
-    return html`<ol class="lv-beys">${slots}</ol>`
+    const left = deck.filter(x => !played.includes(x))
+    for (const x of left) rows.push(html`<li class="next"><span class="lv-bn">${x}</span></li>`)
+    for (let i = rows.length; i < 3; i++) rows.push(html`<li class="hid"><span class="lv-bn">?</span></li>`)
+    return html`<ol class="lv-beys">${rows}</ol>`
   }
   // endy strany v aktuální hře
   function sideFin(battles, s) {
@@ -129,8 +151,8 @@ export async function render(main, [id]) {
         <div class="lv-sc num">${live ? html`<b>${s1}</b><i>:</i><b>${s2}</b>` : html`<span class="faint">vs</span>`}</div>
         <div class="lv-p r"><span class="lv-nick p2c">${nick(cur.p2_reg)}${follow.has(cur.p2_reg) ? html`<i class="lv-star"> ★</i>` : ''}</span>${live ? sideFin(g.battles, 2) : ''}</div>
       </div>
-      ${live ? html`<div class="lv-set"><div>${sideBeys(set, 1)}</div><span class="lv-setno">${g.battles.length ? `sada ${no}` : 'čeká se na první souboj'}</span><div>${sideBeys(set, 2)}</div></div>
-        ${ptHist(g.battles)}` : ''}
+      ${live || decks.size ? html`<div class="lv-set"><div>${sideBeys(set, 1, cur.p1_reg)}</div><span class="lv-setno">${!live ? 'decky' : g.battles.length ? `sada ${no}` : 'první sada'}</span><div>${sideBeys(set, 2, cur.p2_reg)}</div></div>` : ''}
+      ${live ? ptHist(g.battles) : ''}
       ${rest.length ? html`<div class="lv-queue">Na řadě: ${rest.slice(0, 2).map((m, i) => html`${i ? ' · ' : ''}<span>${nick(m.p1_reg)} vs ${nick(m.p2_reg)}</span>`)}${rest.length > 2 ? ` · +${rest.length - 2}` : ''}</div>` : ''}
     </section>`
   }
@@ -166,6 +188,54 @@ export async function render(main, [id]) {
     </div>`
   }
 
+  // ── statistiky turnaje (dohrané hry + rozehrané) ──
+  function stats() {
+    const fin = { xtreme: 0, burst: 0, over: 0, spin: 0 }
+    const beys = new Map(), players = new Map()
+    let n = 0, draws = 0
+    const add = (map, k, f) => { if (!k) return; const v = map.get(k) || { name: k, w: 0, l: 0, pts: 0, x: 0 }; f(v); map.set(k, v) }
+    for (const m of d.matches) {
+      if (!m.p1_reg || !m.p2_reg) continue
+      const games = [...(d.points?.get(m.id) || [])]
+      const lv = liveBattles(m); if (lv) games.push(lv)
+      for (const g of games) for (const b of g) {
+        n++
+        if (!b.slot) { draws++; continue }
+        const f = finOf(b); if (f) fin[f]++
+        const wb = b[`p${b.slot}_bey`], lb = b[`p${3 - b.slot}_bey`]
+        add(beys, wb, v => { v.w++; v.pts += b.pts })
+        add(beys, lb, v => { v.l++ })
+        const wr = b.slot === 1 ? m.p1_reg : m.p2_reg
+        add(players, nick(wr), v => { v.pts += b.pts; if (f === 'xtreme') v.x++ })
+      }
+    }
+    const total = Object.values(fin).reduce((a, b) => a + b, 0)
+    const topBeys = [...beys.values()].filter(v => v.w + v.l >= 2).sort((a, b) => b.w / (b.w + b.l) - a.w / (a.w + a.l) || b.w - a.w).slice(0, 5)
+    const topX = [...players.values()].filter(v => v.x).sort((a, b) => b.x - a.x).slice(0, 3)
+    const topPts = [...players.values()].sort((a, b) => b.pts - a.pts).slice(0, 3)
+    if (!n) return html`<p class="faint small">Statistiky se ukážou po prvních soubojích.</p>`
+    return html`<div class="lv-stats">
+      <div class="lv-sn"><b class="num">${n}</b> soubojů${draws ? html` · <span class="num">${draws}</span> remíz` : ''}</div>
+      <div class="lv-bars">${Object.entries(fin).map(([f, c]) => html`<div class="lv-bar lv-${f}"><span>${FIN[f][1]}</span>
+        <i style="--p:${total ? Math.round(c / total * 100) : 0}%"></i><b class="num">${c}</b></div>`)}</div>
+      ${topBeys.length ? html`<h4>Nejúspěšnější beye</h4><ol class="lv-top">${topBeys.map(v => html`<li><span class="grow">${v.name}</span><span class="num">${v.w}–${v.l}</span><b class="num">${Math.round(v.w / (v.w + v.l) * 100)} %</b></li>`)}</ol>` : ''}
+      ${topX.length ? html`<h4>Nejvíc Xtreme</h4><ol class="lv-top">${topX.map(v => html`<li><span class="grow">${v.name}</span><b class="num">${v.x}×</b></li>`)}</ol>` : ''}
+      ${topPts.length ? html`<h4>Nejvíc bodů</h4><ol class="lv-top">${topPts.map(v => html`<li><span class="grow">${v.name}</span><b class="num">${v.pts}</b></li>`)}</ol>` : ''}
+    </div>`
+  }
+
+  // ── režie: jedna aréna přes celou plochu; auto = kde se naposledy něco stalo ──
+  function directorArena(arenas) {
+    const live = arenas.filter(x => x.q[0]?.status === 'live').map(x => x.a)
+    if (dir !== 'auto') return arenas.some(x => x.a === dir) ? dir : arenas[0]?.a
+    const hot = feed.find(e => e.arena && live.includes(e.arena))?.arena
+    const now = Date.now()
+    if (dirShown && live.includes(dirShown) && (hot === dirShown || now - dirAt < 12000)) return dirShown
+    const pick = hot || (live.includes(dirShown) ? dirShown : live[0]) || arenas[0]?.a
+    if (pick !== dirShown) { dirShown = pick; dirAt = now }
+    return pick
+  }
+
   const draw = () => {
     const { t } = d
     const st = t.kind === 'tournament' && t.status !== 'registration' ? standingsFor(d) : []
@@ -176,30 +246,55 @@ export async function render(main, [id]) {
     const results = d.matches.filter(m => m.status === 'done' && !m.is_bye && m.p1_reg && m.p2_reg && m.winner_reg)
       .sort((a, b) => new Date(b.finished_at || 0) - new Date(a.finished_at || 0)).slice(0, 6)
     const anyLive = arenas.some(x => x.q.length)
-    const cols = arenas.length <= 1 ? 1 : arenas.length <= 4 ? 2 : 3
     const fol = [...follow].filter(r => d.pmap.has(r))
+    const hasBracket = d.matches.some(m => m.stage !== 'swiss')
+    const showDir = dir != null && running && anyLive
+    const dirA = showDir ? directorArena(arenas) : null
+    const shown = showDir ? arenas.filter(x => x.a === dirA) : arenas
+    const cols = shown.length <= 1 ? 1 : shown.length <= 4 ? 2 : 3
+    const mini = (x) => {
+      const m = x.q[0]
+      return html`<button type="button" class="lv-mini ${x.a === dirA ? 'on' : ''} ${m?.status === 'live' ? 'live' : ''}" data-dir="${x.a}" aria-pressed="${dir === x.a}">
+        <b>${x.a}</b>${m ? html`<span>${nick(m.p1_reg)}</span><span class="num">${m.status === 'live' && m.live_p1 != null ? `${m.live_p1}:${m.live_p2}` : 'vs'}</span><span>${nick(m.p2_reg)}</span>` : html`<span class="faint">volno</span>`}</button>`
+    }
 
+    main.classList.toggle('lv-dirmode', showDir)
     mount(main, html`
       <div class="lv">
         <header class="lv-head">
           <div><h1>${t.name}</h1><div class="lv-sub">${running ? html`<span class="lv-dot" aria-hidden="true"></span><b>ŽIVĚ</b> · ` : ''}${phase} · <span data-clock>${hhmm()}</span></div></div>
-          <div class="row" style="gap:8px"><button class="btn sm" data-follow>★ Sledovat hráče${fol.length ? ` (${fol.length})` : ''}</button>
+          <div class="row wrap" style="gap:8px">
+            ${running && anyLive ? html`<button class="btn sm ${dir != null ? 'primary' : ''}" data-dirmode aria-pressed="${dir != null}">🎬 Režie${dir != null ? ': zap' : ''}</button>` : ''}
+            <button class="btn sm" data-follow>★ Sledovat hráče${fol.length ? ` (${fol.length})` : ''}</button>
             <a class="btn sm ghost btn-ico" href="#/t/${t.id}/tv">${raw(icon('tv'))}TV rozpis</a></div>
         </header>
         ${paused(t) ? html`<div class="tv-pause" data-countdown-box><b>PAUZA</b><span class="num" data-countdown="${t.pause_until}">${fmtLeft(t.pause_until)}</span></div>` : ''}
+        ${showDir ? html`<nav class="lv-dirbar" aria-label="Výběr arény">
+          <button type="button" class="lv-mini auto ${dir === 'auto' ? 'on' : ''}" data-dir="auto" aria-pressed="${dir === 'auto'}"><b>AUTO</b><span>kde se něco děje</span></button>
+          ${arenas.map(mini)}</nav>` : ''}
         <div class="lv-body">
           <div class="lv-main">
             ${t.status === 'registration' ? html`<div class="card lv-empty"><h2>Turnaj ještě nezačal</h2><p class="muted">Přihlášeno ${d.players.filter(p => p.status === 'active').length} hráčů. Jakmile začne, uvidíš tu arény živě.</p></div>`
               : t.status === 'finished' ? html`<div class="card lv-empty"><h2>Konečné pořadí</h2><ol class="lv-podium">${d.players.filter(p => p.final_place).sort((a, b) => a.final_place - b.final_place).slice(0, 8)
                   .map(p => html`<li class="p${p.final_place}"><span class="num">${p.final_place}.</span> ${p.nick}</li>`)}</ol></div>`
-              : anyLive ? html`<div class="lv-arenas" style="--cols:${cols}">${arenas.map(x => arenaCard(x.a, x.q))}</div>`
-              : html`<div class="card lv-empty"><h2>Čekáme na další kolo</h2><p class="muted">Všechny zápasy kola jsou dohrané.</p></div>`}
+              : anyLive ? html`<div class="lv-arenas ${showDir ? 'lv-dir' : ''}" style="--cols:${cols}">${shown.map(x => arenaCard(x.a, x.q))}</div>`
+              : html`<div class="card lv-empty"><h2>${t.status === 'topcut' ? 'Čekáme na další zápasy pavouka' : 'Čekáme na další kolo'}</h2><p class="muted">Rozehrané zápasy tu hned uvidíš.</p></div>`}
+            ${hasBracket && !showDir ? html`<section class="lv-bracket">
+              <div class="row between"><h3>${t.top_cut === 2 ? 'Finále' : `Pavouk – top ${t.top_cut}`}</h3>
+                <label class="lv-tog"><input type="checkbox" data-hide-done ${hideDone ? 'checked' : ''}> Skrýt odehrané</label></div>
+              ${bracketHtml(d, { hideDone, follow })}</section>` : ''}
           </div>
           <aside class="lv-side">
-            ${fol.length ? html`<section><h3>Sledovaní</h3>${fol.map(r => followCard(r, st))}</section>`
-              : html`<section class="lv-hint"><p>Klepni na <b>★ Sledovat hráče</b> a uvidíš, kde a jak hrají tví hráči. Vyskočí ti, až půjdou na arénu.</p></section>`}
+            <section class="lv-folsec">
+              <div class="row between"><h3>Sledovaní</h3>
+                ${fol.length ? html`<button type="button" class="btn sm ${pushOn ? 'primary' : 'ghost'}" data-push aria-pressed="${pushOn}">${pushOn ? '🔔 Upozornění zap' : '🔕 Upozornit na telefon'}</button>` : ''}</div>
+              ${fol.length ? fol.map(r => followCard(r, st))
+                : html`<p class="lv-hint">Klepni na <b>★ Sledovat hráče</b> a uvidíš, kde a jak hrají tví hráči. Vyskočí ti, až půjdou na arénu.</p>`}
+            </section>
             ${running ? html`<section><h3>Dění</h3>${feed.length ? html`<ul class="lv-feed">${feed.slice(0, 8).map(e => html`<li class="k-${e.kind} ${e.fol ? 'fol' : ''}"><span class="faint num">${e.at}</span>${e.arena ? html`<span class="lv-fa">A${e.arena}</span>` : ''}<span>${e.text}</span></li>`)}</ul>`
               : html`<p class="faint small">Tady se objeví každý bod a výsledek, jak padají.</p>`}</section>` : ''}
+            ${t.status !== 'registration' ? html`<section class="lv-statsec"><details ${statsOpen ? 'open' : ''} data-stats>
+              <summary><h3>Statistiky turnaje</h3></summary>${statsOpen ? stats() : ''}</details></section>` : ''}
             ${results.length ? html`<section><h3>Poslední výsledky</h3><ul class="lv-res">${results.map(m => {
               const w1 = m.winner_reg === m.p1_reg
               return html`<li><span class="${w1 ? 'w' : ''}">${nick(m.p1_reg)}</span><b class="num">${m.best_of > 1 ? `${m.p1_wins}:${m.p2_wins}` : `${m.p1_score}:${m.p2_score}`}</b><span class="${w1 ? '' : 'w'}">${nick(m.p2_reg)}</span></li>`
@@ -211,21 +306,23 @@ export async function render(main, [id]) {
       </div>`)
   }
 
+  // ── sledování: místně vždy, s účtem a zapnutým upozorněním i na serveru (push) ──
+  const syncFollow = (reg, on) => pushOn ? rpc('live_follow_set', { p_reg: reg, p_on: on }).catch(e => toast(errMsg(e), 'err')) : null
   function followModal() {
     const list = d.players.filter(p => p.status === 'active' || follow.has(p.id)).sort((a, b) => a.nick.localeCompare(b.nick, 'cs'))
     const row = (p) => html`<button type="button" class="li lv-fpick ${follow.has(p.id) ? 'on' : ''}" data-reg="${p.id}" aria-pressed="${follow.has(p.id)}"><span class="grow">${p.nick}</span><span class="lv-star">${follow.has(p.id) ? '★' : '☆'}</span></button>`
     modal(html`<h2>Sledovat hráče</h2>
-      <p class="muted small">Sledovaní jsou nahoře v přehledu a vyskočí ti, když jdou na arénu nebo dohrají. Ukládá se jen v tomhle zařízení.</p>
+      <p class="muted small">Sledovaní jsou nahoře v přehledu a vyskočí ti, když jdou na arénu nebo dohrají. Ukládá se v tomhle zařízení; s účtem si můžeš zapnout i upozornění na telefon.</p>
       <input class="input" placeholder="Hledat hráče" data-q style="margin:10px 0">
       <div class="list" data-list>${list.map(row)}</div>
       <button class="btn primary block" data-close style="margin-top:14px">Hotovo</button>`, {
       onMount: (box) => {
         on(box, 'click', '[data-reg]', (e, b) => {
-          const r = b.dataset.reg
-          follow.has(r) ? follow.delete(r) : follow.add(r)
-          saveFollow(id, follow)
-          b.classList.toggle('on', follow.has(r)); b.setAttribute('aria-pressed', follow.has(r))
-          b.querySelector('.lv-star').textContent = follow.has(r) ? '★' : '☆'
+          const r = b.dataset.reg, now = !follow.has(r)
+          now ? follow.add(r) : follow.delete(r)
+          saveFollow(id, follow); syncFollow(r, now)
+          b.classList.toggle('on', now); b.setAttribute('aria-pressed', now)
+          b.querySelector('.lv-star').textContent = now ? '★' : '☆'
           draw()
         })
         box.querySelector('[data-q]').addEventListener('input', (e) => {
@@ -235,9 +332,42 @@ export async function render(main, [id]) {
       },
     })
   }
+  async function togglePush(btn) {
+    if (!pushOn) {
+      if (!isLoggedIn() || state.isAnon) return toast(html`Upozornění na telefon jdou jen s účtem. <a href="#/login">Přihlásit se</a>`, 'err', 6000)
+      const sup = pushSupport()
+      if (sup === 'ios-install') return toast('Na iPhonu nejdřív přidej BBXU na plochu (Sdílet → Přidat na plochu), pak upozornění zapni tam.', 'err', 7000)
+      if (sup !== 'ok') return toast(sup === 'denied' ? 'Upozornění máš v prohlížeči zakázaná – povol je v nastavení.' : 'Tenhle prohlížeč upozornění neumí.', 'err', 6000)
+      await busy(btn, async () => {
+        try {
+          await enablePush()
+          for (const r of follow) await rpc('live_follow_set', { p_reg: r, p_on: true })
+          pushOn = true; setPref(pushKey, true)
+          toast('Upozornění zapnutá – přijde ti, když sledovaný hráč jde na arénu a jak dohrál.', 'ok', 5000)
+        } catch (e) { toast(errMsg(e), 'err') }
+      })
+    } else {
+      await busy(btn, async () => {
+        try { for (const r of follow) await rpc('live_follow_set', { p_reg: r, p_on: false }) } catch {}
+        pushOn = false; setPref(pushKey, false)
+        toast('Upozornění na sledované hráče vypnutá.', 'ok')
+      })
+    }
+    draw()
+  }
 
   on(main, 'click', '[data-follow]', followModal)
+  on(main, 'click', '[data-push]', (e, b) => togglePush(b))
+  on(main, 'click', '[data-dirmode]', () => { dir = dir == null ? 'auto' : null; dirShown = null; setPref('dir:' + id, dir); draw() })
+  on(main, 'click', '[data-dir]', (e, b) => { dir = b.dataset.dir === 'auto' ? 'auto' : Number(b.dataset.dir); dirShown = null; setPref('dir:' + id, dir); draw() })
+  on(main, 'change', '[data-hide-done]', (e, el) => { hideDone = el.checked; setPref('hide_done', hideDone); draw() })
+  main.addEventListener('toggle', (e) => {
+    if (!e.target.matches?.('[data-stats]')) return
+    if (statsOpen === e.target.open) return
+    statsOpen = e.target.open; setPref('stats_open', statsOpen); draw()
+  }, true)
   on(main, 'click', '[data-goto]', (e, el) => {
+    if (dir != null && el.dataset.goto) { dir = Number(el.dataset.goto); setPref('dir:' + id, dir); draw(); return }
     const card = el.dataset.goto && main.querySelector(`.lv-arena[data-arena="${el.dataset.goto}"]`)
     if (!card) return
     card.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'center' })
@@ -245,17 +375,20 @@ export async function render(main, [id]) {
   })
 
   diff(); draw()
-  let busy = false, again = false
+  let busyLoad = false, again = false
   const refresh = async () => {
-    if (busy) { again = true; return }
-    busy = true
-    try { d = await load(id); diff(); draw() } catch {}
-    busy = false
+    if (busyLoad) { again = true; return }
+    busyLoad = true
+    try { d = await load(id); await loadDecks(); diff(); draw() } catch {}
+    busyLoad = false
     if (again) { again = false; refresh() }
   }
   const off = liveChannel(id, refresh)
   const poll = setInterval(refresh, 15000)           // pojistka, kdyby realtime vypadl (TV bez přihlášení)
-  const tick = setInterval(() => { const c = main.querySelector('[data-clock]'); if (c) c.textContent = hhmm() }, 15000)
+  const tick = setInterval(() => {
+    const c = main.querySelector('[data-clock]'); if (c) c.textContent = hhmm()
+    if (dir === 'auto') draw()                         // auto režie přepíná i bez nových dat
+  }, 15000)
   window.addEventListener('bbx:countdown-over', draw)
   return () => { off(); clearInterval(poll); clearInterval(tick); clearTimeout(flashT); window.removeEventListener('bbx:countdown-over', draw)
     document.querySelector('.lv-flash')?.remove(); document.body.classList.remove('tv') }
