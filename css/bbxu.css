@@ -1325,6 +1325,7 @@ main.tv-land > .card { flex: 1; min-height: 0; overflow: hidden; }
 .pt-hist .r .pt { background: rgba(255,111,177,.14); }
 .pt.pt2 { font-weight: 700; }
 .pt.pt3 { font-weight: 800; }
+.pt-hist .pt.ptr { background: rgba(255,255,255,.08); color: var(--muted); }
 .pt-hist .l .pt.pt3 { background: rgba(95,214,255,.34); }
 .pt-hist .r .pt.pt3 { background: rgba(255,111,177,.34); }
 /* TV: žetony pod skóre přes celou šířku řádku */

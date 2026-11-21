@@ -54,11 +54,12 @@ const liveBattles = (m) => m.status !== 'done' && m.live_state?.game === m.p1_wi
   ? (m.live_state.battles || []).map(b => ({ slot: b.slot, pts: b.pts, finish: b.finish })) : null
 const ptLabel = (b) => b.pts === 2 && b.finish === 'over' ? '+2 O' : b.pts === 2 && b.finish === 'burst' ? '+2 B' : `+${b.pts}`
 const ptTitle = { spin: 'Spin finish', over: 'Over finish', burst: 'Burst finish', xtreme: 'Xtreme finish' }
-// řádek žetonů: body hráče vlevo (u středu) a vpravo, v pořadí, jak padaly; remízy se nepíšou
+// řádek žetonů: body hráče vlevo (u středu) a vpravo, v pořadí, jak padaly; remíza = „R“ u obou (posun beyů)
 export function ptHist(battles, label = '') {
-  if (!battles?.some(b => b.slot && b.pts)) return ''
-  const side = (n) => battles.filter(b => b.slot === n && b.pts)
-    .map(b => html`<span class="pt pt${b.pts}" title="${ptTitle[b.finish] || ''}">${ptLabel(b)}</span>`)
+  if (!battles?.length) return ''
+  const side = (n) => battles.filter(b => b.slot === n || !b.slot)
+    .map(b => b.slot ? html`<span class="pt pt${b.pts}" title="${ptTitle[b.finish] || ''}">${ptLabel(b)}</span>`
+      : html`<span class="pt ptr" title="Remíza">R</span>`)
   return html`<div class="pt-hist">${label ? html`<span class="pt-g">${label}</span>` : ''}<div class="l">${side(1)}</div><div class="r">${side(2)}</div></div>`
 }
 // všechny hry zápasu: dohrané z DB + rozehraná (u BO3 s číslem hry)

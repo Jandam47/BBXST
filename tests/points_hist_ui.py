@@ -43,9 +43,9 @@ with sync_playwright() as p:
     assert seven, rows
     assert len(set(seven[0]['top'])) == 1, 'sedm +1 se musí vejít na jeden řádek'
     flat = [x for r in rows for x in r['l'] + r['r']]
-    for lab in ['+2 O', '+2 B', '+3', '+2']:
+    for lab in ['+2 O', '+2 B', '+3', '+2', 'R']:
         assert lab in flat, (lab, flat)
-    livez = [r for r in rows if r['l'] == ['+1', '+2 B'] and r['r'] == ['+1', '+3', '+1']]
+    livez = [r for r in rows if r['l'] == ['+1', '+2 B', 'R'] and r['r'] == ['+1', '+3', 'R', '+1']]
     assert livez, 'rozehraný zápas ukazuje body z live_state'
     over = pg.evaluate("[...document.querySelectorAll('.pt-hist')].some(h => h.scrollWidth > h.clientWidth + 1)")
     assert not over, 'žetony nesmí přetékat'
@@ -57,7 +57,7 @@ with sync_playwright() as p:
         pg.on('pageerror', lambda e: errors.append('PAGEERROR ' + str(e)))
         pg.goto(BASE + f'#/t/{tid}/tv'); pg.wait_for_selector('.tv-now .pt-hist'); pg.wait_for_timeout(500)
         labs = pg.evaluate("[...document.querySelectorAll('.tv-now .pt-hist .pt')].map(x => x.textContent)")
-        assert labs == ['+1', '+2 B', '+1', '+3', '+1'], labs
+        assert labs == ['+1', '+2 B', 'R', '+1', '+3', 'R', '+1'], labs
         if w > h:
             assert pg.evaluate("document.documentElement.scrollHeight <= innerHeight + 1"), 'na šířku bez rolování'
         pg.screenshot(path=OUT + f'281_tv_hist_{name}.png')

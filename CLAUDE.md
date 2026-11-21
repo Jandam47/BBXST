@@ -46,7 +46,7 @@ Komunikuj **česky**, celé UI je česky.
   na šířku (`main.tv-land`) vše na jedné obrazovce – mřížka `fitGrid` (sloupce × řádky podle počtu arén a poměru
   obrazovky), písmo podle velikosti karty (container query `cqh/cqw`), fronta zkrácená na 2–6 zápasů + „+ N dalších“.
   Při otočení / změně velikosti se překreslí.
-- Historie bodů (`ptHist` / `matchHist` v tournament.js): žetony +1 / +2 O / +2 B / +2 / +3 (remízy ne) – body hráče
+- Historie bodů (`ptHist` / `matchHist` v tournament.js): žetony +1 / +2 O / +2 B / +2 / +3, remíza = R u obou – body hráče
   vlevo a vpravo u středu, v pořadí. Swiss řádky a Můj Status (`matchRow`): dohrané hry z `points` (`loadPoints`,
   stahuje se znovu jen po nové hře; BO3 = řádek na hru s číslem) + rozehraná z `matches.live_state`. TV: jen
   rozehraná hra pod živým skóre (`load(id, { hist: false })`). 7× +1 se vejde na řádek i na 360 px.
