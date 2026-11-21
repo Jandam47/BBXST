@@ -49,6 +49,22 @@ const S = [
       <li><b>Volný los</b> dostane nejhůř umístěný hráč, který ho ještě neměl – počítá se jako výhra 7:0.</li>
       <li><b>Top cut</b> je double elimination: po první prohře hraješ dál v pavouku poražených.</li>
     </ul>`],
+  ['league', 'Ligy', html`
+    <p>Ligové turnaje se po skončení sčítají do tabulky ligy (Hráči → Ligy). Výchozí bodování:</p>
+    <div class="help-pts lg">
+      <div><b class="num">1</b><span>účast</span></div>
+      <div><b class="num">+1</b><span>top cut</span></div>
+      <div><b class="num">+5</b><span>1. místo</span></div>
+      <div><b class="num">+3</b><span>2. místo</span></div>
+      <div><b class="num">+2</b><span>3. místo</span></div>
+      <div><b class="num">+1</b><span>4. místo</span></div>
+    </div>
+    <ul>
+      <li>Body se sčítají – vítěz turnaje s top cutem má 1 + 1 + 5 = 7 bodů.</li>
+      <li>U každého hráče je i bilance: zápasy výhry–prohry a body <b>+</b> získané / <b>−</b> ztracené ve všech ligových zápasech. Volné losy se nepočítají.</li>
+      <li>Při shodě bodů rozhoduje počet výher, pak rozdíl bodů.</li>
+      <li>Ligu zakládá hlavní admin a jmenuje jejího správce. Ligové turnaje smí zakládat správce, organizátoři, které do ligy přidá, a admini.</li>
+    </ul>`],
   ['judge', 'Pro judge (BBXST)', html`
     <ul>
       <li>V turnaji otevři <b>Judge</b> a vyber zápas, nebo v BBXST načti QR vstupenky hráčů. Zápas je pak tvůj – jiný judge ho nepřevezme bez organizátora.</li>

@@ -11,9 +11,10 @@ const fmtMonth = (d) => new Date(d).toLocaleDateString('cs-CZ', { month: 'short'
 export const COMM_ROLE = { leader: 'Community leader', sub: 'Sub-community leader', member: 'Člen' }
 
 // přepínač Hráči | Komunity (sdílí ho i seznam hráčů)
-export const peopleTabs = (on_) => html`<nav class="tabs people-tabs" aria-label="Hráči a komunity">
+export const peopleTabs = (on_) => html`<nav class="tabs people-tabs" aria-label="Hráči, komunity a ligy">
   <a href="#/players" class="${on_ === 'players' ? 'on' : ''}">Hráči</a>
-  <a href="#/communities" class="${on_ === 'communities' ? 'on' : ''}">Komunity</a></nav>`
+  <a href="#/communities" class="${on_ === 'communities' ? 'on' : ''}">Komunity</a>
+  <a href="#/leagues" class="${on_ === 'leagues' ? 'on' : ''}">Ligy</a></nav>`
 
 export async function renderList(main, _p, ctx) {
   const list = await rpc('community_list')

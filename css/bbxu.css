@@ -1153,3 +1153,56 @@ button.chip.on { background: var(--bolt); color: var(--bolt-ink); border-color: 
 .h2h-rec { font-family: var(--display); color: var(--muted); }
 .h2h-rec b { color: var(--text); font-size: 18px; }
 .h2h-opp .grow { flex: 1; min-width: 0; }
+
+/* ── ligy (22) ───────────────────────────────────── */
+.people-tabs a { flex: 0 0 auto; }
+.lg-card { display: grid; gap: 8px; text-decoration: none; color: var(--text); --corner: var(--bolt); }
+.lg-card h3 { margin: 0; min-width: 0; }
+.lg-card.archived { opacity: .7; --corner: var(--line); }
+.lg-card.mine { border-color: rgba(255,228,31,.45); }
+.lg-leader { display: flex; align-items: center; gap: 10px; padding: 8px 10px; background: var(--ink-2); border: 1px solid var(--line-soft); }
+.lg-leader .av { width: 30px; height: 30px; font-size: 17px; }
+.lg-leader b { font-family: var(--display); font-size: 22px; color: var(--bolt); text-shadow: var(--glow-y); }
+.lg-tag { color: var(--bolt); text-decoration: none; }
+a.lg-tag:hover { text-decoration: underline; }
+.lg-rules { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.lg-rules span { display: inline-flex; align-items: baseline; gap: 6px; padding: 4px 10px; border: 1px solid var(--line); font-size: 13px; color: var(--muted); }
+.lg-rules b { font-family: var(--display); font-size: 16px; color: var(--bolt); }
+.lg-table { list-style: none; margin: 0; padding: 0; border: 1px solid var(--line-soft); background: var(--panel); }
+.lg-row + .lg-row { border-top: 1px solid var(--line-soft); }
+.lg-row summary { display: flex; align-items: center; gap: 10px; padding: 10px 12px 10px 4px; cursor: pointer; list-style: none; }
+.lg-row summary::-webkit-details-marker { display: none; }
+.lg-row .place { width: 36px; flex: none; }
+.lg-row .av { flex: none; }
+.lg-row.is-me { background: rgba(0,229,255,.06); box-shadow: inset 3px 0 0 var(--cyan); }
+.lg-row.top.p1 { box-shadow: inset 3px 0 0 var(--bolt); }
+.lg-who { display: grid; min-width: 0; flex: 1; gap: 2px; }
+.lg-who b { font-weight: 600; }
+.lg-bal { display: flex; flex-wrap: wrap; gap: 4px 10px; color: var(--muted); font-size: 12.5px; }
+.lg-bal .plus { font-style: normal; color: var(--ok); }
+.lg-bal .minus { font-style: normal; color: var(--red); }
+.lg-bal .pos { color: var(--ok); font-weight: 700; }
+.lg-bal .neg { color: var(--red); font-weight: 700; }
+.lg-pts { display: grid; justify-items: end; line-height: 1; flex: none; }
+.lg-pts b { font-family: var(--display); font-size: 28px; color: var(--text); }
+.lg-row.top.p1 .lg-pts b { color: var(--bolt); text-shadow: var(--glow-y); }
+.lg-pts small { font-size: 11px; color: var(--faint); margin-top: 2px; }
+.lg-results { display: grid; gap: 2px; padding: 0 12px 12px 50px; }
+.lg-res { display: flex; align-items: center; gap: 8px; padding: 6px 8px; text-decoration: none; color: var(--text); background: var(--ink-2); }
+.lg-res .place { width: 30px; font-size: 15px; }
+.lg-res .grow { display: grid; }
+.lg-res small { font-size: 12px; }
+.lg-res b { font-family: var(--display); color: var(--bolt); }
+.lg-badges { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.lg-badge { display: inline-flex; align-items: baseline; gap: 8px; max-width: 100%; padding: 6px 12px; border: 1px solid var(--line);
+  text-decoration: none; color: var(--text); font-size: 14px; }
+.lg-badge b { font-family: var(--display); font-size: 18px; color: var(--cyan); }
+.lg-badge.p1 { border-color: rgba(255,228,31,.6); } .lg-badge.p1 b { color: var(--bolt); }
+.lg-badge.p2 b { color: #d9e0ff; } .lg-badge.p3 b { color: #ffb380; }
+.lg-badge small { color: var(--muted); }
+.lg-score-f { border: 1px solid var(--line-soft); padding: 10px 12px 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; }
+.lg-score-f legend { padding: 0 6px; color: var(--muted); font-size: 14px; }
+.lg-score-f label { display: grid; gap: 4px; font-size: 13px; color: var(--muted); }
+.lg-role-row { display: flex; align-items: center; gap: 10px; }
+.lg-role-row select { width: auto; min-width: 150px; }
+.help-pts.lg { grid-template-columns: repeat(3, 1fr); }

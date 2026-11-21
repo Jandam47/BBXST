@@ -16,6 +16,7 @@ import * as Meta from './views/meta.js'
 import * as Auth from './views/auth.js'
 import * as Communities from './views/communities.js'
 import * as Help from './views/help.js'
+import * as Leagues from './views/leagues.js'
 
 const cfg = window.BBX_CONFIG
 
@@ -28,6 +29,8 @@ const routes = [
   [/^\/players$/, Players.render, 'players'],
   [/^\/communities$/, Communities.renderList, 'players'],
   [/^\/c\/([0-9a-f-]{36})$/, Communities.renderDetail, 'players'],
+  [/^\/leagues$/, Leagues.renderList, 'players'],
+  [/^\/l\/([0-9a-f-]{36})$/, Leagues.renderDetail, 'players'],
   [/^\/meta$/, Meta.render, 'meta'],
   [/^\/p\/([0-9a-f-]{36})$/, Profile.render, 'me'],
   [/^\/me$/, Profile.renderMe, 'me'],

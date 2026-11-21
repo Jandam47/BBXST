@@ -38,7 +38,7 @@ export async function renderList(main, _p, ctx) {
   const draw = () => {
     const ql = query.trim().toLowerCase()
     const list = all.filter(t => {
-      if (ql && !(`${t.name} ${t.location || ''} ${t.organizer_nick || ''}`.toLowerCase().includes(ql))) return false
+      if (ql && !(`${t.name} ${t.location || ''} ${t.organizer_nick || ''} ${t.league || ''}`.toLowerCase().includes(ql))) return false
       if (filter === 'upcoming') return !['finished', 'canceled'].includes(t.status)
       if (filter === 'mine') return mine.has(t.id)
       if (filter === 'past') return ['finished', 'canceled'].includes(t.status)
@@ -55,6 +55,7 @@ export async function renderList(main, _p, ctx) {
       <h3>${t.name}</h3>
       <div class="meta">
         <span>${kindLabel(t)}</span>
+        ${t.league ? html`<span class="lg-tag">🏆 ${t.league}</span>` : ''}
         ${t.location ? html`<span>📍 ${t.location}</span>` : ''}
         <span>👥 ${plural(Number(t.players), 'hráč', 'hráči', 'hráčů')}${t.max_players ? ` / ${t.max_players}` : ''}</span>
         ${mine.has(t.id) ? html`<span style="color:var(--bolt)">✓ Jsi přihlášený</span>` : ''}
@@ -114,6 +115,16 @@ export async function renderEditor(main, [kindArg, id]) {
   const started = id && t.status !== 'registration'
   const isEv = t.kind === 'event'
   const leads = isEv && !id ? await rpc('my_lead_communities').catch(() => []) : []
+  // ligy, do kterých smím turnaj zařadit (+ aktuální liga turnaje, i když do ní už nesmím)
+  let leagues = !isEv ? await rpc('my_leagues').catch(() => []) : []
+  if (!isEv && t.league_id && !leagues.some(l => l.id === t.league_id)) {
+    const cur = await q(sb.from('leagues').select('id,name').eq('id', t.league_id).maybeSingle()).catch(() => null)
+    if (cur) leagues = [cur, ...leagues]
+  }
+  if (!id) {
+    const want = new URLSearchParams(location.hash.split('?')[1] || '').get('league')
+    if (want && leagues.some(l => l.id === want)) t.league_id = want
+  }
   const topPreset = [0, 4, 8, 16, 32].includes(t.top_cut) ? String(t.top_cut) : 'custom'
   const bo = { ...DEFAULT_BO, ...(t.bo_config || {}) }
 
@@ -141,6 +152,16 @@ export async function renderEditor(main, [kindArg, id]) {
           <input class="input" type="number" min="1" max="10" name="fashion_beys" value="${t.fashion_beys || 3}" ${started ? 'disabled' : ''}></label>` : ''}
         <label class="f"><span>Maximální počet hráčů (nepovinné)</span><input class="input" type="number" min="2" max="512" name="max_players" value="${t.max_players || ''}"></label>
       </div>
+      ${isEv || !leagues.length ? '' : html`
+      <div class="card stack lg-pick">
+        <h3>Liga</h3>
+        <label class="f"><span>Ligový turnaj?</span>
+          <select class="input" name="league_id">
+            <option value="">Ne – běžný turnaj</option>
+            ${leagues.map(l => html`<option value="${l.id}" ${t.league_id === l.id ? 'selected' : ''}>${l.name}</option>`)}
+          </select></label>
+        <p class="hint">Ligový turnaj se po skončení započítá do tabulky ligy: body za účast, postup do top cutu a 1.–4. místo.</p>
+      </div>`}
       ${isEv ? '' : html`
       <div class="card stack">
         <h3>Formát</h3>
@@ -211,6 +232,7 @@ export async function renderEditor(main, [kindArg, id]) {
                                          format: d.format || 'swiss', unique_parts: !!d.unique_parts, rated: !!d.rated })
       if (row.format === 'deathmatch' && !started) Object.assign(row, { top_cut: 0 })
       if (row.top_cut === 1 || row.top_cut < 0) return toast('Top cut musí mít aspoň 2 hráče, nebo 0.', 'err')
+      if (leagues.length) row.league_id = d.league_id || null
     } else {
       Object.assign(row, { swiss_rounds: 1, top_cut: 0 })
       if (!started) Object.assign(row, { event_type: d.event_type || 'training',

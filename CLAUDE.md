@@ -30,7 +30,7 @@ Komunikuj **česky**, celé UI je česky.
   (zdroj kyoganken.sakura.ne.jp/beyx/weight1.htm), Hasbro názvy jsou v `aliases`. Nové díly = nový SQL soubor
   s `insert … on conflict do update` (viz `07-parts-update.sql`); web se kvůli dílům nasazovat nemusí.
 - `js/config.js` – **obsahuje Adamovy živé klíče Supabase. Nikdy ho neměň ani nepřepisuj.**
-- `supabase/schema.sql`, `02-parts.sql`, `03-live-score.sql`, `04-security-hardening.sql`, `05-judge-handover.sql`, `06-formats-stats.sql`, `07-parts-update.sql`, `08-judge-per-match.sql`, `09-pause.sql`, `10-fashion.sql`, `11-finishes.sql`, `12-rated.sql`, `13-communities.sql`, `14-training-extras.sql`, `15-training-bots.sql`, `16-training-reset.sql`, `17-chat-bazar.sql`, `18-chat-tournament-state.sql`, `19-account-reports.sql`, `20-push.sql`, `21-checkin-errors-backup.sql` – databáze (spuštěné v produkci, nové soubory
+- `supabase/schema.sql`, `02-parts.sql`, `03-live-score.sql`, `04-security-hardening.sql`, `05-judge-handover.sql`, `06-formats-stats.sql`, `07-parts-update.sql`, `08-judge-per-match.sql`, `09-pause.sql`, `10-fashion.sql`, `11-finishes.sql`, `12-rated.sql`, `13-communities.sql`, `14-training-extras.sql`, `15-training-bots.sql`, `16-training-reset.sql`, `17-chat-bazar.sql`, `18-chat-tournament-state.sql`, `19-account-reports.sql`, `20-push.sql`, `21-checkin-errors-backup.sql`, `22-leagues.sql` – databáze (spuštěné v produkci, nové soubory
   spouští Adam). Živé skóre: BBXST v judge módu posílá po každém bodu `live_score` → `matches.live_p1/p2`
   (TV rozpis, vstupenka, seznamy); trigger `bbx_clear_live` ho maže po uložení hry.
   Rozehraná hra: BBXST posílá s `live_score` i `p_state` → `matches.live_state` (souboje v orientaci p1/p2,
@@ -143,6 +143,17 @@ Komunikuj **česky**, celé UI je česky.
 - **Nápověda** `#/help` (`js/views/help.js`, `?k=<sekce>` otevře sekci): tlačítko „?“ na hlavní stránce, „Jak na to“ v profilu.
 - **Vzájemná bilance** (21): `player_h2h(p_user)` → profil: „Ty vs hráč“ (`vs_me`, posledních 5 zápasů) a nejčastější
   soupeři s účtem (výhry–prohry).
+- **Ligy** (22, `js/views/leagues.js`, `#/leagues`, `#/l/<id>`, přepínač Hráči | Komunity | Ligy): `leagues` (zakládá,
+  upravuje, archivuje a maže jen hlavní admin – `league_save`, `league_delete`; bodování v `leagues.scoring`: účast 1,
+  postup do top cutu +1, 4. +1, 3. +2, 2. +3, 1. +5, body se sčítají). `league_staff`: správce (jmenuje hlavní admin)
+  a organizátoři ligy (přidává správce nebo admin) – `league_staff_set`, jen hráči s funkcí organizátor+; nastavuje se
+  na stránce ligy (Správa) i v profilu organizátora (karta Ligové turnaje, `player_leagues.roles`). Ligové turnaje
+  zakládá admin+ ve všech aktivních ligách, jinak jen správce / organizátor ligy (`bbx_league_can`, `my_leagues`);
+  `tournaments.league_id` se vybírá v editoru turnaje (`#/new?league=<id>` předvybere), hlídá trigger
+  `bbx_protect_league`. Tabulka `bbx_league_table` (jen skončené turnaje, hráč = účet nebo nick, bez „T-…“ bez účtu):
+  body ligy, turnaje, V–P a body +/− ze zápasů bez volných losů; pořadí body → výhry → rozdíl → získané body.
+  `league_list`, `league_detail`, umístění v profilu (`player_leagues.standings`), název ligy v `tournament_list`
+  a v záhlaví turnaje.
 - **Měsíční kontrola dílů**: naplánovaná úloha (2. den v měsíci) porovná kyoganken s `bey_parts` a případně otevře PR
   s novým `NN-parts-RRRR-MM.sql` (do DB nic nezapisuje).
 - `vendor/` – supabase-js, qrcode-generator, html5-qrcode (lokálně, kvůli slabé síti v hale).
@@ -203,10 +214,11 @@ Potřebují lokální PostgreSQL 16, Node a pro UI Python Playwright + Chrome a 
 - `node tests/fashion.test.mjs` – fashion show v DB (po reset_db / ui-up): judge, hodnocení, rozstřel, boss, vyhlášení.
 - `node tests/chat.test.mjs` – chat (místnosti, přístup, hosté) a bazar (fotky, soukromá vlákna) v DB.
 - `node tests/extras.test.mjs` – prezence, chyby z telefonů, záloha, vzájemná bilance (21).
+- `node tests/leagues.test.mjs` – ligy: práva správce / organizátorů, ligové turnaje, bodování a bilance (22).
 - `node tests/account.test.mjs` – nahlášení a smazání účtu; `node tests/push.test.mjs` – odběry a push události (outbox).
 - `node tests/community.test.mjs` – komunity a komunitní trénink v DB (schválení, členové, trénink, výzvy, souboje, meta).
 - `tests/ui-up.sh && python3 tests/ui_smoke.py && python3 tests/bbxst_judge.py && python3 tests/test_tools.py` – proklik v Chrome
-  (`tests/judge_handover.py`, `tests/formats_stats.py`, `tests/arenas_status.py`, `tests/fashion_ui.py`, `tests/community_ui.py`, `tests/bbxst_training.py`, `tests/training_bot_ui.py`, `tests/chat_bazar_ui.py`, `tests/extras_ui.py` a `tests/checkin_ui.py` každý zvlášť po čerstvém `ui-up.sh`: převzetí judge;
+  (`tests/judge_handover.py`, `tests/formats_stats.py`, `tests/arenas_status.py`, `tests/fashion_ui.py`, `tests/community_ui.py`, `tests/bbxst_training.py`, `tests/training_bot_ui.py`, `tests/chat_bazar_ui.py`, `tests/extras_ui.py`, `tests/checkin_ui.py` a `tests/leagues_ui.py` každý zvlášť po čerstvém `ui-up.sh`: převzetí judge;
   deathmatch přes testovací nástroje až po finále, vyhodnocení, meta, profil)
   (poslední: zkušební turnaj 16 hráčů přes testovací nástroje až po ukončení).
 Když měníš SQL, přidej nový soubor i do `tests/reset_db.sh`. Po změně logiky nebo DB pusť testy.

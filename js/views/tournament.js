@@ -21,12 +21,13 @@ export async function load(id) {
   let myReg = null
   if (state.user && t) myReg = (await rpc('my_registration', { p_tournament: id }))?.[0] || null
   const pmap = new Map(players.map(p => [p.id, p]))
+  const league = t?.league_id ? await q(sb.from('leagues').select('id,name').eq('id', t.league_id).maybeSingle()).catch(() => null) : null
   // prezence (jen pro judge / organizátora, ostatním RPC vrátí prázdno)
   let checkin = null
   if (t && t.kind === 'tournament' && t.status === 'registration' && state.user && !state.isAnon) {
     checkin = new Map((await rpc('checkin_list', { p_tournament: id }).catch(() => [])).map(x => [x.reg, x.checked_in_at]))
   }
-  return { t, players, matches, myReg, pmap, checkin, busy: busyRegs(matches, players) }
+  return { t, players, matches, myReg, pmap, checkin, league, busy: busyRegs(matches, players) }
 }
 
 // fronta zápasů na aréně (rozehraný první, hráč, který judguje, o místo níž)
@@ -103,6 +104,7 @@ export async function render(main, [id, tabArg]) {
           ${t.starts_at ? html`<span>🗓 ${fmtDate(t.starts_at)}, ${fmtTime(t.starts_at)}${t.ends_at ? `–${fmtTime(t.ends_at)}` : ''}</span>` : ''}
           ${t.location ? html`<span>📍 ${t.location}</span>` : ''}
           ${t.kind === 'tournament' ? html`<span>⚔ ${t.format === 'deathmatch' ? `Deathmatch${t.status !== 'registration' ? ` (${t.swiss_rounds} kol)` : ''}` : `${t.swiss_rounds} kol swiss`}${t.top_cut ? (t.top_cut === 2 ? ', finále' : `, top ${t.top_cut}`) : ''}${t.unique_parts ? ' · díly se neopakují' : ''}${t.rated === false ? ' · bez ratingu' : ''}</span>` : html`<span>Akce</span>`}
+          ${d.league ? html`<a class="lg-tag" href="#/l/${d.league.id}">🏆 ${d.league.name}</a>` : ''}
           ${t.status === 'swiss' ? html`<span style="color:var(--bolt)">Kolo ${t.current_round} z ${t.swiss_rounds}</span>` : ''}
         </div>
         ${t.description ? html`<p class="desc">${t.description}</p>` : ''}

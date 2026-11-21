@@ -3,6 +3,7 @@
 // ════════════════════════════════════════════════════════════════
 import { sb, state, rpc, q, errMsg, refreshMe, isLoggedIn } from '../supa.js'
 import { adminErrors, adminBackup } from '../admin.js'
+import { leagueBadges, leagueRolesCard } from './leagues.js'
 import { html, mount, on, formData, toast, modal, busy, confirmBox, fmtDate, raw, plural, kindLabel, finishTiles } from '../ui.js'
 import { ROLES, REGIONS, roleLevel } from '../core.js'
 import { avatarPicker } from './auth.js'
@@ -99,13 +100,14 @@ function h2hBlock(h, p, own) {
 }
 
 export async function render(main, [id], ctx) {
-  const [p, stats, bs, ach, comms, h2h] = await Promise.all([
+  const [p, stats, bs, ach, comms, h2h, lgs] = await Promise.all([
     q(sb.from('profiles').select('*').eq('id', id).maybeSingle()),
     rpc('player_stats', { p_user: id }),
     rpc('player_bey_stats', { p_user: id }).catch(() => ({})),
     rpc('player_achievements', { p_user: id }).catch(() => []),
     rpc('player_communities', { p_user: id }).catch(() => []),
     rpc('player_h2h', { p_user: id }).catch(() => ({ opponents: [] })),
+    rpc('player_leagues', { p_user: id }).catch(() => ({ roles: [], standings: [] })),
   ])
   if (ctx && !ctx.isCurrent()) return
   if (!p || !p.nick) { mount(main, html`<div class="empty">${p && id === state.user?.id ? html`<button class="btn primary" onclick="location.reload()">Dokonči profil</button>` : 'Profil nenalezen.'}</div>`); return }
@@ -127,6 +129,7 @@ export async function render(main, [id], ctx) {
       </div>
     </div>
     ${communityBadges(comms)}
+    ${leagueBadges(lgs.standings)}
     ${p.bio ? html`<p style="margin-top:14px;white-space:pre-line">${p.bio}</p>` : ''}
     ${own ? html`<div class="row wrap" style="margin-top:14px">
       <button class="btn sm" data-act="edit">Upravit profil</button>
@@ -167,6 +170,7 @@ export async function render(main, [id], ctx) {
       })}
       ${canEditRoles ? html`<p class="hint">Vyšší funkce zahrnuje nižší: admin je i organizátor a judge, organizátor je i judge.</p>` : ''}
     </div>
+    ${own ? '' : leagueRolesCard(lgs.roles, lvl)}
 
     <h2>Turnaje</h2>
     ${tours.length ? html`<div class="list">${tours.map(t => html`
@@ -212,6 +216,16 @@ export async function render(main, [id], ctx) {
   if (own && state.level >= 4) adminBackup(main.querySelector('#admin-bk'))
   if (own) pushCard(main.querySelector('#push-card'))
 
+  on(main, 'change', '[data-lgrole]', async (e, sel) => {
+    const r = lgs.roles.find(x => x.league === sel.dataset.lgrole)
+    sel.disabled = true
+    try {
+      await rpc('league_staff_set', { p_league: r.league, p_user: id, p_role: sel.value || null })
+      r.role = sel.value || null
+      toast(sel.value ? `${p.nick}: ${sel.value === 'manager' ? 'správce' : 'organizátor'} ligy ${r.name}.` : `${p.nick} už v lize ${r.name} nic nezakládá.`, 'ok')
+    } catch (err) { sel.value = r.role || ''; toast(errMsg(err), 'err') }
+    sel.disabled = false
+  })
   on(main, 'click', '#bk [data-k]', (e, b) => {
     main.querySelectorAll('#bk button').forEach(x => x.classList.toggle('on', x === b))
     mount(main.querySelector('#bl'), beyList(bs[b.dataset.k]))
