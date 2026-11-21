@@ -1258,3 +1258,30 @@ a.lg-tag:hover { text-decoration: underline; }
 .fx-imp-row { width: 100%; font: inherit; color: inherit; background: transparent; cursor: pointer; border: 0; border-bottom: 1px solid var(--line-soft); }
 .fx-imp-row:last-child { border-bottom: 0; }
 .fx-imp-row:hover, .fx-imp-row:focus-visible { background: var(--panel-2); }
+
+/* ── kontrola registrací (25) ────────────────────── */
+.list > .li > .grow { flex: 1; min-width: 0; }   /* dlouhé beyblady nesmí vytlačit tlačítko ⋯ */
+.rc-sum { color: var(--muted); }
+.rc-sum b { font-family: var(--display); font-size: 22px; color: var(--ok); }
+.rc-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; color: var(--muted); }
+.rc-dot { width: 10px; height: 10px; display: inline-block; margin-left: 6px; }
+.rc-dot:first-child { margin-left: 0; }
+.rc-dot.ok { background: var(--ok); } .rc-dot.wait { background: var(--bolt); } .rc-dot.out { background: var(--red); }
+.rc-list { margin-top: 14px; }
+.list > .li.rc-row { cursor: pointer; border-left: 4px solid transparent; }
+.list > .li.rc-row:hover, .list > .li.rc-row:focus-visible { background: var(--panel-2); outline: none; }
+.list > .li.rc-ok { border-left-color: var(--ok); background: rgba(46,240,168,.06); }
+.list > .li.rc-wait { border-left-color: var(--bolt); background: rgba(255,228,31,.05); }
+.list > .li.rc-out { border-left-color: var(--red); background: rgba(255,59,127,.07); }
+.list > .li.rc-out .grow { opacity: .65; }
+.rc-ok .rc-tag { color: var(--ok); } .rc-wait .rc-tag { color: var(--bolt); }
+.rc-head { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid var(--line); border-left-width: 4px; }
+.rc-head.rc-ok { border-color: var(--ok); color: var(--ok); }
+.rc-head.rc-wait { border-color: var(--bolt); color: var(--bolt); }
+.rc-head.rc-out { border-color: var(--red); color: var(--red); }
+.rc-head h2 { color: var(--text); }
+.rc-beys { display: grid; gap: 8px; }
+.rc-bey { display: flex; align-items: center; gap: 12px; padding: 12px; border: 1px solid var(--line); background: var(--ink-2); cursor: pointer; font-size: 16px; }
+.rc-bey input { width: 24px; height: 24px; accent-color: var(--ok); flex: none; }
+.rc-bey:has(input:checked) { border-color: var(--ok); }
+.start-unchecked { align-self: flex-start; border: 1px dashed rgba(255,176,32,.6); color: var(--warn); background: transparent; }

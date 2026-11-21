@@ -38,59 +38,66 @@ with sync_playwright() as p:
     assert 'ukaž QR' in h1.inner_text('.pass-checkin')
     tok = sql(f"select qr_token from registrations where tournament_id = '{tid}' and nick = 'Hrac1'")
 
-    # ── organizátor: sken vstupenky z obrázku ──
+    # ── organizátor: Řízení bez karty prezence, start blokovaný ──
     org = ctx(b, 'org@test.cz')
-    go(org, f'/t/{tid}/manage', '.ci-card')
-    assert '0' in org.inner_text('.ci-count') and '/ 5' in org.inner_text('.ci-count')
-    org.screenshot(path=OUT + '200_checkin_card.png', full_page=False)
+    go(org, f'/t/{tid}/manage', '[data-act=start]')
+    assert org.locator('.ci-card').count() == 0
+    assert org.is_disabled('[data-act=start]') and org.locator('[data-act=start-unchecked]').count() == 1
+    assert 'Zkontrolováno 0 z 5' in org.inner_text('.notice.warn')
+
+    # ── Hráči: panel kontroly, sken vstupenky z obrázku → kontrola hráče ──
+    go(org, f'/t/{tid}/players', '.rc-panel')
+    assert org.locator('.li.rc-wait').count() == 5
+    org.screenshot(path=OUT + '200_check_list.png')
     png = org.evaluate("""async (txt) => { const { qrPng } = await import('./js/ui.js'); return qrPng(txt, 8) }""", f'BBXU1|{tid}|{tok}')
     data = base64.b64decode(png.split(',', 1)[1])
-    org.click('[data-act=checkin-scan]'); org.wait_for_selector('#ci-reader')
-    org.wait_for_timeout(1500)
-    org.set_input_files('#ci-file', files=[{'name': 'qr.png', 'mimeType': 'image/png', 'buffer': data}])
-    org.wait_for_selector('.ci-last.ok')
-    assert 'Hrac1' in org.inner_text('.ci-last')
-    org.screenshot(path=OUT + '201_checkin_scan.png')
-    # stejná vstupenka znovu → „už prezenci má“ (po 3 s, kdy se sken počítá jako nový)
-    org.wait_for_timeout(3100)
-    org.set_input_files('#ci-file', files=[{'name': 'qr.png', 'mimeType': 'image/png', 'buffer': data}])
-    org.wait_for_selector('.ci-last.warn')
     # vstupenka na jiný turnaj
     other = sql("select id from tournaments where name = 'Listopadový Cup'")
     png2 = org.evaluate("""async (txt) => { const { qrPng } = await import('./js/ui.js'); return qrPng(txt, 8) }""", f'BBXU1|{other}|{tok}')
+    org.click('[data-rc=scan]'); org.wait_for_selector('#ci-reader'); org.wait_for_timeout(1500)
     org.set_input_files('#ci-file', files=[{'name': 'q2.png', 'mimeType': 'image/png', 'buffer': base64.b64decode(png2.split(',', 1)[1])}])
     org.wait_for_selector('.ci-last.err >> text=jiný turnaj')
+    org.wait_for_timeout(300)
+    org.set_input_files('#ci-file', files=[{'name': 'qr.png', 'mimeType': 'image/png', 'buffer': data}])
+    org.wait_for_selector('.rc-head:has-text("Hrac1")')
+    assert org.locator('.rc-bey').count() == 3 and org.is_disabled('[data-rc=ok]')
+    org.locator('.rc-bey').nth(0).click(); org.locator('.rc-bey').nth(1).click()
+    assert org.is_disabled('[data-rc=ok]'), 'potvrdit jde až po všech třech'
+    org.locator('.rc-bey').nth(2).click()
+    org.screenshot(path=OUT + '201_check_modal.png')
+    org.click('[data-rc=ok]'); org.wait_for_selector('.li.rc-ok:has-text("Hrac1")')
+
+    # ── ručně z listu: Hrac2 zkontrolovat, Hrac3 vyřadit ──
+    org.locator('.li.rc-row:has-text("Hrac2")').click(); org.wait_for_selector('.rc-head:has-text("Hrac2")')
+    for i in range(3): org.locator('.rc-bey').nth(i).click()
+    org.click('[data-rc=ok]'); org.wait_for_selector('.li.rc-ok:has-text("Hrac2")')
+    org.locator('.li.rc-row:has-text("Hrac3")').click(); org.wait_for_selector('.rc-head:has-text("Hrac3")')
+    org.click('[data-rc=drop]'); org.wait_for_selector('.li.rc-out:has-text("Hrac3")')
+    # ⋯ menu jde pořád otevřít (dlouhé beyblady ho už nevytlačí)
+    org.locator('.li:has-text("Hrac4") [data-menu]').click(); org.wait_for_selector('.modal h2:has-text("Hrac4")')
     org.click('.modal [data-close]'); org.wait_for_selector('.modal', state='detached')
-    org.wait_for_selector('.ci-count >> text=1')
-
-    # ── ruční odškrtnutí ──
-    org.click('.ci-card details summary') if not org.is_visible('.ci-row') else None
-    org.locator('.ci-row:has-text("Hrac2")').click()
-    org.wait_for_selector('.ci-row.on:has-text("Hrac2")')
-    org.locator('.ci-row:has-text("Hrac3")').click()
-    org.wait_for_selector('.ci-row.on:has-text("Hrac3")')
-    org.locator('.ci-row:has-text("Hrac3")').click()          # omylem → zpět
-    org.wait_for_selector('.ci-row:not(.on):has-text("Hrac3")')
     assert sql(f"select count(*) from registrations where tournament_id = '{tid}' and checked_in_at is not null") == '2'
-    org.locator('.ci-card').scroll_into_view_if_needed()
-    org.screenshot(path=OUT + '202_checkin_list.png')
+    assert 'zkontrolováno 2' in org.inner_text('.rc-legend') and 'vyřazeno 1' in org.inner_text('.rc-legend')
+    org.screenshot(path=OUT + '202_check_states.png')
 
-    # ── vstupenka hráče ukáže prezenci ──
+    # ── vstupenka hráče ukáže kontrolu ──
     h1.reload(); h1.wait_for_selector('.pass-checkin.on')
     h1.locator('.pass').screenshot(path=OUT + '203_ticket_checkin.png')
 
-    # ── start: odebrat chybějící ──
-    org.click('[data-act=start]'); org.wait_for_selector('.modal [data-drop]')
-    assert 'Hrac3' in org.inner_text('.modal') and 'Hrac1' not in org.inner_text('.modal .ci-missing')
-    org.screenshot(path=OUT + '204_noshow_dialog.png')
-    org.click('.modal [data-drop]')
+    # ── start bez kontroly (Hrac4, Hrac5 nezkontrolovaní) ──
+    go(org, f'/t/{tid}/manage', '[data-act=start-unchecked]')
+    assert org.is_disabled('[data-act=start]')
+    org.locator('[data-act=start-unchecked]').scroll_into_view_if_needed()
+    org.screenshot(path=OUT + '204_start_unchecked.png')
+    org.click('[data-act=start-unchecked]'); org.wait_for_selector('.modal [data-yes]')
+    assert 'bez kontroly' in org.inner_text('.modal')
+    org.click('.modal [data-yes]')
     org.wait_for_selector('.modal h2 >> text=1. kolo')
-    assert 'Hrac3' not in org.inner_text('.modal'), 'odebraný hráč se nepáruje'
+    assert 'Hrac3' not in org.inner_text('.modal'), 'vyřazený hráč se nepáruje'
     org.click('.modal button.primary')
     org.wait_for_function("() => !document.querySelector('.modal')")
-    assert sql(f"select count(*) from registrations where tournament_id = '{tid}' and status = 'dropped'") == '3'
     assert sql(f"select status from tournaments where id = '{tid}'") == 'swiss'
-    assert sql(f"select count(*) from matches where tournament_id = '{tid}'") == '1'
+    assert sql(f"select count(*) from matches where tournament_id = '{tid}'") == '2', 'čtyři hráči = 2 zápasy'
 
     # ── hlášení chyb ──
     h1.evaluate("setTimeout(() => { throw new Error('Testovací chyba BBXU') })")

@@ -12,6 +12,8 @@ import { loadParts, deckEditor, bindDeckEditor } from '../parts.js'
 export function renderManage(box, { d, reload }) {
   const { t } = d
   const active = d.players.filter(p => p.status === 'active')
+  // kontrola registrací (jen turnaj v registraci) – čekající hráči blokují start
+  const waiting = d.checkin && t.kind === 'tournament' && t.status === 'registration' ? active.filter(p => !d.checkin.get(p.id)) : []
   const swiss = d.matches.filter(m => m.stage === 'swiss')
   const roundMs = swiss.filter(m => m.round === t.current_round)
   const roundDone = roundMs.every(m => m.status === 'done')
@@ -36,11 +38,12 @@ export function renderManage(box, { d, reload }) {
           ? `deathmatch – ${plural(roundRobinRounds(Math.max(2, active.length)), 'kolo', 'kola', 'kol')} každý s každým`
           : `${t.swiss_rounds} kol swiss · ${t.top_cut ? `top ${t.top_cut}` : 'bez top cutu'}`} · ${plural(t.arena_count, 'aréna', 'arény', 'arén')}${t.unique_parts ? ' · díly se neopakují' : ''}</p>
         ${!dm && t.top_cut > active.length ? html`<div class="notice warn">Top ${t.top_cut} je víc než přihlášených hráčů – před top cutem ho zmenšíš.</div>` : ''}
+        ${waiting.length ? html`<div class="notice warn">Zkontrolováno ${active.length - waiting.length} z ${active.length} hráčů. Zkontroluj zbytek v záložce <a href="#/t/${t.id}/players">Hráči</a> – pak půjde turnaj spustit.</div>` : ''}
         <div class="row wrap"><a class="btn" href="#/t/${t.id}/edit">Upravit nastavení</a>
-          <button class="btn primary" data-act="start" ${active.length < 2 ? 'disabled' : ''}>Spustit turnaj</button></div>
+          <button class="btn primary" data-act="start" ${active.length < 2 || waiting.length ? 'disabled' : ''}>Spustit turnaj</button></div>
+        ${waiting.length && active.length >= 2 ? html`<button class="btn sm danger-ghost start-unchecked" data-act="start-unchecked">⚠ Spustit bez kontroly registrací</button>` : ''}
         <p class="hint">Po startu se uzavře registrace a hráči už nemůžou měnit beyblady.</p>
       </div>
-      ${checkinCard(d, active)}
       <div class="card stack">
         <h3>Přidat hráče bez telefonu</h3>
         <p class="hint">Zapíšeš ho sám, jeho QR kód pak najdeš v záložce Hráči → ⋯.</p>
@@ -162,35 +165,17 @@ export function renderManage(box, { d, reload }) {
   // ── akce ───────────────────────────────────────
   const act = async (fn, okMsg) => { try { await fn(); if (okMsg) toast(okMsg, 'ok'); reload() } catch (e) { toast(errMsg(e), 'err') } }
 
-  on(box, 'click', '[data-act=start]', async (e, b) => {
-    const ci = d.checkin || new Map()
-    const missing = active.filter(p => !ci.get(p.id))
-    // prezence se používá (aspoň jeden hráč ji má) a někdo chybí → nabídnout odebrání
-    let drop = false
-    if (missing.length && missing.length < active.length) {
-      drop = await noShowBox(missing, active.length)
-      if (drop === null) return
+  // start: všichni musí být zkontrolovaní (Hráči → Kontrola registrací), nebo vědomě bez kontroly
+  on(box, 'click', '[data-act=start], [data-act=start-unchecked]', async (e, b) => {
+    const unchecked = b.dataset.act === 'start-unchecked'
+    if (unchecked) {
+      if (!await confirmBox(`⚠ Spustit bez kontroly registrací? ${waiting.length === 1 ? '1 hráč nebyl zkontrolovaný' : `${waiting.length} ${waiting.length <= 4 ? 'hráči nebyli zkontrolovaní' : 'hráčů nebylo zkontrolováno'}`} – nikdo neověřil, že jsou na místě a mají beyblady z přihlášky. Turnaj začne se všemi ${active.length} hráči.`, { ok: 'Spustit bez kontroly', danger: true })) return
     } else if (!await confirmBox(`Spustit turnaj s ${active.length} hráči? Registrace se uzavře.`, { ok: 'Spustit' })) return
     await busy(b, () => act(async () => {
-      if (drop) await rpc('drop_noshows', { p_tournament: t.id })
       await rpc('start_tournament', { p_tournament: t.id })
-      if (drop) {
-        // drawRound potřebuje aktuální seznam hráčů
-        const fresh = await rpc('tournament_players', { p_tournament: t.id })
-        d.players = fresh; d.pmap = new Map(fresh.map(p => [p.id, p]))
-      }
       drawRound(d, reload, 1)
     }, 'Turnaj běží!'))
   })
-  on(box, 'click', '[data-act=checkin-scan]', () => scanModal(d, reload))
-  on(box, 'click', '[data-ci]', (e, b) => busy(b, async () => {
-    const on_ = !d.checkin?.get(b.dataset.ci)
-    try {
-      const r = await rpc('checkin', { p_tournament: t.id, p_reg: b.dataset.ci, p_on: on_ })
-      d.checkin.set(r.reg, r.checked_in_at)
-      reload()
-    } catch (err) { toast(errMsg(err), 'err') }
-  }))
   on(box, 'click', '[data-act=draw]', () => drawRound(d, reload, t.current_round + 1))
   on(box, 'click', '[data-act=finish]', () => finishModal(d, reload))
   on(box, 'click', '[data-act=finish-event]', async () => {
@@ -423,7 +408,12 @@ async function walkinModal(d, reload) {
         let deck
         try { deck = getDeck() } catch (err) { return toast(err.message, 'err') }
         await busy(f.querySelector('button.primary'), async () => {
-          try { await rpc('add_walkin', { p_tournament: d.t.id, p_nick: nick, p_deck: deck }); close(); toast(`${nick} přidán.`, 'ok'); reload() }
+          try {
+            const rid = await rpc('add_walkin', { p_tournament: d.t.id, p_nick: nick, p_deck: deck })
+            // hráče zapisuje organizátor na místě → rovnou zkontrolovaný
+            if (rid && d.t.status === 'registration') await rpc('checkin', { p_tournament: d.t.id, p_reg: rid }).catch(() => {})
+            close(); toast(`${nick} přidán.`, 'ok'); reload()
+          }
           catch (err) { toast(errMsg(err), 'err') }
         })
       })
@@ -453,7 +443,10 @@ async function addTestPlayers(d, n, reload) {
     const used = new Set()
     const uniq = (list) => { let x, k = 0; do { x = pickRand(list) } while (used.has(x.name) && k++ < 50); used.add(x.name); return x.name }
     const deck = [0, 1, 2].map(() => ({ type: 'bx', blade: uniq(blades), ratchet: uniq(ratchets), bit: uniq(bits) }))
-    try { await rpc('add_walkin', { p_tournament: d.t.id, p_nick: nick, p_deck: deck }); added++ }
+    try {
+      const rid = await rpc('add_walkin', { p_tournament: d.t.id, p_nick: nick, p_deck: deck }); added++
+      if (rid && d.t.status === 'registration') await rpc('checkin', { p_tournament: d.t.id, p_reg: rid }).catch(() => {})
+    }
     catch (e) { toast(errMsg(e), 'err'); break }
   }
   toast(`Přidáno ${added} testovacích hráčů.`, 'ok')
@@ -497,120 +490,3 @@ async function autoPlay(d, reload) {
 }
 
 
-// ── prezence ─────────────────────────────────────
-function checkinCard(d, active) {
-  if (!d.checkin) return ''
-  const n = active.filter(p => d.checkin.get(p.id)).length
-  const sorted = [...active].sort((a, b) => (!!d.checkin.get(a.id) - !!d.checkin.get(b.id)) || a.nick.localeCompare(b.nick, 'cs'))
-  return html`<div class="card stack ci-card">
-    <div class="row between" style="align-items:center">
-      <h3>Prezence</h3>
-      <span class="ci-count num"><b>${n}</b> / ${active.length}</span>
-    </div>
-    <div class="ci-bar" role="img" aria-label="Přítomno ${n} z ${active.length}"><i style="width:${active.length ? (100 * n / active.length).toFixed(1) : 0}%"></i></div>
-    <button class="btn primary" data-act="checkin-scan">📷 Skenovat vstupenky</button>
-    <details${n ? ' open' : ''}><summary class="small" style="cursor:pointer">Odškrtnout ručně</summary>
-      <div class="list ci-list" style="margin-top:10px">${sorted.map(p => {
-        const at = d.checkin.get(p.id)
-        return html`<button type="button" class="li ci-row ${at ? 'on' : ''}" data-ci="${p.id}" aria-pressed="${at ? 'true' : 'false'}">
-          <span class="ci-box" aria-hidden="true">${at ? '✓' : ''}</span>
-          <span class="grow ellipsis">${p.nick}</span>
-          <span class="small faint">${at ? fmtTime(at) : 'chybí'}</span>
-        </button>`
-      })}</div>
-    </details>
-    <p class="hint">Při startu nabídnu odebrat hráče, kteří nemají prezenci. Kdo prezenci nepoužije, spustí turnaj se všemi.</p>
-  </div>`
-}
-
-// při startu: odebrat chybějící? true = odebrat, false = spustit se všemi, null = zpět
-function noShowBox(missing, total) {
-  return new Promise(res => {
-    let done = false
-    const fin = (v, close) => { if (done) return; done = true; close(); res(v) }
-    modal(html`
-      <h2 style="margin-top:0">${missing.length === 1 ? '1 hráč nemá' : `${missing.length} ${missing.length <= 4 ? 'hráči nemají' : 'hráčů nemá'}`} prezenci</h2>
-      <div class="ci-missing">${missing.map(p => html`<span class="pill">${p.nick}</span>`)}</div>
-      <p class="muted small">Odebraní hráči odstoupí a do turnaje se nezapočítají. Turnaj začne s ${total - missing.length} hráči.</p>
-      <div class="stack" style="margin-top:16px">
-        <button class="btn primary" data-drop>Odebrat a spustit</button>
-        <button class="btn" data-all>Spustit se všemi (${total})</button>
-        <button class="btn ghost" data-back>Zpět</button>
-      </div>`, {
-      onMount: (box, close) => {
-        box.querySelector('[data-drop]').onclick = () => fin(true, close)
-        box.querySelector('[data-all]').onclick = () => fin(false, close)
-        box.querySelector('[data-back]').onclick = () => fin(null, close)
-        const obs = new MutationObserver(() => { if (!box.isConnected) { obs.disconnect(); if (!done) { done = true; res(null) } } })
-        obs.observe(document.body, { childList: true })
-      },
-    })
-  })
-}
-
-// html5-qrcode se načítá jen když je potřeba (je i v BBXST)
-let qrLib = null
-const loadQrLib = () => qrLib || (qrLib = new Promise((ok, bad) => {
-  if (window.Html5Qrcode) return ok()
-  const s = document.createElement('script')
-  s.src = './vendor/html5-qrcode.min.js'; s.onload = () => ok(); s.onerror = () => { qrLib = null; bad(new Error('Skener se nenačetl.')) }
-  document.head.append(s)
-}))
-
-const QR_RE = /^BBXU1\|([0-9a-f-]{36})\|([0-9a-f-]{36})$/i
-
-function scanModal(d, reload) {
-  const { t } = d
-  let scanner = null, lastTxt = '', lastAt = 0, changed = false
-  const log = []
-  const { box, close } = modal(html`
-    <h2 style="margin-top:0">Prezence</h2>
-    <div id="ci-reader" class="ci-reader"></div>
-    <div id="ci-last" class="ci-last" aria-live="polite">Namiř kameru na QR kód vstupenky.</div>
-    <ol id="ci-log" class="ci-log"></ol>
-    <div class="row" style="margin-top:12px">
-      <label class="btn grow" style="text-align:center">🖼 Z obrázku<input type="file" accept="image/*" id="ci-file" hidden></label>
-      <button class="btn primary grow" data-close>Hotovo</button>
-    </div>`, { dismissable: true })
-  const last = box.querySelector('#ci-last')
-  const show = (cls, txt) => { last.className = `ci-last ${cls}`; last.textContent = txt }
-  const handle = async (txt) => {
-    const now = Date.now()
-    if (txt === lastTxt && now - lastAt < 3000) return
-    lastTxt = txt; lastAt = now
-    const m = QR_RE.exec(txt.trim())
-    if (!m) return show('err', 'Tohle není vstupenka BBXU.')
-    if (m[1] !== t.id) return show('err', 'Vstupenka je na jiný turnaj.')
-    try {
-      const r = await rpc('checkin', { p_tournament: t.id, p_token: m[2] })
-      d.checkin?.set(r.reg, r.checked_in_at); changed = true
-      if (r.status === 'dropped') show('warn', `${r.nick} – odstoupil z turnaje (prezence zapsaná)`)
-      else show(r.already ? 'warn' : 'ok', r.already ? `${r.nick} už prezenci má` : `✓ ${r.nick}`)
-      if (!r.already) {
-        log.unshift(r.nick)
-        mount(box.querySelector('#ci-log'), html`${log.slice(0, 6).map(n => html`<li>${n}</li>`)}`)
-      }
-      navigator.vibrate?.(r.already ? [60, 60, 60] : 80)
-    } catch (err) { show('err', errMsg(err)) }
-  }
-  const stop = async () => { try { if (scanner?.isScanning) await scanner.stop() } catch {} }
-  loadQrLib().then(async () => {
-    if (!box.isConnected) return
-    scanner = new window.Html5Qrcode('ci-reader')
-    try { await scanner.start({ facingMode: 'environment' }, { fps: 10, qrbox: 220 }, handle) }
-    catch (err) { show('err', 'Kamera nedostupná – povol ji v prohlížeči, nebo načti QR z obrázku.') }
-  }).catch(err => show('err', err.message))
-  box.querySelector('#ci-file').onchange = async (e) => {
-    const f = e.target.files[0]; e.target.value = ''
-    if (!f || !scanner) return
-    await stop()
-    try { await handle(await scanner.scanFile(f, false)) } catch { show('err', 'V obrázku jsem QR kód nenašel.') }
-  }
-  // po zavření (Hotovo / klik vedle / Esc) zastavit kameru a překreslit
-  const obs = new MutationObserver(() => {
-    if (box.isConnected) return
-    obs.disconnect(); stop(); if (changed) reload()
-  })
-  obs.observe(document.body, { childList: true })
-  return close
-}

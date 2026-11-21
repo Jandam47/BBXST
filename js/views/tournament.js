@@ -3,6 +3,7 @@
 // ════════════════════════════════════════════════════════════════
 import { sb, state, rpc, q, errMsg, canManage, ensureSession, refreshMe, askNotify } from '../supa.js'
 import { html, raw, mount, on, formData, toast, modal, busy, confirmBox, qrSvg, qrPng, statusPill, fmtDate, fmtTime, pauseLeft, fmtLeft, finishLine, kindLabel } from '../ui.js'
+import { regCheckPanel, regState, checkModal, scanModal } from '../regcheck.js'
 import { computeStandings, matchLabel, qrPayload, nextPow2, phaseName, arenaQueue, busyRegs } from '../core.js'
 import { renderManage } from './manage.js'
 import { icon } from '../icons.js'
@@ -187,8 +188,8 @@ function tabMe(box, { d, reload }) {
   } else if (t.status === 'registration') {
     arenaBlock = html`<div class="lbl">Arénu se dozvíš po startu turnaje.</div>
       ${myReg.checked_in_at
-        ? html`<div class="pass-checkin on">✓ Prezence ${fmtTime(myReg.checked_in_at)}</div>`
-        : html`<div class="pass-checkin">Prezence: na místě ukaž QR kód judgovi nebo organizátorovi.</div>`}`
+        ? html`<div class="pass-checkin on">✓ Registrace zkontrolována ${fmtTime(myReg.checked_in_at)}</div>`
+        : html`<div class="pass-checkin">Na místě ukaž QR kód organizátorovi – zkontroluje tvoje beyblady.</div>`}`
   } else if (t.status === 'finished') {
     arenaBlock = html`<div class="lbl">Konečné umístění</div><div class="big">${myReg.final_place ?? '–'}.</div>`
   } else {
@@ -364,15 +365,19 @@ function tabPlayers(box, { d, reload }) {
     (t.status === 'finished' ? (a.final_place ?? 999) - (b.final_place ?? 999) : 0) ||
     (a.seed ?? 999) - (b.seed ?? 999))
 
+  // organizátor v registraci: kontrola registrací (QR + beyblady), barevný stav u každého hráče
+  const check = mgr && t.kind === 'tournament' && t.status === 'registration' && d.checkin
   mount(box, list.length ? html`
-    <div class="list">${list.map(p => html`
-      <div class="li" style="${p.status === 'dropped' ? 'opacity:.5' : ''}">
+    ${check ? regCheckPanel(d) : ''}
+    <div class="list ${check ? 'rc-list' : ''}">${list.map(p => html`
+      <div class="li ${check ? `rc-row rc-${regState(p, d.checkin)}` : ''}" ${check ? html`data-check="${p.id}" role="button" tabindex="0"` : ''} style="${p.status === 'dropped' && !check ? 'opacity:.5' : ''}">
         ${t.status === 'finished' && p.final_place ? html`<span class="place p${p.final_place}">${p.final_place}.</span>` : ''}
         <span class="av">${p.avatar || '👤'}</span>
         <div class="grow">
           <div class="ellipsis" style="font-weight:600">${p.has_account ? html`<a href="#/p/${p.user_id}">${p.nick}</a>` : p.nick}
             ${p.seed ? html`<span class="faint small"> · seed ${p.seed}</span>` : ''}
-            ${p.status === 'dropped' ? html`<span class="faint small"> · odstoupil</span>` : ''}</div>
+            ${p.status === 'dropped' ? html`<span class="faint small"> · ${check ? 'vyřazen' : 'odstoupil'}</span>` : ''}
+            ${check && p.status !== 'dropped' ? html`<span class="small rc-tag"> · ${d.checkin.get(p.id) ? '✓ zkontrolováno' : 'čeká'}</span>` : ''}</div>
           ${p.bey1 ? html`<div class="small muted ellipsis">${[p.bey1, p.bey2, p.bey3].filter(Boolean).join(' · ')}</div>`
                    : html`<div class="small faint">${p.region || (p.has_account ? '' : 'host')}</div>`}
         </div>
@@ -381,6 +386,14 @@ function tabPlayers(box, { d, reload }) {
     ${t.kind === 'tournament' && t.status === 'registration' ? html`<p class="hint">Beyblady ostatních hráčů se zveřejní po skončení turnaje.</p>` : ''}`
     : html`<div class="empty">Zatím se nikdo nepřihlásil.</div>`)
 
+  on(box, 'click', '[data-rc=scan]', () => scanModal(d, reload))
+  on(box, 'click', '[data-check]', (e, el) => {
+    if (e.target.closest('[data-menu], a')) return
+    checkModal(d, d.pmap.get(el.dataset.check), reload)
+  })
+  on(box, 'keydown', '[data-check]', (e, el) => {
+    if ((e.key === 'Enter' || e.key === ' ') && e.target === el) { e.preventDefault(); checkModal(d, d.pmap.get(el.dataset.check), reload) }
+  })
   on(box, 'click', '[data-menu]', (e, el) => {
     const p = d.pmap.get(el.dataset.menu)
     modal(html`

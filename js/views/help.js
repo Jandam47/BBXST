@@ -14,7 +14,7 @@ const S = [
     <ul>
       <li>U turnaje dej <b>Přihlásit se</b> a slož tři beyblady z dílů. Každý bey musí být jiný; u některých turnajů se nesmí opakovat ani jednotlivé díly.</li>
       <li>Po přihlášení máš v záložce <b>Můj Status</b> vstupenku s QR kódem. Ulož si ji do telefonu – v hale bývá slabý signál.</li>
-      <li><b>Prezence:</b> na místě ukaž QR judgovi nebo organizátorovi. Na vstupence pak svítí <i>✓ Prezence</i>. Kdo ji před startem nemá, může být z turnaje odebrán.</li>
+      <li><b>Kontrola registrace:</b> na místě ukaž QR kód organizátorovi. Zkontroluje, že máš beyblady z přihlášky, a na vstupence pak svítí <i>✓ Registrace zkontrolována</i>. Když potom beyblady změníš, musí tě zkontrolovat znovu.</li>
       <li>Beyblady můžeš měnit, dokud turnaj nezačne. Pak už ne.</li>
     </ul>`],
   ['play', 'Během turnaje', html`

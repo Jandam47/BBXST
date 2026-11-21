@@ -30,7 +30,7 @@ Komunikuj **česky**, celé UI je česky.
   (zdroj kyoganken.sakura.ne.jp/beyx/weight1.htm), Hasbro názvy jsou v `aliases`. Nové díly = nový SQL soubor
   s `insert … on conflict do update` (viz `07-parts-update.sql`); web se kvůli dílům nasazovat nemusí.
 - `js/config.js` – **obsahuje Adamovy živé klíče Supabase. Nikdy ho neměň ani nepřepisuj.**
-- `supabase/schema.sql`, `02-parts.sql`, `03-live-score.sql`, `04-security-hardening.sql`, `05-judge-handover.sql`, `06-formats-stats.sql`, `07-parts-update.sql`, `08-judge-per-match.sql`, `09-pause.sql`, `10-fashion.sql`, `11-finishes.sql`, `12-rated.sql`, `13-communities.sql`, `14-training-extras.sql`, `15-training-bots.sql`, `16-training-reset.sql`, `17-chat-bazar.sql`, `18-chat-tournament-state.sql`, `19-account-reports.sql`, `20-push.sql`, `21-checkin-errors-backup.sql`, `22-leagues.sql`, `23-meetings.sql`, `24-judge-count.sql` – databáze (spuštěné v produkci, nové soubory
+- `supabase/schema.sql`, `02-parts.sql`, `03-live-score.sql`, `04-security-hardening.sql`, `05-judge-handover.sql`, `06-formats-stats.sql`, `07-parts-update.sql`, `08-judge-per-match.sql`, `09-pause.sql`, `10-fashion.sql`, `11-finishes.sql`, `12-rated.sql`, `13-communities.sql`, `14-training-extras.sql`, `15-training-bots.sql`, `16-training-reset.sql`, `17-chat-bazar.sql`, `18-chat-tournament-state.sql`, `19-account-reports.sql`, `20-push.sql`, `21-checkin-errors-backup.sql`, `22-leagues.sql`, `23-meetings.sql`, `24-judge-count.sql`, `25-reg-check.sql` – databáze (spuštěné v produkci, nové soubory
   spouští Adam). Živé skóre: BBXST v judge módu posílá po každém bodu `live_score` → `matches.live_p1/p2`
   (TV rozpis, vstupenka, seznamy); trigger `bbx_clear_live` ho maže po uložení hry.
   Rozehraná hra: BBXST posílá s `live_score` i `p_state` → `matches.live_state` (souboje v orientaci p1/p2,
@@ -132,11 +132,14 @@ Komunikuj **česky**, celé UI je česky.
   Události: zápas na aréně, start turnaje, výzva / přijetí na tréninku, bazar, info k turnaji (přihlášeným),
   obecné informace (všem s odběrem), fashion (molo, rozstřel, boss), nové nahlášení (adminům). Autor akce nic
   nedostane. sw.js: `push` → showNotification, `notificationclick` → otevře odkaz (#/… nebo bbxst.html…).
-- **Prezence** (21): `registrations.checked_in_at` (mění jen RPC, hlídá trigger `bbx_protect_checkin`). V Řízení před
-  startem karta Prezence: sken vstupenky (`checkin` s `p_token`, skener html5-qrcode se do BBXU načte až při otevření,
-  jde i z obrázku) nebo ruční odškrtnutí (`checkin` s `p_reg`, `p_on`); smí organizátor, admin i judge. `checkin_list`
-  → `d.checkin` (load v tournament.js). Při startu, když má prezenci aspoň jeden a někdo chybí, dialog Odebrat a spustit
-  (`drop_noshows`) / Spustit se všemi. Vstupenka (Můj Status) ukazuje „✓ Prezence“ (`my_registration.checked_in_at`).
+- **Kontrola registrací** (21 + 25, `js/regcheck.js`): stav = `registrations.checked_in_at` (mění jen RPC `checkin`,
+  hlídá trigger `bbx_protect_checkin`; když hráč změní deck, kontrola se zruší). Organizátor/admin v záložce Hráči
+  (turnaj v registraci): panel s počty, „Načíst QR kód“ (`checkin_lookup` podle tokenu, skener html5-qrcode se načte
+  až při otevření, jde i z obrázku) nebo klepnutí na hráče → modal: 3 beyblady k odškrtnutí → Potvrdit registraci,
+  Vyřadit – nenastoupí (status dropped) / Vrátit, Zpět. Řádky zelená = zkontrolováno, žlutá = čeká, červená = vyřazen.
+  `checkin_list` → `d.checkin` (load v tournament.js). Řízení: Spustit turnaj jde až po kontrole všech aktivních,
+  jinak „⚠ Spustit bez kontroly registrací“ s varováním. Hráče přidané v Řízení (i testovací) zkontroluje rovnou.
+  Vstupenka ukazuje „✓ Registrace zkontrolována“. (`drop_noshows` z 21 zůstává v DB, UI ho nepoužívá.)
 - **Chyby z telefonů** (21, `js/errlog.js`): `installErrorLog(sb, app)` v app.js i bbxst.html (module skript na konci,
   sahá na globální `sb`) chytá `error` / `unhandledrejection`, router posílá i nenačtené stránky (`logError`). RPC
   `log_client_error` (i anon, stejná chyba = `count`+1, max 60 nových / 10 min), admini 3+ v profilu „Chyby z telefonů“
@@ -237,7 +240,7 @@ Potřebují lokální PostgreSQL 16, Node a pro UI Python Playwright + Chrome a 
 - `tests/reset_db.sh && node tests/db.test.mjs` – celý turnaj proti DB se stubem Supabase (role, RLS, RPC).
 - `node tests/fashion.test.mjs` – fashion show v DB (po reset_db / ui-up): judge, hodnocení, rozstřel, boss, vyhlášení.
 - `node tests/chat.test.mjs` – chat (místnosti, přístup, hosté) a bazar (fotky, soukromá vlákna) v DB.
-- `node tests/extras.test.mjs` – prezence, chyby z telefonů, záloha, vzájemná bilance (21).
+- `node tests/extras.test.mjs` – kontrola registrací, chyby z telefonů, záloha, vzájemná bilance (21, 25).
 - `node tests/leagues.test.mjs` – ligy: práva správce / organizátorů, ligové turnaje, bodování a bilance (22).
 - `node tests/meetings.test.mjs` – meeting osobně / online, akce jen pro organizátory (23).
 - `node tests/judge-count.test.mjs` – počítadlo odjudgovaných zápasů (24).

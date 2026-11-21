@@ -73,6 +73,14 @@ assert.equal(list.filter(x => x.checked_in_at).length, 2)
 assert.equal((await as(ps[0], 'select * from checkin_list($1)', [t.id])).length, 0, 'hráč seznam nevidí')
 step('prezence: sken vstupenky, odškrtnutí, hráč ji nepodvrhne')
 
+// kontrola registrací (25): QR → registrace, změna beybladů kontrolu zruší
+assert.equal(await one(org, 'checkin_lookup', [t.id, a0.qr_token]), ps[0].reg)
+await fails(ps[1], 'select checkin_lookup($1, $2)', [t.id, a0.qr_token], /judge nebo organizátor/)
+await as(ps[1], 'update registrations set deck = $2 where id = $1', [ps[1].reg, DECK.replace('"flat"', '"Ball"')])
+assert.equal((await db.query('select checked_in_at from registrations where id = $1', [ps[1].reg])).rows[0].checked_in_at, null, 'jiné beyblady = znovu kontrolovat')
+await as(org, 'select checkin($1, null, $2)', [t.id, ps[1].reg])
+step('kontrola registrací: dohledání podle QR, změna decku kontrolu zruší')
+
 await fails(judge, 'select drop_noshows($1)', [t.id], /nemůžeš/)
 assert.equal(await one(org, 'drop_noshows', [t.id]), 2)
 const st = (await db.query('select nick, status from registrations where tournament_id = $1 order by nick', [t.id])).rows
