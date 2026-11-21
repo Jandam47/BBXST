@@ -622,7 +622,6 @@ export async function renderTV(main, [id]) {
   if (Training.isTraining(k)) return Training.renderTV(main, [id])
   document.body.classList.add('tv')
   let d = await load(id)
-  let scrollTimer = null
   const clock = () => new Date().toLocaleTimeString('cs-CZ', { hour: '2-digit', minute: '2-digit' })
 
   const draw = () => {
@@ -634,10 +633,15 @@ export async function renderTV(main, [id]) {
     // série BO3: číslo hry a stav výher (modrá : červená)
     const series = (m) => m.best_of > 1 ? html`<span class="tv-series"><em>Hra ${Math.min(m.p1_wins + m.p2_wins + 1, m.best_of)}</em><span><u class="l">${m.p1_wins}</u><i>:</i><u class="r">${m.p2_wins}</u></span></span>` : ''
     const phase = t.status === 'swiss' ? `${phaseName(t)} · kolo ${t.current_round}/${t.swiss_rounds}` : t.status === 'topcut' ? (t.top_cut === 2 ? 'Finále' : `Top ${t.top_cut}`) : t.status === 'finished' ? 'Konec turnaje' : 'Registrace'
+    // na šířku se všechno vejde na jednu obrazovku (mřížka podle počtu arén), na výšku pod sebe
+    const land = landscape()
+    const grid = land ? fitGrid(arenas.length) : null
+    const maxNext = !land ? 99 : grid.rows <= 1 ? 6 : grid.rows === 2 ? 3 : 2
     let body
     if (anyOpen) {
-      body = html`<div class="tv-arenas ${arenas.length === 1 ? 'one' : ''}">${arenas.map(({ a, q: qa }) => {
-        const [cur, ...rest] = qa
+      body = html`<div class="tv-arenas ${arenas.length === 1 ? 'one' : ''}" ${grid ? html`style="--cols:${grid.cols};--rows:${grid.rows}"` : ''}>${arenas.map(({ a, q: qa }) => {
+        const [cur, ...all] = qa
+        const rest = all.slice(0, maxNext), more = all.length - rest.length
         return html`<section class="tv-arena ${cur?.status === 'live' ? 'live' : ''} ${cur ? '' : 'idle'}">
           <div class="tv-ano" aria-label="aréna ${a}">${a}</div>
           <div class="tv-rows">
@@ -649,6 +653,7 @@ export async function renderTV(main, [id]) {
               <span class="n r">${nickOf(d, cur.p2_reg)}</span>
             </div>` : html`<div class="tv-free">volno</div>`}
             ${rest.map((m, i) => html`<div class="tv-next"><span class="i">${i + 2}.</span><span class="n l">${nickOf(d, m.p1_reg)}</span><span class="vs">vs</span><span class="n r">${nickOf(d, m.p2_reg)}</span></div>`)}
+            ${more > 0 ? html`<div class="tv-more">+ ${more} ${more === 1 ? 'další zápas' : more <= 4 ? 'další zápasy' : 'dalších zápasů'}</div>` : ''}
           </div>
         </section>`
       })}</div>`
@@ -660,33 +665,42 @@ export async function renderTV(main, [id]) {
           ? d.players.filter(p => p.final_place).sort((a, b) => a.final_place - b.final_place).slice(0, 8).map(p => html`<tr><td>${p.final_place}.</td><td>${p.nick}</td><td></td></tr>`)
           : st.map(s => html`<tr><td>${s.rank}</td><td>${s.nick}</td><td><b>${s.main}</b> HB · ${s.aux1} PB</td></tr>`))}</tbody></table></div>`
     }
+    main.classList.toggle('tv-land', land); main.classList.toggle('tv-port', !land)
     mount(main, html`
       <div class="tv-head"><h1>${t.name}</h1><div class="r">${phase} · ${clock()}</div></div>
       ${paused(t) ? html`<div class="tv-pause" data-countdown-box><b>PAUZA</b><span class="num" data-countdown="${t.pause_until}">${fmtLeft(t.pause_until)}</span></div>` : ''}
       ${body}
       <a class="btn sm tv-exit" href="#/t/${t.id}">Zavřít TV</a>`)
-    startScroll()
   }
 
-  // pomalé rolování, když se zápasy nevejdou na obrazovku
-  function startScroll() {
-    clearInterval(scrollTimer)
-    if (document.documentElement.scrollHeight <= innerHeight + 10) return
-    let dir = 1, pause = 60
-    scrollTimer = setInterval(() => {
-      if (pause > 0) { pause--; return }
-      scrollBy(0, dir)
-      if (innerHeight + scrollY >= document.documentElement.scrollHeight - 2) { pause = 60; dir = 0; setTimeout(() => { scrollTo(0, 0); dir = 1; pause = 60 }, 2000) }
-    }, 30)
+  // otočení / změna velikosti okna = jiný režim nebo jiná mřížka
+  let lastKey = ''
+  const onResize = () => {
+    const key = landscape() ? `L${fitGrid(Math.max(1, d.t.arena_count)).cols}` : 'P'
+    if (key !== lastKey) { lastKey = key; draw() }
   }
-
   draw()
+  lastKey = landscape() ? `L${fitGrid(Math.max(1, d.t.arena_count)).cols}` : 'P'
+  window.addEventListener('resize', onResize)
   const off = liveChannel(id, async () => { d = await load(id); draw() })
   const tick = setInterval(() => { const r = main.querySelector('.tv-head .r'); if (r) r.textContent = r.textContent.replace(/\d{1,2}:\d{2}$/, clock()) }, 15000)
   // pojistka, kdyby realtime vypadl
   const poll = setInterval(async () => { try { d = await load(id); draw() } catch {} }, 60000)
   window.addEventListener('bbx:countdown-over', draw)
-  return () => { off(); clearInterval(tick); clearInterval(poll); clearInterval(scrollTimer); window.removeEventListener('bbx:countdown-over', draw); document.body.classList.remove('tv') }
+  return () => { off(); clearInterval(tick); clearInterval(poll); window.removeEventListener('resize', onResize); window.removeEventListener('bbx:countdown-over', draw); document.body.classList.remove('tv') }
+}
+
+const landscape = () => innerWidth > innerHeight
+// sloupce × řádky tak, aby karty arén měly zhruba poměr 16:9 a zbylo co nejmíň prázdných míst
+function fitGrid(n) {
+  const W = innerWidth, H = innerHeight * 0.85
+  let best = { cols: 1, rows: n, score: Infinity }
+  for (let cols = 1; cols <= n; cols++) {
+    const rows = Math.ceil(n / cols)
+    const score = Math.abs(Math.log((W / cols) / (H / rows) / 1.7)) + (cols * rows - n) * 0.35
+    if (score < best.score) best = { cols, rows, score }
+  }
+  return best
 }
 
 export { nickOf, running }

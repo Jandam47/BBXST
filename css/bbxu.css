@@ -1285,3 +1285,30 @@ a.lg-tag:hover { text-decoration: underline; }
 .rc-bey input { width: 24px; height: 24px; accent-color: var(--ok); flex: none; }
 .rc-bey:has(input:checked) { border-color: var(--ok); }
 .start-unchecked { align-self: flex-start; border: 1px dashed rgba(255,176,32,.6); color: var(--warn); background: transparent; }
+
+/* ── TV rozpis: na výšku pod sebe, na šířku vše na jedné obrazovce ─── */
+main.tv-port .tv-arenas { grid-template-columns: minmax(0, 1fr); }
+main.tv-land { height: 100vh; height: 100dvh; box-sizing: border-box; display: flex; flex-direction: column;
+  padding: 2vh 2vw; overflow: hidden; }
+main.tv-land .tv-head { margin-bottom: 1.5vh; flex: none; }
+main.tv-land .tv-head h1 { font-size: clamp(20px, 3.2vw, 52px); }
+main.tv-land .tv-pause { flex: none; margin-bottom: 1.5vh; padding: 1.2vh 2vw; }
+main.tv-land .tv-pause b, main.tv-land .tv-pause span { font-size: clamp(32px, 6vh, 110px); }
+main.tv-land .tv-arenas { --r: clamp(18px, 3.2vh, 46px); flex: 1; min-height: 0;
+  grid-template-columns: repeat(var(--cols, 2), minmax(0, 1fr)); grid-template-rows: repeat(var(--rows, 1), minmax(0, 1fr));
+  align-items: stretch; gap: calc(var(--r) + 1.2vh) calc(var(--r) + 1vw); }
+main.tv-land .tv-arena { container-type: size; min-height: 0; overflow: visible; display: flex; flex-direction: column;
+  padding: calc(var(--r) * .8) 1.2vw 1vh; }
+main.tv-land .tv-rows { flex: 1; min-height: 0; overflow: hidden; align-content: center; gap: 2cqh; }
+main.tv-land .tv-now { gap: 2cqw; padding-bottom: 1.5cqh; }
+main.tv-land .tv-now .n { font-size: clamp(14px, min(17cqh, 9cqw), 96px); }
+main.tv-land .tv-now .vs { font-size: clamp(11px, min(8cqh, 4cqw), 36px); }
+main.tv-land .tv-now .sc b { font-size: clamp(22px, min(30cqh, 15cqw), 170px); }
+main.tv-land .tv-series { font-size: clamp(10px, min(6cqh, 3cqw), 28px); margin-top: 1cqh; }
+main.tv-land .tv-next { font-size: clamp(11px, min(10cqh, 5cqw), 40px); gap: 1.5cqw; }
+main.tv-land .tv-free { font-size: clamp(16px, min(16cqh, 8cqw), 64px); text-align: center; }
+main.tv-land .tv-arenas.one .tv-now .n { font-size: clamp(24px, min(18cqh, 8cqw), 110px); }
+main.tv-land .tv-arenas.one .tv-now .sc b { font-size: clamp(40px, min(34cqh, 15cqw), 200px); }
+.tv-more { font-size: clamp(11px, 1.2vw, 20px); color: var(--faint); }
+main.tv-land .tv-more { font-size: clamp(10px, min(6cqh, 3cqw), 24px); }
+main.tv-land > .card { flex: 1; min-height: 0; overflow: hidden; }
