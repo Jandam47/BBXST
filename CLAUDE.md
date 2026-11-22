@@ -175,6 +175,9 @@ Komunikuj **česky**, celé UI je česky.
   v supa.js). Kontrola registrace má „💰 Zaplatil vstupné“; pokladník, který turnaj neřídí, vidí v Hráčích jen vstupné
   (`payPanel` / `payModal` v regcheck.js, sken QR přes `checkin_lookup`, který pustí i pokladníka). Start turnaje neblokuje,
   Řízení jen upozorní na nezaplacené. Vstupenka: `my_registration.paid_at`. Záhlaví turnaje: 💰 Vstupné N Kč.
+- **E-maily přihlašování**: Supabase Auth posílá přes vlastní SMTP (Resend, `smtp.resend.com:465`, odesílatel `noreply@bbxu.cz`,
+  doména ověřená DNS záznamy u WEDOSu; limit Resend free 100/den). České šablony v `supabase/email/` (confirm, reset,
+  email-change = i převod hosta na účet) – Adam je vkládá ručně do Authentication → Emails → Templates.
 - **Chyby z telefonů** (21, `js/errlog.js`): `installErrorLog(sb, app)` v app.js i bbxst.html (module skript na konci,
   sahá na globální `sb`) chytá `error` / `unhandledrejection`, router posílá i nenačtené stránky (`logError`). RPC
   `log_client_error` (i anon, stejná chyba = `count`+1, max 60 nových / 10 min), admini 3+ v profilu „Chyby z telefonů“
