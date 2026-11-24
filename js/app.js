@@ -235,11 +235,10 @@ async function boot() {
     history.replaceState(null, '', location.pathname + '#/')
   }
   window.addEventListener('hashchange', route)
-  // záložka Komunikace: když už na rozcestníku jsem, otevře znovu kolečko
+  // záložka Komunikace: kolečko nad aktuální stránkou (bez přechodu)
   document.querySelector('.tabbar a[data-tab="chat"]')?.addEventListener('click', (e) => {
-    if (location.hash !== '#/komunikace') return
     e.preventDefault()
-    if (!document.querySelector('.cw-overlay')) Komunikace.openCommWheel()
+    Komunikace.openCommWheel()
   })
   await route()
   if (isRecovery && state.user) Auth.newPasswordModal()

@@ -4,16 +4,16 @@
 // ════════════════════════════════════════════════════════════════
 import { state, rpc, errMsg, isLoggedIn } from '../supa.js'
 import { html, mount, on, toast, busy, fmtDateTime } from '../ui.js'
-import { commTabs } from './komunikace.js'
+import { syncSeen, seenKey } from '../unread.js'
 
 const KIND = { question: 'Dotaz', note: 'Připomínka' }
 const SEEN = 'bbxu_fb_seen'
-export const markFbSeen = (ts) => { try { if (ts && ts > (localStorage.getItem(SEEN) || '')) localStorage.setItem(SEEN, ts) } catch {} ; window.dispatchEvent(new Event('bbx:seen')) }
-export const fbSeen = () => { try { return localStorage.getItem(SEEN) || '' } catch { return '' } }
+export const markFbSeen = (ts) => { try { if (ts && ts > (localStorage.getItem(seenKey(SEEN)) || '')) localStorage.setItem(seenKey(SEEN), ts) } catch {} ; if (ts) syncSeen('fb', ts); window.dispatchEvent(new Event('bbx:seen')) }
+export const fbSeen = () => { try { return localStorage.getItem(seenKey(SEEN)) || '' } catch { return '' } }
 
 export async function render(main, _, ctx) {
   if (!isLoggedIn() || state.isAnon || !state.profile?.nick) {
-    return mount(main, html`${commTabs('fb')}<h1 class="comm-h">Dotazy a připomínky</h1>
+    return mount(main, html`<h1 class="comm-h">Dotazy a připomínky</h1>
       <div class="notice">Napsat hlavnímu adminovi můžou hráči s účtem. <a href="#/login">Přihlásit se</a></div>`)
   }
   return state.level >= 4 ? inbox(main, ctx) : mine(main, ctx)
@@ -24,7 +24,7 @@ async function mine(main, ctx) {
   if (!ctx.isCurrent()) return
   const seen = fbSeen()
   const draw = () => {
-    mount(main, html`${commTabs('fb')}
+    mount(main, html`
       <h1 class="comm-h">Dotazy a připomínky</h1>
       <p class="muted small fb-lead">Zpráva je <b>soukromá</b> – vidí ji jen hlavní admin. Odpověď ti přijde sem (a na telefon, pokud máš zapnutá upozornění).</p>
       <form class="card stack fb-form" id="f-fb">
@@ -65,7 +65,7 @@ async function inbox(main, ctx) {
   if (!ctx.isCurrent()) return
   const draw = () => {
     const open = list.filter(f => !f.done).length
-    mount(main, html`${commTabs('fb')}
+    mount(main, html`
       <h1 class="comm-h">Dotazy a připomínky</h1>
       <p class="muted small fb-lead">Soukromé zprávy od hráčů – vidíš je jen ty. ${open ? html`<b>${open}</b> čeká na vyřízení.` : 'Všechno vyřízeno.'}</p>
       <nav class="tabs people-tabs"><button class="${all ? '' : 'on'}" data-all="0">Otevřené</button><button class="${all ? 'on' : ''}" data-all="1">Vše</button></nav>

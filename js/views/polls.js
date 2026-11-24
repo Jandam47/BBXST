@@ -5,7 +5,6 @@
 // ════════════════════════════════════════════════════════════════
 import { state, rpc, errMsg, isLoggedIn } from '../supa.js'
 import { html, mount, on, toast, modal, busy, confirmBox, fmtDateTime, plural, raw } from '../ui.js'
-import { commTabs } from './komunikace.js'
 
 const canCreate = () => isLoggedIn() && !state.isAnon && state.level >= 2
 const canVote = () => isLoggedIn() && !state.isAnon && !!state.profile?.nick
@@ -79,7 +78,7 @@ export async function render(main, [id], ctx) {
   if (!ctx.isCurrent()) return
   const draw = () => {
     const open = polls.filter(p => p.open), done = polls.filter(p => !p.open)
-    mount(main, html`${commTabs('polls')}
+    mount(main, html`
       ${id ? html`<a class="small" href="#/ankety">← Všechny ankety</a>` : html`<div class="row between poll-top">
         <h1 class="comm-h">Ankety</h1>
         ${canCreate() ? html`<button class="btn primary sm" data-new>+ Nová anketa</button>` : ''}</div>`}

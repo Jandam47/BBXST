@@ -1204,6 +1204,8 @@ a.lg-tag:hover { text-decoration: underline; }
 .cw-sec text.more { fill: var(--c); font-size: 10px; letter-spacing: 2px; }
 .cw-sec .nicon { pointer-events: none; }
 .cw-sec .nicon .i1, .cw-sec .nicon .i2 { stroke: var(--c); }
+.cw-badge circle { fill: var(--bolt); stroke: #070b16; stroke-width: 2; filter: drop-shadow(0 0 6px rgba(255,228,31,.7)); }
+.cw-badge text { fill: #0a0a0a; font-family: var(--display); font-weight: 800; font-size: 11px; text-anchor: middle; pointer-events: none; }
 .cw-center { cursor: pointer; outline: none; }
 .cw-center circle { fill: var(--ink); stroke: var(--line); stroke-width: 1.5; transition: stroke .15s; }
 .cw-center:hover circle, .cw-center:focus-visible circle { stroke: var(--c); filter: drop-shadow(0 0 6px var(--c)); }
@@ -1593,16 +1595,8 @@ main.tv-land .tv-now .pt { font-size: clamp(10px, min(8cqh, 3cqw), 34px); }
 .fee-card fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
 .fee-card fieldset > span { display: block; margin-bottom: 8px; }
 
-/* ── Komunikace: rozcestník, ankety, dotazy ── */
+/* ── Komunikace: ankety, dotazy ── */
 .comm-h { margin: 4px 0 12px; }
-.comm-tabs a:last-child { color: var(--muted); }
-.comm-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
-.comm-card { display: grid; gap: 4px; justify-items: start; color: inherit; text-decoration: none; border-color: color-mix(in srgb, var(--c) 45%, transparent); }
-.comm-card:hover, .comm-card:focus-visible { border-color: var(--c); box-shadow: 0 0 18px color-mix(in srgb, var(--c) 25%, transparent); }
-.comm-card b { font-family: var(--display); font-size: 17px; }
-.comm-ico .nicon { width: 34px; height: 34px; }
-.comm-ico .nicon .i1, .comm-ico .nicon .i2 { stroke: var(--c); }
-.comm-wheel-btn { margin-top: 14px; }
 .poll-top { align-items: center; margin-bottom: 4px; }
 .poll-top .comm-h { margin: 4px 0; }
 .poll { margin-bottom: 14px; }

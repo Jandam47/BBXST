@@ -5,16 +5,14 @@
 import { sb, state, q, rpc, errMsg, isLoggedIn } from '../supa.js'
 import { html, mount, on, toast, timeAgo, modal, busy, confirmBox, fmtTime, fmtDateTime } from '../ui.js'
 import { reportModal } from '../report.js'
-import { commTabs } from './komunikace.js'
+import { syncSeen, seenKey } from '../unread.js'
 
 const STATE_LABEL = { closed: 'Uzavřený', hidden: 'Schovaný' }
 
 const SEEN_KEY = 'bbxu_chat_seen'
-const seen = () => { try { return JSON.parse(localStorage.getItem(SEEN_KEY)) || {} } catch { return {} } }
-const markSeen = (room, id) => { try { const s = seen(); s[room] = Math.max(s[room] || 0, id); localStorage.setItem(SEEN_KEY, JSON.stringify(s)) } catch {} ; window.dispatchEvent(new Event('bbx:seen')) }
+const seen = () => { try { return JSON.parse(localStorage.getItem(seenKey(SEEN_KEY))) || {} } catch { return {} } }
+const markSeen = (room, id) => { try { const s = seen(); s[room] = Math.max(s[room] || 0, id); localStorage.setItem(seenKey(SEEN_KEY), JSON.stringify(s)) } catch {} ; syncSeen('chat:' + room, id); window.dispatchEvent(new Event('bbx:seen')) }
 
-// přepínač částí Komunikace (Chat | Ankety | Dotazy | Nápověda)
-const chatTabs = commTabs
 
 export async function render(main, [roomId], ctx) {
   if (!roomId) return roomList(main, ctx)
@@ -26,6 +24,7 @@ async function roomList(main, ctx) {
   const rooms = await rpc('chat_room_list')
   if (!ctx.isCurrent()) return
   const s = seen()
+  for (const r of rooms) if (r.seen && r.seen > (s[r.id] || 0)) s[r.id] = r.seen   // přečteno na jiném zařízení
   const logged = isLoggedIn()
   const test = rooms.filter(r => r.kind === 'test')
   const info = rooms.filter(r => r.kind === 'info')
@@ -49,7 +48,7 @@ async function roomList(main, ctx) {
     </a>`
   }
   const draw = () => mount(main, html`
-    ${chatTabs('chat')}
+    <h1 class="comm-h">Chat</h1>
     ${logged ? html`<h2 class="chat-sec">Zkušební chat</h2>
       <div class="list">${test.map(row)}</div>` : ''}
 
@@ -73,7 +72,7 @@ async function roomView(main, roomId, ctx) {
   try { info = await rpc('chat_room_info', { p_room: roomId }) }
   catch (e) {
     if (!ctx.isCurrent()) return
-    return mount(main, html`${chatTabs('chat')}<div class="empty"><h2>Do téhle místnosti nemáš přístup</h2>
+    return mount(main, html`<div class="empty"><h2>Do téhle místnosti nemáš přístup</h2>
       <p class="muted">${isLoggedIn() ? 'Možná ti skončil přístup hosta.' : 'Přihlas se.'}</p><a class="btn" href="#/chat">Zpět na chat</a></div>`)
   }
   let msgs = (await q(sb.from('chat_messages').select('*').eq('room_id', roomId).order('id', { ascending: false }).limit(150))).reverse()

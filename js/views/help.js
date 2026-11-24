@@ -107,7 +107,7 @@ const S = [
     </ul>`],
   ['chat', 'Komunikace: chat, ankety, dotazy', html`
     <ul>
-      <li>Záložka <b>Komunikace</b> dole otevře kolečko: Chat, Ankety, Nápověda a Dotazy a připomínky.</li>
+      <li>Záložka <b>Komunikace</b> dole otevře kolečko: Chat, Ankety, Nápověda a Dotazy a připomínky. Žluté číslo na záložce i na výseči ukazuje, kde je něco nového: nepřečtené místnosti v chatu, ankety, ve kterých jsi ještě nehlasoval, a nová odpověď na tvůj dotaz. Co si přečteš, zhasne na všech zařízeních, kde jsi přihlášený.</li>
       <li><b>Info k turnaji</b> čte každý, píšou organizátoři. <b>Komunitní chat</b> vidí jen členové a pozvaní hosté. Ve <b>Zkušebním chatu</b> může psát každý s účtem.</li>
       <li><b>Ankety</b> zakládají organizátoři a admini: otázka, 2–10 možností, délka (od 15 minut po týden nebo vlastní konec), hlasování pro víc možností a anonymní režim. Hlasuje každý s účtem a do konce může hlas změnit. Výsledky uvidíš po hlasování, po skončení je vidí všichni. U anonymní ankety nikdo neuvidí, kdo jak hlasoval.</li>
       <li><b>Dotazy a připomínky</b> jsou soukromé – přečte je jen hlavní admin. Odpověď ti přijde zpátky do Komunikace (a na telefon, když máš zapnutá upozornění).</li>

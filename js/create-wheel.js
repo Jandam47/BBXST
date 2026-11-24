@@ -94,12 +94,13 @@ export function openCreateWheel(tree, { title = 'Co chceš založit?', hint = 'V
       const [lx, ly] = items.length === 1 ? [C, C - rm] : pt(rm, mid)
       const name = n.short || n.label
       const small = items.length > 4 || name.length > 10
-      return `<g class="cw-sec${n.children ? ' has-sub' : ''}" data-i="${i}" tabindex="0" role="button" aria-label="${esc(n.label)}${n.children ? ' – další volby' : ''}" style="--c:${n.color || color || 'var(--cyan)'}">
+      return `<g class="cw-sec${n.children ? ' has-sub' : ''}" data-i="${i}" tabindex="0" role="button" aria-label="${esc(n.label)}${n.badge ? ` (${n.badge} nových)` : ''}${n.children ? ' – další volby' : ''}" style="--c:${n.color || color || 'var(--cyan)'}">
         <title>${esc(n.label)}</title>
         <path d="${sector(a0, a1)}" fill-rule="evenodd"/>
         ${icon(n.icon, (+lx - 13).toFixed(1), (+ly - 26).toFixed(1), 26)}
         <text x="${lx}" y="${(+ly + 16).toFixed(1)}" class="${small ? 'sm' : ''}">${esc(clip(name, small ? 14 : 12))}</text>
         ${n.children ? `<text x="${lx}" y="${(+ly + 30).toFixed(1)}" class="more">•••</text>` : ''}
+        ${n.badge ? `<g class="cw-badge" aria-hidden="true"><circle cx="${(+lx + 16).toFixed(1)}" cy="${(+ly - 26).toFixed(1)}" r="10"/><text x="${(+lx + 16).toFixed(1)}" y="${(+ly - 22).toFixed(1)}">${n.badge > 9 ? '9+' : n.badge}</text></g>` : ''}
       </g>`
     }).join('')
     ov.innerHTML = `

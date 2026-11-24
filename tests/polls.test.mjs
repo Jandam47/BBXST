@@ -133,5 +133,22 @@ for (let i = 0; i < 4; i++) await as(b, `select feedback_send('note', 'Další p
 await fails(b, `select feedback_send('note', 'A ještě jedna')`, [], /Moc zpráv/)
 step('dotazy: jen účet, soukromé, push hlavnímu adminovi, odpověď, vyřízeno, limit')
 
+// ── „přečteno“ na serveru (30) ──
+const room = 'volny'
+const [{ id: mid }] = await as(b, "insert into chat_messages (room_id, body) values ($1, 'ahoj') returning id", [room])
+const seenOf = async (u) => (await as(u, 'select chat_room_list() l'))[0].l.find(r => r.id === room).seen
+assert.equal(await seenOf(a), null)
+await as(a, 'select seen_set($1, $2)', ['chat:' + room, mid])
+await as(a, 'select seen_set($1, $2)', ['chat:' + room, Number(mid) - 1])      // starší nepřepíše
+assert.equal(Number(await seenOf(a)), Number(mid)); assert.equal(await seenOf(b), null, 'každý má své')
+await as(a, 'select seen_set($1, $2)', ['chat:neexistuje', 5])                  // tiše ignoruje
+await fails(a, 'select seen_set($1, $2)', ['cokoli', 5], /Neplatný/)
+await fails(null, 'select seen_set($1, $2)', ['chat:' + room, mid])
+const t = (await as(a, 'select feedback_mine() m'))[0].m[0].replied_at
+await as(a, 'select seen_set($1, null, $2)', ['fb', t])
+assert.equal(new Date((await as(a, 'select feedback_count() c'))[0].c.seen).getTime(), new Date(t).getTime())
+await fails(a, 'select * from user_seen')
+step('přečteno na serveru: chat i odpovědi, jen dopředu, každý své')
+
 console.log(`\nPOLLS OK (${ok} kroků)`)
 await db.end()
