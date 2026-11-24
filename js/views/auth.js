@@ -2,7 +2,7 @@
 //  Přihlášení, registrace účtu, převod hosta na účet, nový profil
 // ════════════════════════════════════════════════════════════════
 import { sb, state, errMsg, refreshMe, isLoggedIn, q, authProviders } from '../supa.js'
-import { html, raw, mount, on, formData, toast, modal, busy, AVATARS } from '../ui.js'
+import { html, raw, mount, on, formData, toast, modal, busy, confirmBox, AVATARS } from '../ui.js'
 import { REGIONS } from '../core.js'
 
 const cfg = window.BBX_CONFIG
@@ -55,9 +55,10 @@ export async function render(main, [mode]) {
             <label class="f"><span>E-mail</span><input class="input" name="email" type="email" required></label>
             <button class="btn primary block">Poslat odkaz</button>
           </form>` : ''}
-        ${discord && mode !== 'forgot' && !state.isAnon ? html`
+        ${discord && mode !== 'forgot' ? html`
           <div class="or">nebo</div>
-          <button class="btn discord block" data-act="discord">${raw(DISCORD_SVG)}Pokračovat přes Discord</button>` : ''}
+          <button class="btn discord block" data-act="discord">${raw(DISCORD_SVG)}${state.isAnon ? 'Převést na účet přes Discord' : 'Pokračovat přes Discord'}</button>
+          ${state.isAnon ? html`<div class="hint" style="text-align:center">Tvoje registrace jako hosta zůstanou u tebe.</div>` : ''}` : ''}
       </div>
       <div class="or">nebo</div>
       <a class="btn ghost block" href="#/">Pokračovat bez účtu</a>
@@ -66,6 +67,15 @@ export async function render(main, [mode]) {
 
   on(main, 'click', '[data-mode]', (e, b) => { location.hash = '#/login/' + b.dataset.mode })
   on(main, 'click', '[data-act=discord]', async () => {
+    // host: připojit Discord k anonymnímu účtu (registrace zůstanou); když to Supabase nedovolí, běžné přihlášení
+    let taken = false
+    try { taken = !!sessionStorage.getItem('bbxu_discord_taken') } catch {}
+    if (state.isAnon && !taken) {
+      const { error } = await sb.auth.linkIdentity({ provider: 'discord', options: { redirectTo: redirectTo() } })
+      if (!error) return
+      console.warn('linkIdentity', error)
+      if (!await confirmBox('Převést hosta na účet přes Discord teď nejde. Přihlásit se přes Discord i tak? Registrace z režimu hosta pak zůstanou u hosta.', { ok: 'Přihlásit přes Discord' })) return
+    }
     const { error } = await sb.auth.signInWithOAuth({ provider: 'discord', options: { redirectTo: redirectTo() } })
     if (error) toast(errMsg(error), 'err')
   })

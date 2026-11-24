@@ -270,7 +270,9 @@ Komunikuj **česky**, celé UI je česky.
 ## Pravidla turnaje (dohodnutá s Adamem)
 - Role: hráč < judge < organizátor < admin < hlavní admin (vyšší zahrnuje nižší). Admin přiděluje
   judge/organizátora, hlavní admin i admina. Organizátor řídí jen své turnaje, admin všechny.
-- Host bez účtu = anonymní přihlášení Supabase; účet si může založit později a registrace se převedou.
+- Host bez účtu = anonymní přihlášení Supabase; účet si může založit později a registrace se převedou (e-mailem přes
+  `updateUser`, nebo přes Discord `linkIdentity` – v Supabase musí být zapnuté „Allow manual linking“; když linkování
+  nejde, nabídne běžné přihlášení přes Discord; chybu „už propojeno“ z adresy přeloží app.js a další klik už se přihlásí).
 - Formáty (`tournaments.format`): **Klasika 3v3** (`swiss`) a **Deathmatch** (`deathmatch` = každý s každým 1×,
   `pairRoundRobin` v core.js, kruhová metoda s pevným pořadím podle hashe; počet kol nastaví `start_tournament`
   na n−1 / n). Deathmatch používá status i stage `swiss` – v UI se popisuje přes `phaseName(t)`. Po dohrání:

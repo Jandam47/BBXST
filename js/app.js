@@ -213,6 +213,17 @@ async function boot() {
   installErrorLog(sb, 'bbxu')
   document.title = `${cfg.appName} – ${cfg.appSub}`
   const isRecovery = location.hash.includes('type=recovery')
+  // chyba z přihlášení přes Discord (vrací ji Supabase v adrese)
+  const authErr = new URLSearchParams(location.search).get('error_description')
+    || new URLSearchParams(location.hash.replace(/^#\/?/, '').split('?').pop()).get('error_description')
+  if (authErr) {
+    window.history.replaceState(null, '', location.pathname + '#/login')
+    const taken = /already|exists|linked/i.test(authErr)
+    if (taken) try { sessionStorage.setItem('bbxu_discord_taken', '1') } catch {}
+    setTimeout(() => toast(taken
+      ? 'Tenhle Discord už má účet. Klepni znovu na Discord – přihlásíš se do něj (registrace hosta zůstanou u hosta).'
+      : 'Přihlášení přes Discord se nepovedlo: ' + authErr, 'err'), 300)
+  }
   await initAuth()
   renderChrome()
   watchMyMatches()

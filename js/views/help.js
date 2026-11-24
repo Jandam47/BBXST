@@ -5,7 +5,7 @@ import { html, mount, on } from '../ui.js'
 
 const S = [
   ['start', 'První kroky', html`
-    <p>Na turnaj se přihlásíš i bez účtu – jako <b>host</b>. Výsledky se ti ale ukládají do profilu jen s účtem. Účet si můžeš založit kdykoli později a registrace se ti do něj přenesou.</p>
+    <p>Na turnaj se přihlásíš i bez účtu – jako <b>host</b>. Výsledky se ti ale ukládají do profilu jen s účtem. Účet si můžeš založit kdykoli později – e-mailem nebo přes <b>Discord</b> – a registrace se ti do něj přenesou.</p>
     <ul>
       <li>Web najdeš na <b>bbxu.cz</b>. Aplikaci si přidej na plochu: <b>Profil → Aplikace na plochu</b>. BBXU (turnaje) a BBXST (počítadlo / judge) se instalují zvlášť – na plochu si dej obě.</li>
       <li>V profilu si nastav nick, avatara a kraj. Nick je vidět v pořadí i na TV.</li>
