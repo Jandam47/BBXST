@@ -1324,6 +1324,7 @@ main.tv-land > .card { flex: 1; min-height: 0; overflow: hidden; }
 .pt-hist .l .pt { background: rgba(95,214,255,.14); }
 .pt-hist .r .pt { background: rgba(255,111,177,.14); }
 .pt.pt2 { font-weight: 700; }
+.pt-f { color: #ff9a2e; font-weight: 800; font-size: .9em; letter-spacing: 0; }
 .pt.pt3 { font-weight: 800; }
 .pt-hist .pt.ptr { background: rgba(255,255,255,.08); color: var(--muted); }
 .pt-hist .l .pt.pt3 { background: rgba(95,214,255,.34); }

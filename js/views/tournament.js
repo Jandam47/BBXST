@@ -57,7 +57,9 @@ async function loadPoints(id, matches) {
 // souboje rozehrané hry (BBXST posílá matches.live_state v orientaci p1/p2)
 export const liveBattles = (m) => m.status !== 'done' && m.live_state?.game === m.p1_wins + m.p2_wins
   ? (m.live_state.battles || []).map(b => ({ slot: b.slot, pts: b.pts, finish: b.finish, p1_bey: b.p1_bey, p2_bey: b.p2_bey })) : null
-export const ptLabel = (b) => b.pts === 2 && b.finish === 'over' ? '+2 O' : b.pts === 2 && b.finish === 'burst' ? '+2 B' : `+${b.pts}`
+// +2 O / +2 B: písmeno endu oranžově, ať O nevypadá jako nula (+20)
+const PT_FIN = { over: 'O', burst: 'B' }
+export const ptLabel = (b) => b.pts === 2 && PT_FIN[b.finish] ? html`+2 <b class="pt-f">${PT_FIN[b.finish]}</b>` : `+${b.pts}`
 const ptTitle = { spin: 'Spin finish', over: 'Over finish', burst: 'Burst finish', xtreme: 'Xtreme finish' }
 // řádek žetonů: body hráče vlevo (u středu) a vpravo, v pořadí, jak padaly; remíza = „R“ u obou (posun beyů)
 export function ptHist(battles, label = '') {
