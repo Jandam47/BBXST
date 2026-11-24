@@ -19,7 +19,9 @@ Komunikuj **česky**, celé UI je česky.
   p1/p2), body na hru číslo nebo ∞ (změna = nová hra), tournament mode (`settings.tourney`: bey se v sadě
   neopakuje jako v judge módu, sada = počet beyů hráče), sestavy z decků obou hráčů nebo nový bey z dílů
   (podržení beye v setupu = úprava jeho dílů, předvyplněné; ratchet se vybírá na kolečku – vnitřní kruh zuby
-  0–9 + M, vnější výška 50–85, jen existující kombinace z `bey_parts`; Turbo / Operate = bit s ratchetem).
+  0–9 + M, vnější výška 50–85, jen existující kombinace z `bey_parts`; Turbo / Operate = bit s ratchetem;
+  bit na kolečku `trBitWheel` = stejné výseče ve třech řadách s hledáním jako `bitWheel` v BBXU, velikost podle
+  `visualViewport`, aby ho klávesnice nezakryla).
   Tahací RESET = nová hra (`training_new_game`, 16): skóre i zahrané beye od nuly, souboje zůstanou v historii.
   ⇄ prohodí strany jen na tomhle telefonu (`localStorage.bbxst_training_left`).
   Odkaz z BBXU: `bbxst.html?training=<id>`; rozehraný trénink se obnoví z `localStorage.bbxst_training`.
@@ -38,7 +40,7 @@ Komunikuj **česky**, celé UI je česky.
   (vnitřní → vnější, počet podle obvodu; Turbo / Operate žlutě), uprostřed hledání (zkratka → název → slovo → alias), nevyhovující zhasnou, Enter /
   tlačítko uprostřed vezme nejlepší shodu, písmeno na poli bitu otevře kolečko s hledáním. Tip na zkratky nahoře.
 - `js/config.js` – **obsahuje Adamovy živé klíče Supabase. Nikdy ho neměň ani nepřepisuj.**
-- `supabase/schema.sql`, `02-parts.sql`, `03-live-score.sql`, `04-security-hardening.sql`, `05-judge-handover.sql`, `06-formats-stats.sql`, `07-parts-update.sql`, `08-judge-per-match.sql`, `09-pause.sql`, `10-fashion.sql`, `11-finishes.sql`, `12-rated.sql`, `13-communities.sql`, `14-training-extras.sql`, `15-training-bots.sql`, `16-training-reset.sql`, `17-chat-bazar.sql`, `18-chat-tournament-state.sql`, `19-account-reports.sql`, `20-push.sql`, `21-checkin-errors-backup.sql`, `22-leagues.sql`, `23-meetings.sql`, `24-judge-count.sql`, `25-reg-check.sql`, `26-judge-scan.sql`, `27-live.sql`, `28-cashier.sql` – databáze (spuštěné v produkci, nové soubory
+- `supabase/schema.sql`, `02-parts.sql`, `03-live-score.sql`, `04-security-hardening.sql`, `05-judge-handover.sql`, `06-formats-stats.sql`, `07-parts-update.sql`, `08-judge-per-match.sql`, `09-pause.sql`, `10-fashion.sql`, `11-finishes.sql`, `12-rated.sql`, `13-communities.sql`, `14-training-extras.sql`, `15-training-bots.sql`, `16-training-reset.sql`, `17-chat-bazar.sql`, `18-chat-tournament-state.sql`, `19-account-reports.sql`, `20-push.sql`, `21-checkin-errors-backup.sql`, `22-leagues.sql`, `23-meetings.sql`, `24-judge-count.sql`, `25-reg-check.sql`, `26-judge-scan.sql`, `27-live.sql`, `28-cashier.sql`, `29-polls-feedback.sql` – databáze (spuštěné v produkci, nové soubory
   spouští Adam). Živé skóre: BBXST v judge módu posílá po každém bodu `live_score` → `matches.live_p1/p2`
   (TV rozpis, vstupenka, seznamy); trigger `bbx_clear_live` ho maže po uložení hry.
   Rozehraná hra: BBXST posílá s `live_score` i `p_state` → `matches.live_state` (souboje v orientaci p1/p2,
@@ -124,7 +126,21 @@ Komunikuj **česky**, celé UI je česky.
   trigger `bbx_training_close` uzavře rozehrané výzvy a `bbx_tmatch` odmítne zápis i setup.
   **TV tréninku** (`#/t/<id>/tv`, `Training.renderTV`): comba celého tréninku (`training_combos` all) po 12 na
   stránku (střídání po 12 s), obnova pollingem 8 s (TV nemusí být přihlášená), tlačítko TV v záhlaví jen u živého tréninku (v archivu ne).
-- **Chat** (17, `js/views/chat.js`, `#/chat`, `#/chat/<room>`, přepínač Chat | Bazar): `chat_rooms.kind` = `test`
+- **Komunikace** (`js/views/komunikace.js`, `#/komunikace`, záložka dole „Komunikace“, `data-tab="chat"`): otevře kolečko
+  (`openCreateWheel` s `title`/`hint`) Chat · Ankety · Nápověda · Dotazy a připomínky; po zavření zůstane rozcestník, klepnutí
+  na záložku na rozcestníku kolečko otevře znovu (app.js). Přepínač `commTabs` (Chat | Ankety | Dotazy | Nápověda) nahoře.
+  **Ankety** (29, `js/views/polls.js`, `#/ankety`, `#/ankety/<id>`): zakládá organizátor+ (`poll_create`: otázka, poznámka,
+  2–10 možností, délka 5 min – 60 dní, `multi`, `anonymous` = kdo jak hlasoval nevidí nikdo); hlasuje účet (`poll_vote`, změna
+  i zrušení do konce); výsledky vidí hlasující, autor a admin, po konci všichni (`poll_list`); `poll_close` / `poll_delete`
+  autor nebo admin 3+; `poll_pending` do odznaku; nová anketa = push všem s odběrem. Tabulky jen přes RPC.
+  **Dotazy a připomínky** (29, `js/views/feedback.js`, `#/dotazy`): soukromá zpráva hlavnímu adminovi (`feedback_send`, limit
+  5 / 10 min, push superadminům); hráč vidí své + odpovědi (`feedback_mine`, „přečteno“ `bbxu_fb_seen`), hlavní admin schránku
+  (`feedback_inbox` otevřené / vše, `feedback_reply` → push autorovi, `feedback_done`). Odznak (`js/unread.js`) = nepřečtené
+  místnosti + ankety bez hlasu + nevyřízené dotazy (hlavní admin) / nová odpověď.
+  **Bazar je zrušený** (UI pryč, `#/bazar…` ukáže „Bazar skončil“); tabulky a funkce bazaru v DB zůstaly (staré fotky
+  se při smazání účtu pořád mažou přes `bazar_my_photos`).
+  Router v app.js dává každému pohledu nové čisté `<main>` (posluchače `on(main, …)` nepřežijí navigaci).
+- **Chat** (17, `js/views/chat.js`, `#/chat`, `#/chat/<room>`, součást Komunikace): `chat_rooms.kind` = `test`
   (Zkušební chat, id 'volny', píše každý s účtem), `info` (pevná Obecné informace) a `info_t` (místnost ke každému
   turnaji kind 'tournament', id `t-<turnaj>`, název „DD.MM.RRRR Název“ – zakládá/přejmenovává trigger
   `bbx_chat_sync_tournament`) – Info čte každý, píšou organizátoři+; `community` (id `c-<komunita>`, po schválení
@@ -136,17 +152,9 @@ Komunikuj **česky**, celé UI je česky.
   `chat_room_state(room, 'active'|'closed'|'hidden'|'delete')` smí organizátor akce a admin (`bbx_chat_manage`),
   tlačítka v místnosti. Po ukončení turnaje (finishModal v manage.js) se BBXU zeptá Nechat aktivní / Uzavřít
   (`askTournamentChat`). Místnost vzniká jen při založení turnaje – úprava turnaje smazanou nevrátí.
-- **Bazar** (17, `js/views/bazar.js`, `#/bazar`, `#/bazar/<id>`, jen účet): `bazar_ads` (název, cena = null
-  „Dohodou“, popis, 1–3 fotky, active/sold) přes RPC `bazar_list`/`bazar_ad`/`bazar_save`/`bazar_set_status`/
-  `bazar_delete` (vrátí cesty fotek, klient je smaže z úložiště). Fotky: Supabase Storage bucket `bazar` (veřejné
-  čtení, nahrávat jen do složky `<uid>/`, max 1 MB, JPEG/WebP); klient je zmenší na max 1280 px JPEG.
-  `bazar_comments` = soukromé vlákno zájemce ↔ prodejce (`buyer_id`), čtení + realtime přes RLS, psaní
-  `bazar_comment` (prodejce odpovídá s `p_buyer`). Upozornění na novou zprávu v app.js `watchBazar`.
-  Router v app.js dává každému pohledu nové čisté `<main>` (posluchače `on(main, …)` nepřežijí navigaci).
-  Pravidla bazaru (`RULES` v bazar.js) – rozbalovací v seznamu, souhlas povinný u nového inzerátu.
-- **Odznak nepřečtených** (`js/unread.js`): na záložce Chat počet místností s novou zprávou + inzerátů s novým
-  komentářem (porovnání s „přečteno“ v localStorage, `bbx:seen`), živě přes realtime, i `navigator.setAppBadge`.
-- **Nahlášení** (19, `js/report.js`): ⚑ u zprávy v chatu / komentáře v bazaru, „Nahlásit inzerát“; `report_create`
+- **Odznak nepřečtených** (`js/unread.js`): na záložce Komunikace (viz výše; porovnání s „přečteno“ v localStorage,
+  `bbx:seen`), živě přes realtime u chatu + polling 90 s, i `navigator.setAppBadge`.
+- **Nahlášení** (19, `js/report.js`): ⚑ u zprávy v chatu (staré nahlášení z bazaru se dají dořešit); `report_create`
   (jen obsah, který hráč vidí, kopie obsahu do `snapshot`), admini (úroveň 3+) v profilu „Nahlášený obsah“
   (`report_list`, `report_resolve` smazat / ponechat, `report_count`).
 - **Smazání účtu** (19): profil → Účet → Smazat účet (potvrzení nickem). `delete_my_account` smaže auth.users
@@ -160,7 +168,7 @@ Komunikuj **česky**, celé UI je česky.
   pg_net → Edge Function `push` (verify_jwt false, hlavička `x-bbx-secret`), ta rozešle Web Push (npm:web-push,
   VAPID) a smaže neplatné odběry. Adresa, heslo i VAPID klíče jsou jen v soukromé `bbx_settings` (`push_url`,
   `push_secret`, `vapid_public`, `vapid_private`, `vapid_subject`; funkce je čte přes service role), veřejný klíč i v push.js.
-  Události: zápas na aréně, start turnaje, výzva / přijetí na tréninku, bazar, info k turnaji (přihlášeným),
+  Události: zápas na aréně, start turnaje, výzva / přijetí na tréninku, nová anketa, dotaz / odpověď, info k turnaji (přihlášeným),
   obecné informace (všem s odběrem), fashion (molo, rozstřel, boss), nové nahlášení (adminům). Autor akce nic
   nedostane. sw.js: `push` → showNotification, `notificationclick` → otevře odkaz (#/… nebo bbxst.html…).
 - **Kontrola registrací** (21 + 25, `js/regcheck.js`): stav = `registrations.checked_in_at` (mění jen RPC `checkin`,
@@ -282,6 +290,7 @@ Potřebují lokální PostgreSQL 16, Node a pro UI Python Playwright + Chrome a 
 - `tests/reset_db.sh && node tests/db.test.mjs` – celý turnaj proti DB se stubem Supabase (role, RLS, RPC).
 - `node tests/fashion.test.mjs` – fashion show v DB (po reset_db / ui-up): judge, hodnocení, rozstřel, boss, vyhlášení.
 - `node tests/chat.test.mjs` – chat (místnosti, přístup, hosté) a bazar (fotky, soukromá vlákna) v DB.
+- `node tests/polls.test.mjs` – ankety (zakládání, hlasování, anonymní / veřejné, konec) a dotazy a připomínky (29).
 - `node tests/extras.test.mjs` – kontrola registrací, chyby z telefonů, záloha, vzájemná bilance (21, 25).
 - `node tests/leagues.test.mjs` – ligy: práva správce / organizátorů, ligové turnaje, bodování a bilance (22).
 - `node tests/meetings.test.mjs` – meeting osobně / online, akce jen pro organizátory (23).
@@ -291,7 +300,7 @@ Potřebují lokální PostgreSQL 16, Node a pro UI Python Playwright + Chrome a 
 - `node tests/account.test.mjs` – nahlášení a smazání účtu; `node tests/push.test.mjs` – odběry a push události (outbox).
 - `node tests/community.test.mjs` – komunity a komunitní trénink v DB (schválení, členové, trénink, výzvy, souboje, meta).
 - `tests/ui-up.sh && python3 tests/ui_smoke.py && python3 tests/bbxst_judge.py && python3 tests/test_tools.py` – proklik v Chrome
-  (`tests/judge_handover.py`, `tests/formats_stats.py`, `tests/arenas_status.py`, `tests/fashion_ui.py`, `tests/community_ui.py`, `tests/bbxst_training.py`, `tests/training_bot_ui.py`, `tests/chat_bazar_ui.py`, `tests/extras_ui.py`, `tests/checkin_ui.py`, `tests/leagues_ui.py`, `tests/install_ui.py`, `tests/create_wheel_ui.py`, `tests/tv_modes_ui.py`, `tests/points_hist_ui.py`, `tests/ratchet_wheel_ui.py`, `tests/live_ui.py` a `tests/cashier_ui.py` každý zvlášť po čerstvém `ui-up.sh`: převzetí judge;
+  (`tests/judge_handover.py`, `tests/formats_stats.py`, `tests/arenas_status.py`, `tests/fashion_ui.py`, `tests/community_ui.py`, `tests/bbxst_training.py`, `tests/training_bot_ui.py`, `tests/chat_ui.py`, `tests/komunikace_ui.py`, `tests/extras_ui.py`, `tests/checkin_ui.py`, `tests/leagues_ui.py`, `tests/install_ui.py`, `tests/create_wheel_ui.py`, `tests/tv_modes_ui.py`, `tests/points_hist_ui.py`, `tests/ratchet_wheel_ui.py`, `tests/live_ui.py` a `tests/cashier_ui.py` každý zvlášť po čerstvém `ui-up.sh`: převzetí judge;
   deathmatch přes testovací nástroje až po finále, vyhodnocení, meta, profil)
   (poslední: zkušební turnaj 16 hráčů přes testovací nástroje až po ukončení).
 Když měníš SQL, přidej nový soubor i do `tests/reset_db.sh`. Po změně logiky nebo DB pusť testy.

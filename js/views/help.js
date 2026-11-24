@@ -101,26 +101,28 @@ const S = [
     <ul>
       <li>Trénink zakládá leader nebo zástupce komunity. Přidat se může člen nebo pozvaný hráč.</li>
       <li>V BBXST zelené tlačítko <b>TRAINING</b> → vyber soupeře → on výzvu potvrdí. Zapisovat můžete oba.</li>
-      <li><b>SETUP</b>: mód 3v3 / 1v1, body na hru, tournament mode (bey se v sadě neopakuje) a sestavy. Podržením beye upravíš jeho díly.</li>
+      <li><b>SETUP</b>: mód 3v3 / 1v1, body na hru, tournament mode (bey se v sadě neopakuje) a sestavy. Podržením beye upravíš jeho díly – ratchet i bit se vybírají na kolečku jako v registraci.</li>
       <li>Tahací <b>RESET</b> začne novou hru, odehrané souboje zůstanou v historii. Trénovat jde i proti botovi.</li>
       <li>Trénink se nepočítá do ratingu. Comba a historie najdeš v tréninku i na stránce komunity.</li>
     </ul>`],
-  ['chat', 'Chat a bazar', html`
+  ['chat', 'Komunikace: chat, ankety, dotazy', html`
     <ul>
+      <li>Záložka <b>Komunikace</b> dole otevře kolečko: Chat, Ankety, Nápověda a Dotazy a připomínky.</li>
       <li><b>Info k turnaji</b> čte každý, píšou organizátoři. <b>Komunitní chat</b> vidí jen členové a pozvaní hosté. Ve <b>Zkušebním chatu</b> může psát každý s účtem.</li>
-      <li><b>Bazar</b>: inzerát s až třemi fotkami. Zájemce píše prodejci do soukromého vlákna – ostatní ho nevidí.</li>
-      <li>Nevhodnou zprávu nebo inzerát nahlas přes <b>⚑</b>. Admin ho posoudí.</li>
+      <li><b>Ankety</b> zakládají organizátoři a admini: otázka, 2–10 možností, délka (od 15 minut po týden nebo vlastní konec), hlasování pro víc možností a anonymní režim. Hlasuje každý s účtem a do konce může hlas změnit. Výsledky uvidíš po hlasování, po skončení je vidí všichni. U anonymní ankety nikdo neuvidí, kdo jak hlasoval.</li>
+      <li><b>Dotazy a připomínky</b> jsou soukromé – přečte je jen hlavní admin. Odpověď ti přijde zpátky do Komunikace (a na telefon, když máš zapnutá upozornění).</li>
+      <li>Nevhodnou zprávu v chatu nahlas přes <b>⚑</b>. Admin ji posoudí.</li>
     </ul>`],
   ['notify', 'Upozornění na telefonu', html`
     <ul>
-      <li>V profilu zapni <b>Upozornění na telefonu</b>. Přijde ti, když jsi na řadě v aréně, když turnaj začne, výzva na tréninku nebo zpráva v bazaru.</li>
+      <li>V profilu zapni <b>Upozornění na telefonu</b>. Přijde ti, když jsi na řadě v aréně, když turnaj začne, výzva na tréninku, nová anketa nebo odpověď na tvůj dotaz.</li>
       <li>Upozornění na sledované hráče si zapneš v <b>Živě</b> u sekce Sledovaní.</li>
       <li>Na iPhonu to funguje jen v aplikaci přidané na plochu.</li>
     </ul>`],
   ['account', 'Účet a soukromí', html`
     <ul>
-      <li>Účet smažeš v profilu dole (potvrdíš nickem). Zmizí profil, zprávy a inzeráty; výsledky turnajů zůstanou bez tvého jména.</li>
-      <li>Když něco nefunguje, aplikace chybu sama pošle adminům – nemusíš nic hlásit, ale klidně napiš do Zkušebního chatu.</li>
+      <li>Účet smažeš v profilu dole (potvrdíš nickem). Zmizí profil a zprávy; výsledky turnajů zůstanou bez tvého jména.</li>
+      <li>Když něco nefunguje, aplikace chybu sama pošle adminům – nemusíš nic hlásit, ale klidně napiš přes <b>Dotazy a připomínky</b>.</li>
     </ul>`],
 ]
 

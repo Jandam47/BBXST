@@ -199,12 +199,25 @@ with sync_playwright() as p:
     a.click('#nbRatchet'); a.wait_for_selector('#trWheel:not(.hidden)')
     a.click('.twK.t[data-t="4"]'); a.click('.twK.h[data-h="60"]'); a.wait_for_selector('#trWheel', state='hidden')
     assert a.input_value('#nbRatchet') == '4-60' and a.input_value('#nbBit') == '', 'normální ratchet zruší Turbo'
-    a.click('#nbBit'); a.fill('#nbBit', 'bal')
-    a.wait_for_selector('.nbF[data-k=bit] .nbSug:not(.hidden) .nbOpt')
-    opts = a.locator('.nbF[data-k=bit] .nbOpt').all_inner_texts()
-    assert opts and opts[0].startswith('Ball'), opts
+    # bit na kolečku s výsečemi a hledáním uprostřed
+    a.click('#nbBit'); a.wait_for_selector('#trWheel:not(.hidden) .tbDial')
+    nbits = int(sql("select count(*) from bey_parts where category = 'bit' and active"))
+    assert a.locator('.tbK').count() == nbits and a.locator('.tbK.off').count() == 0
+    assert 'zkratk' in a.inner_text('.tbTip')
+    a.fill('.tbQ', 'tr'); assert a.inner_text('#tbBest b') == 'Turbo'
+    a.keyboard.press('Enter'); a.wait_for_selector('#trWheel', state='hidden')
+    assert a.input_value('#nbBit') == 'Turbo' and a.input_value('#nbRatchet') == '', 'Turbo zruší ratchet'
+    assert 'Turbo' in a.get_attribute('#nbRatchet', 'placeholder')
+    a.click('#nbBit'); a.wait_for_selector('#trWheel:not(.hidden) .tbK.on[data-bit="Turbo"]')
+    a.fill('.tbQ', 'bal'); a.wait_for_timeout(250)
+    assert a.inner_text('#tbBest b') == 'Ball' and a.locator('.tbK.off').count() > 30
     a.screenshot(path=OUT + '159_bbxst_part_suggest.png')
-    a.locator('.nbF[data-k=bit] .nbOpt').first.click()
+    a.click('#tbBest'); a.wait_for_selector('#trWheel', state='hidden')
+    assert a.input_value('#nbBit') == 'Ball'
+    a.click('#nbBit'); a.wait_for_selector('#trWheel:not(.hidden)'); a.keyboard.press('Escape'); a.wait_for_selector('#trWheel', state='hidden')
+    assert a.input_value('#nbBit') == 'Ball' and a.locator('#trSetup:not(.hidden)').count() == 1, 'Esc zavře jen kolečko'
+    a.click('#nbRatchet'); a.wait_for_selector('#trWheel:not(.hidden)')
+    a.click('.twK.t[data-t="4"]'); a.click('.twK.h[data-h="60"]'); a.wait_for_selector('#trWheel', state='hidden')
     assert a.input_value('#nbBit') == 'Ball'
     a.screenshot(path=OUT + '158_bbxst_edit_bey.png')
     a.click('#nbOk'); a.wait_for_selector('.trSlot:has-text("upraveno")')

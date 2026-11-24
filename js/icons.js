@@ -49,6 +49,12 @@ export const ICONS = {
   // televize
   // živé vysílání: bod se vlnami
   live: svg(`<circle class="i2" cx="12" cy="12" r="2.2"/><path class="i1" d="M8.2 8.2a5.4 5.4 0 0 0 0 7.6M15.8 8.2a5.4 5.4 0 0 1 0 7.6M5.4 5.4a9.3 9.3 0 0 0 0 13.2M18.6 5.4a9.3 9.3 0 0 1 0 13.2"/>`),
+  // anketa: sloupce s fajfkou
+  poll: svg(`<path class="i1" d="M4.5 20.5h15M7 20.5V12M12 20.5V7M17 20.5v-5"/><path class="i2" d="m14.5 6.5 1.8 1.8 3.4-3.6"/>`),
+  // otazník v kruhu
+  help: svg(`<circle class="i1" cx="12" cy="12" r="8.5"/><path class="i2" d="M9.6 9.4a2.5 2.5 0 1 1 3.6 2.3c-.8.4-1.2 1-1.2 1.8v.6"/><path class="i2" d="M12 17.2h.01" stroke-width="2.4"/>`),
+  // obálka s vykřičníkem
+  mail: svg(`<rect class="i1" x="3.5" y="6" width="17" height="12.5" rx="1.5"/><path class="i1" d="m4 7 8 6.2L20 7"/><path class="i2" d="M18.5 2.5v3M18.5 7.6h.01"/>`),
   tv: svg(`<rect class="i1" x="3" y="6" width="18" height="12" rx="1.5"/><path class="i2" d="m8.5 2.8 3.5 3.2 3.5-3.2M8 21h8"/>`),
 }
 

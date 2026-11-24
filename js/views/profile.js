@@ -265,7 +265,7 @@ export async function render(main, [id], ctx) {
 function deleteAccountModal(p) {
   modal(html`
     <h2>Smazat účet</h2>
-    <p>Tohle nejde vrátit. Smaže se profil, rating, zprávy v chatu, inzeráty v bazaru i s fotkami a členství v komunitách.
+    <p>Tohle nejde vrátit. Smaže se profil, rating, zprávy v chatu, dotazy, hlasy v anketách a členství v komunitách.
       Ve výsledcích turnajů zůstaneš jako „Smazaný hráč“.</p>
     <form id="f-del" class="stack" style="margin-top:10px">
       <label class="f"><span>Pro potvrzení napiš svůj nick: <b>${p.nick}</b></span><input class="input" name="nick" autocomplete="off" required></label>
@@ -326,8 +326,8 @@ async function pushCard(box) {
     <div class="row between wrap" style="gap:10px">
       <div class="grow" style="min-width:200px"><h3 style="margin:0">Upozornění na telefonu</h3>
         <p class="small muted" style="margin:4px 0 0">${msg || (st.on
-          ? `Zapnuté na tomhle zařízení${st.devices > 1 ? ` (celkem ${st.devices} zařízení)` : ''}. Přijde ti aréna, start turnaje, výzva, zpráva v bazaru i info k turnaji – i když máš BBX Unity zavřené.`
-          : 'Aréna, start turnaje, výzva na trénink, zpráva v bazaru a info k turnaji i při zavřené aplikaci.')}</p></div>
+          ? `Zapnuté na tomhle zařízení${st.devices > 1 ? ` (celkem ${st.devices} zařízení)` : ''}. Přijde ti aréna, start turnaje, výzva, nová anketa, odpověď na dotaz i info k turnaji – i když máš BBX Unity zavřené.`
+          : 'Aréna, start turnaje, výzva na trénink, nová anketa, odpověď na dotaz a info k turnaji i při zavřené aplikaci.')}</p></div>
       ${!msg ? html`<button class="btn ${st.on ? 'ghost' : 'primary'}" data-push="${st.on ? 'off' : 'on'}">${st.on ? 'Vypnout' : 'Zapnout'}</button>` : ''}
     </div>`)
   on(box, 'click', '[data-push]', (e, b) => busy(b, async () => {

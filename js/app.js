@@ -8,7 +8,9 @@ import * as Tournament from './views/tournament.js'
 import * as Players from './views/players.js'
 import * as Profile from './views/profile.js'
 import * as Chat from './views/chat.js'
-import * as Bazar from './views/bazar.js'
+import * as Komunikace from './views/komunikace.js'
+import * as Polls from './views/polls.js'
+import * as Feedback from './views/feedback.js'
 import { watchUnread } from './unread.js'
 import { syncPush } from './push.js'
 import { installErrorLog, logError } from './errlog.js'
@@ -37,9 +39,13 @@ const routes = [
   [/^\/p\/([0-9a-f-]{36})$/, Profile.render, 'me'],
   [/^\/me$/, Profile.renderMe, 'me'],
   [/^\/chat(?:\/([a-z0-9-]+))?$/, Chat.render, 'chat'],
-  [/^\/bazar(?:\/([0-9a-f-]{36}))?$/, Bazar.render, 'chat'],
+  [/^\/komunikace$/, Komunikace.render, 'chat'],
+  [/^\/ankety(?:\/([0-9a-f-]{36}))?$/, Polls.render, 'chat'],
+  [/^\/dotazy$/, Feedback.render, 'chat'],
+  [/^\/bazar(?:\/.*)?$/, (main) => mount(main, html`<div class="empty"><h2>Bazar skončil</h2>
+    <p class="muted">Bazar jsme zrušili. Ostatní najdeš v Komunikaci.</p><a class="btn" href="#/komunikace">Komunikace</a></div>`), 'chat'],
   [/^\/login(?:\/([a-z]+))?$/, Auth.render, 'me'],
-  [/^\/help$/, Help.render, 'home'],
+  [/^\/help$/, Help.render, 'chat'],
 ]
 
 let cleanup = null
@@ -194,21 +200,6 @@ function watchTraining() {
     .subscribe()
 }
 
-// bazar: nová zpráva v mém vlákně (jako zájemce i jako prodejce) – RLS pustí jen moje vlákna
-let bzChannel = null
-function watchBazar() {
-  if (bzChannel) { sb.removeChannel(bzChannel); bzChannel = null }
-  if (!isLoggedIn() || !state.profile?.nick) return
-  bzChannel = sb.channel('my-bazar')
-    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'bazar_comments' }, ({ new: c }) => {
-      if (!c?.id || c.author_id === state.user?.id) return
-      if (location.hash === '#/bazar/' + c.ad_id) return
-      toast(html`<a href="#/bazar/${c.ad_id}">💬 <b>${c.nick}</b> ti napsal v bazaru.</a>`, 'call', 8000)
-      systemNotify(`${c.nick} ti napsal v bazaru`, c.body, 'bz-' + c.ad_id)
-    })
-    .subscribe()
-}
-
 async function boot() {
   if (!configured) {
     mount($('main'), html`
@@ -226,7 +217,6 @@ async function boot() {
   watchMyMatches()
   watchFashion()
   watchTraining()
-  watchBazar()
   watchUnread()
   syncPush()
   onState((evt) => {
@@ -234,8 +224,7 @@ async function boot() {
     watchMyMatches()
     watchFashion()
     watchTraining()
-    watchBazar()
-    if (evt !== 'TOKEN_REFRESHED') watchUnread()
+      if (evt !== 'TOKEN_REFRESHED') watchUnread()
     if (evt === 'SIGNED_IN') syncPush()
     if (evt === 'PASSWORD_RECOVERY') Auth.newPasswordModal()
     if (evt === 'SIGNED_IN' && isLoggedIn() && state.profile && !state.profile.nick && !document.querySelector('#f-onb')) Auth.onboardingModal()
@@ -246,6 +235,12 @@ async function boot() {
     history.replaceState(null, '', location.pathname + '#/')
   }
   window.addEventListener('hashchange', route)
+  // záložka Komunikace: když už na rozcestníku jsem, otevře znovu kolečko
+  document.querySelector('.tabbar a[data-tab="chat"]')?.addEventListener('click', (e) => {
+    if (location.hash !== '#/komunikace') return
+    e.preventDefault()
+    if (!document.querySelector('.cw-overlay')) Komunikace.openCommWheel()
+  })
   await route()
   if (isRecovery && state.user) Auth.newPasswordModal()
   else if (isLoggedIn() && state.profile && !state.profile.nick) Auth.onboardingModal()

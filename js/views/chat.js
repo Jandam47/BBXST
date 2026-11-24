@@ -5,6 +5,7 @@
 import { sb, state, q, rpc, errMsg, isLoggedIn } from '../supa.js'
 import { html, mount, on, toast, timeAgo, modal, busy, confirmBox, fmtTime, fmtDateTime } from '../ui.js'
 import { reportModal } from '../report.js'
+import { commTabs } from './komunikace.js'
 
 const STATE_LABEL = { closed: 'Uzavřený', hidden: 'Schovaný' }
 
@@ -12,10 +13,8 @@ const SEEN_KEY = 'bbxu_chat_seen'
 const seen = () => { try { return JSON.parse(localStorage.getItem(SEEN_KEY)) || {} } catch { return {} } }
 const markSeen = (room, id) => { try { const s = seen(); s[room] = Math.max(s[room] || 0, id); localStorage.setItem(SEEN_KEY, JSON.stringify(s)) } catch {} ; window.dispatchEvent(new Event('bbx:seen')) }
 
-// přepínač Chat | Bazar
-export const chatTabs = (on_) => html`<nav class="tabs people-tabs" aria-label="Chat a bazar">
-  <a href="#/chat" class="${on_ === 'chat' ? 'on' : ''}">Chat</a>
-  <a href="#/bazar" class="${on_ === 'bazar' ? 'on' : ''}">Bazar</a></nav>`
+// přepínač částí Komunikace (Chat | Ankety | Dotazy | Nápověda)
+const chatTabs = commTabs
 
 export async function render(main, [roomId], ctx) {
   if (!roomId) return roomList(main, ctx)

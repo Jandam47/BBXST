@@ -1016,36 +1016,6 @@ div.f > span { display: block; font-size: 14px; color: var(--muted); margin-bott
 button.chip { border: 1px solid var(--line-soft); cursor: pointer; padding: 6px 12px; font: inherit; font-size: 14px; color: var(--text); }
 button.chip.on { background: var(--bolt); color: var(--bolt-ink); border-color: var(--bolt); }
 
-/* ── bazar ── */
-.bz-add { width: 52px; height: 52px; border-radius: 50%; border: 0; cursor: pointer; flex: none;
-  background: var(--bolt); color: var(--bolt-ink); font-size: 32px; font-weight: 700; line-height: 1; box-shadow: var(--glow-y); }
-.bz-add:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
-.bz-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; margin-top: 14px; }
-.bz-card { display: flex; flex-direction: column; border: 1px solid var(--line-soft); background: var(--panel); color: inherit; text-decoration: none; min-width: 0; }
-.bz-card:hover { border-color: var(--cyan); }
-.bz-card.sold { opacity: .6; }
-.bz-ph { position: relative; aspect-ratio: 1; background: var(--ink-2); overflow: hidden; }
-.bz-ph img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.bz-sold { position: absolute; left: 8px; top: 8px; background: rgba(0,0,0,.75); color: #fff; font-size: 12px; font-weight: 700; padding: 3px 8px; letter-spacing: 1px; text-transform: uppercase; }
-.bz-new { position: absolute; right: 8px; top: 8px; background: var(--bolt); border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; font-size: 15px; }
-.bz-body { padding: 8px 10px 10px; display: grid; gap: 3px; min-width: 0; }
-.bz-title { font-weight: 700; line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.bz-price { color: var(--bolt); font-weight: 700; }
-.bz-price.big { font-size: 22px; flex: none; }
-.bz-ad.sold .bz-gallery { filter: grayscale(.6); }
-.bz-gallery { display: flex; gap: 8px; overflow-x: auto; scroll-snap-type: x mandatory; margin: -4px; padding: 4px; }
-.bz-gallery a { flex: 0 0 100%; scroll-snap-align: start; }
-.bz-gallery img { width: 100%; max-height: 60vh; object-fit: contain; background: #000; display: block; }
-.bz-desc { white-space: pre-wrap; word-break: break-word; margin-top: 10px; }
-.bz-private { margin: -4px 0 10px; }
-.bz-thread .bz-log { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
-.bz-photos { display: flex; gap: 8px; flex-wrap: wrap; }
-.bz-thumb { position: relative; width: 88px; height: 88px; border: 1px solid var(--line-soft); background: var(--ink-2); flex: none; }
-.bz-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.bz-thumb button { position: absolute; top: 2px; right: 2px; width: 26px; height: 26px; border-radius: 50%; border: 0; background: rgba(0,0,0,.75); color: #fff; cursor: pointer; }
-.bz-thumb.add { display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; color: var(--bolt); font-size: 28px; border-style: dashed; }
-.bz-thumb.add small { font-size: 12px; color: var(--muted); }
-
 /* chat k turnaji: stav */
 .chat-state { font-size: 11px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; padding: 1px 6px; border: 1px solid currentColor; margin-left: 4px; vertical-align: middle; }
 .chat-state.closed { color: var(--muted); }
@@ -1059,13 +1029,9 @@ button.chip.on { background: var(--bolt); color: var(--bolt-ink); border-color: 
   background: var(--bolt); color: var(--bolt-ink); font-size: 11px; font-weight: 800; line-height: 18px; text-align: center;
   box-shadow: 0 0 0 2px #04070f; font-family: var(--body, inherit); }
 
-/* nahlášení, pravidla bazaru, smazání účtu */
+/* nahlášení, smazání účtu */
 .msg .who .flag { color: var(--faint); }
 .msg .who .flag:hover { color: var(--magenta); }
-.bz-report { margin-top: 10px; color: var(--muted); }
-.bz-rules { margin-top: 12px; border: 1px solid var(--line-soft); padding: 8px 12px; background: var(--panel); }
-.bz-rules summary { cursor: pointer; font-weight: 600; color: var(--muted); }
-.bz-rules ol { margin: 8px 0 2px; padding-left: 20px; display: grid; gap: 4px; font-size: 14px; }
 .rep-quote { margin: 0; padding: 8px 12px; border-left: 3px solid var(--magenta); background: rgba(255,255,255,.03); }
 .rep-quote .rq-body { white-space: pre-wrap; word-break: break-word; }
 .rep-quote footer { margin-top: 6px; }
@@ -1626,3 +1592,58 @@ main.tv-land .tv-now .pt { font-size: clamp(10px, min(8cqh, 3cqw), 34px); }
 .pay-tag.on { color: var(--bolt); }
 .fee-card fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
 .fee-card fieldset > span { display: block; margin-bottom: 8px; }
+
+/* ── Komunikace: rozcestník, ankety, dotazy ── */
+.comm-h { margin: 4px 0 12px; }
+.comm-tabs a:last-child { color: var(--muted); }
+.comm-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+.comm-card { display: grid; gap: 4px; justify-items: start; color: inherit; text-decoration: none; border-color: color-mix(in srgb, var(--c) 45%, transparent); }
+.comm-card:hover, .comm-card:focus-visible { border-color: var(--c); box-shadow: 0 0 18px color-mix(in srgb, var(--c) 25%, transparent); }
+.comm-card b { font-family: var(--display); font-size: 17px; }
+.comm-ico .nicon { width: 34px; height: 34px; }
+.comm-ico .nicon .i1, .comm-ico .nicon .i2 { stroke: var(--c); }
+.comm-wheel-btn { margin-top: 14px; }
+.poll-top { align-items: center; margin-bottom: 4px; }
+.poll-top .comm-h { margin: 4px 0; }
+.poll { margin-bottom: 14px; }
+.poll.ended { border-color: var(--line-soft); }
+.poll-head h3 { margin: 0 0 6px; font-size: 18px; line-height: 1.3; }
+.poll-head h3 a { color: inherit; text-decoration: none; }
+.poll-meta { display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; }
+.poll-st.open { color: var(--bolt); font-weight: 700; }
+.poll-st.done { color: var(--muted); }
+.poll-tag { border: 1px solid var(--line); border-radius: 999px; padding: 0 8px; color: var(--muted); }
+.poll-tag.pub { border-color: rgba(255,43,214,.5); color: #ff8be6; }
+.poll-note { margin: 8px 0 0; white-space: pre-wrap; }
+.poll-ballot { display: grid; gap: 8px; margin-top: 12px; }
+.poll-opt-in { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; cursor: pointer; background: var(--ink-2); }
+.poll-opt-in:has(input:checked) { border-color: var(--bolt); background: rgba(255,228,31,.07); }
+.poll-opt-in input { width: 20px; height: 20px; accent-color: var(--bolt); flex: none; }
+.poll-res { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 8px; }
+.poll-res li { position: relative; border: 1px solid var(--line-soft); border-radius: 8px; overflow: hidden; background: var(--ink-2); }
+.poll-bar { position: absolute; inset: 0 auto 0 0; width: var(--w); background: rgba(0,229,255,.14); transition: width .4s; }
+.poll-res li.win .poll-bar { background: rgba(255,228,31,.18); }
+.poll-res li.win { border-color: rgba(255,228,31,.55); }
+.poll-res li.mine { border-color: rgba(0,255,170,.55); }
+.poll-row { position: relative; display: flex; justify-content: space-between; gap: 10px; padding: 9px 12px; }
+.poll-lab { min-width: 0; overflow-wrap: anywhere; }
+.poll-check { color: #00ffaa; }
+.poll-num { flex: none; font-variant-numeric: tabular-nums; color: var(--muted); font-size: 14px; }
+.poll-who { position: relative; padding: 0 12px 8px; }
+.hidden-res li { opacity: .75; }
+.poll-foot { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+.poll-opts { display: grid; gap: 6px; }
+.poll-opt-edit { display: flex; gap: 6px; }
+.poll-opt-edit .input { flex: 1; }
+.fb-lead { margin: -4px 0 14px; }
+.fb-form { margin-bottom: 8px; }
+.fb-form .seg { align-self: flex-start; }
+.fb-item.new { border-color: rgba(0,255,170,.6); }
+.fb-item.done { opacity: .7; }
+.fb-kind { font-weight: 700; color: var(--cyan); }
+.fb-kind.note { color: #c3a8ff; }
+.fb-body { white-space: pre-wrap; overflow-wrap: anywhere; margin: 8px 0; }
+.fb-reply { border-left: 3px solid #00ffaa; background: rgba(0,255,170,.06); padding: 6px 10px; margin: 6px 0; }
+.fb-reply p { margin: 2px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.fb-newtag { color: #00ffaa; }
+.fb-answer { display: grid; gap: 8px; margin-top: 8px; }

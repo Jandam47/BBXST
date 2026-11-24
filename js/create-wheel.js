@@ -56,7 +56,7 @@ function sector(a0, a1) {
 const clip = (s, n) => s.length > n ? s.slice(0, n - 1) + '…' : s
 const icon = (name, x, y, s) => (ICONS[name] || '').replace('<svg class="nicon"', `<svg class="nicon" x="${x}" y="${y}" width="${s}" height="${s}"`)
 
-export function openCreateWheel(tree) {
+export function openCreateWheel(tree, { title = 'Co chceš založit?', hint = 'Vyber druh akce', label = 'Založ akci' } = {}) {
   if (!tree) return
   // jediná možnost (např. leader komunity bez funkce organizátor) = rovnou ji otevřít
   if (tree.children.length === 1 && !tree.children[0].children) {
@@ -66,7 +66,7 @@ export function openCreateWheel(tree) {
   const stack = [tree]
   const ov = document.createElement('div')
   ov.className = 'cw-overlay'
-  ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-modal', 'true'); ov.setAttribute('aria-label', 'Založ akci')
+  ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-modal', 'true'); ov.setAttribute('aria-label', label)
   const prevFocus = document.activeElement
   const close = () => { ov.remove(); removeEventListener('keydown', key); prevFocus?.focus?.() }
   const key = (e) => {
@@ -104,7 +104,7 @@ export function openCreateWheel(tree) {
     }).join('')
     ov.innerHTML = `
       <div class="cw-box">
-        <p class="cw-title">${esc(stack.length > 1 ? crumbs : 'Co chceš založit?')}</p>
+        <p class="cw-title">${esc(stack.length > 1 ? crumbs : title)}</p>
         <svg class="cw-wheel ${dir > 0 ? 'in' : dir < 0 ? 'out' : 'open'}" viewBox="0 0 320 320" style="--c:${color || 'var(--cyan)'}">
           ${secs}
           <g class="cw-center" tabindex="0" role="button" aria-label="${stack.length > 1 ? 'Zpět' : 'Zavřít'}">
@@ -112,7 +112,7 @@ export function openCreateWheel(tree) {
             <text x="${C}" y="${C + 9}">${stack.length > 1 ? '←' : '✕'}</text>
           </g>
         </svg>
-        <p class="cw-hint">${stack.length > 1 ? 'Střed = zpět' : 'Vyber druh akce'}</p>
+        <p class="cw-hint">${stack.length > 1 ? 'Střed = zpět' : hint}</p>
       </div>`
     ov.querySelector('.cw-center').onclick = () => stack.length > 1 ? back() : close()
     ov.querySelector('.cw-center').onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); stack.length > 1 ? back() : close() } }

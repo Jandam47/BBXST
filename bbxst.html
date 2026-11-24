@@ -711,6 +711,41 @@ body.training.has-tmatch .trainBar .drawBtn { display: block; }
 .twCenter b { font-family: 'Orbitron', monospace; font-size: clamp(18px, 6vh, 30px); color: white; letter-spacing: 1px; }
 .twCenter small { font-family: 'Orbitron', monospace; font-size: 8px; letter-spacing: 1.5px; color: rgba(200,240,255,0.5); margin-top: 4px; text-align: center; }
 .trHint { font-size: 11px; color: rgba(255,255,255,.55); }
+/* kolečko bitů: výseče ve třech řadách, uprostřed hledání (jako v BBXU) */
+.tbTip { font-family: 'Rajdhani', sans-serif; font-size: 13px; line-height: 1.35; color: rgba(200,240,255,0.7); max-width: 170px;
+  border-left: 2px solid #ffd84a; background: rgba(255,216,74,0.06); border-radius: 0 8px 8px 0; padding: 6px 9px; }
+.tbTip b { color: #ffd84a; font-family: 'Orbitron', monospace; font-size: 10px; letter-spacing: 2px; display: block; margin-bottom: 2px; }
+.tbTip i { font-style: normal; font-family: 'Orbitron', monospace; font-weight: 700; font-size: 11px; color: white; padding: 0 3px;
+  border: 1px solid rgba(0,229,255,0.45); border-radius: 4px; }
+.tbCur { font-family: 'Orbitron', monospace; font-size: 12px; letter-spacing: 1px; color: #00ffaa; text-align: center; }
+.tbDial { position: relative; aspect-ratio: 1; flex: none; container-type: inline-size; }
+.tbDial > svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.tbK { cursor: pointer; outline: none; transition: opacity .15s; }
+.tbK path { fill: color-mix(in srgb, var(--c) 14%, #070b16); stroke: var(--c); stroke-width: 1.1;
+  filter: drop-shadow(0 0 3px color-mix(in srgb, var(--c) 70%, transparent)); transition: fill .12s; }
+.tbK text { fill: var(--c); font-family: 'Orbitron', monospace; font-weight: 700; font-size: 14px; text-anchor: middle; pointer-events: none; }
+.tbK text.m { font-size: 11.5px; fill: white; }
+.tbK.int text { fill: var(--c); }
+.tbK:hover path, .tbK:focus-visible path { fill: color-mix(in srgb, var(--c) 34%, #070b16); filter: drop-shadow(0 0 7px var(--c)); }
+.tbDial.searching .tbK:not(.off) path { fill: color-mix(in srgb, var(--c) 28%, #070b16); filter: drop-shadow(0 0 6px var(--c)); }
+.tbK.on path { fill: #00ffaa; stroke: #00ffaa; filter: drop-shadow(0 0 8px rgba(0,255,170,.8)); }
+.tbK.on text { fill: #021; }
+.tbK.off { opacity: .1; pointer-events: none; }
+.tbK.off path { filter: none; }
+.tbK.off text { fill: var(--c); }
+.tbCenter { position: absolute; inset: 30%; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+  border: 1px solid rgba(0,229,255,0.35); background: #050b11; box-shadow: 0 0 24px rgba(0,229,255,0.12) inset; padding: 0 9%; }
+.tbSearch { display: flex; align-items: center; gap: 5px; width: 100%; border-bottom: 1px solid rgba(0,229,255,0.55); padding-bottom: 2px; }
+.tbSearch svg { flex: none; width: clamp(13px, 4.6cqw, 20px); height: auto; fill: none; stroke: #00e5ff; stroke-width: 2.2; stroke-linecap: round;
+  filter: drop-shadow(0 0 4px rgba(0,229,255,.7)); }
+.tbQ { flex: 1; min-width: 0; background: none; border: 0; outline: 0; color: white; font: 700 clamp(16px, 4.6cqw, 20px) 'Orbitron', monospace; padding: 2px 0; }
+.tbQ::placeholder { color: rgba(200,240,255,0.4); font-weight: 400; font-size: .8em; }
+.tbQ::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; }
+.tbBest { background: none; border: 0; color: white; cursor: pointer; display: flex; flex-direction: column; align-items: center; padding: 2px 4px;
+  min-height: 2.4em; border-radius: 8px; max-width: 100%; }
+.tbBest b { font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: clamp(12px, 4.8cqw, 19px); line-height: 1.1; text-align: center; color: #00ffaa; }
+.tbBest small { font-family: 'Orbitron', monospace; font-size: clamp(7px, 2.4cqw, 10px); letter-spacing: 1px; color: rgba(200,240,255,0.5); text-align: center; }
+.tbBest:disabled b { color: white; }
 .trWin { font-family: 'Orbitron', monospace; font-size: 22px; color: white; min-width: 52px; text-align: center; }
 .trCols { display: flex; gap: clamp(10px, 3vw, 30px); }
 .trCol { flex: 1; display: flex; flex-direction: column; gap: 6px; padding: 8px 10px; border-radius: 14px; border: 1px solid #0e2a3a; min-width: 0; }
@@ -2845,6 +2880,108 @@ function trRatchetWheel(cur, curBit, onPick) {
   box.classList.remove("hidden")
 }
 
+// kolečko bitů: výseče ve třech řadách podle abecedy zkratek (vnitřní → vnější), uprostřed hledání;
+// nevyhovující zhasnou, Enter / název uprostřed vezme nejlepší shodu (stejně jako v BBXU)
+const TB_C = 160, TB_RINGS = [[66, 96], [98, 127], [129, 158]], TB_COL = ["#00e5ff", "#9d7bff", "#ff2bd6"]
+const TB_LENS = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 21 21"/></svg>'
+function tbSector(r0, r1, a0, a1) {
+  const p = (r, d) => { const t = (d - 90) * Math.PI / 180; return `${(TB_C + r * Math.cos(t)).toFixed(2)} ${(TB_C + r * Math.sin(t)).toFixed(2)}` }
+  const big = a1 - a0 > 180 ? 1 : 0
+  return `M${p(r1, a0)}A${r1} ${r1} 0 ${big} 1 ${p(r1, a1)}L${p(r0, a1)}A${r0} ${r0} 0 ${big} 0 ${p(r0, a0)}Z`
+}
+function trBitWheel(cur, onPick, startQ = "") {
+  const box = document.getElementById("trWheel")
+  const lab = (p) => p.abbr || p.name.slice(0, 2)
+  const special = (p) => TW_SPECIAL.some(([n]) => n === p.name)
+  const bits = tr.parts.filter(p => p.category === "bit").sort((a, b) => lab(a).localeCompare(lab(b), "en", { sensitivity: "base" }))
+  const mids = TB_RINGS.map(([a, b]) => (a + b) / 2), sum = mids.reduce((x, y) => x + y, 0)
+  const raw = mids.map(m => bits.length * m / sum), cnt = raw.map(Math.floor)
+  raw.map((v, i) => [v - cnt[i], i]).sort((x, y) => y[0] - x[0]).slice(0, bits.length - cnt.reduce((x, y) => x + y, 0)).forEach(([, i]) => cnt[i]++)
+  const curP = bits.find(p => trNorm(p.name) === trNorm(cur)) || null
+  const score = (p, t) => {
+    if (!t) return 1
+    const a = trNorm(p.abbr || "")
+    if (a === t) return 100
+    if (a && a.startsWith(t)) return 80
+    if (trNorm(p.name).startsWith(t)) return 70
+    if (p.name.split(/\s+/).some(w => trNorm(w).startsWith(t))) return 60
+    if ((p.aliases || []).some(x => trNorm(x).startsWith(t))) return 40
+    return 0
+  }
+  let k0 = 0
+  const segs = TB_RINGS.map(([r0, r1], ri) => {
+    const list = bits.slice(k0, k0 += cnt[ri]), step = 360 / (list.length || 1), gap = (2.4 / r1) * 180 / Math.PI, rm = (r0 + r1) / 2
+    return list.map((p, i) => {
+      const mid = i * step, t = (mid - 90) * Math.PI / 180, ab = lab(p)
+      const x = (TB_C + rm * Math.cos(t)).toFixed(1), y = (TB_C + rm * Math.sin(t) + 5).toFixed(1)
+      return `<g class="tbK r${ri + 1} ${special(p) ? "int" : ""} ${p === curP ? "on" : ""}" data-bit="${esc(p.name)}" data-ab="${esc(ab)}" tabindex="0" role="button"
+          aria-label="${esc(p.name)}" style="--c:${special(p) ? "#ffd84a" : TB_COL[ri]}"><title>${esc(p.name)}</title>
+        <path d="${tbSector(r0, r1, mid - step / 2 + gap / 2, mid + step / 2 - gap / 2)}"/>
+        <text x="${x}" y="${y}" class="${ab.length > 1 ? "m" : ""}">${esc(ab)}</text></g>`
+    }).join("")
+  }).join("")
+  box.innerHTML = `<div class="twSide"><div class="trTitle">BIT</div>
+      <div class="tbCur">${curP ? esc(curP.name.toUpperCase()) : ""}</div>
+      <div class="tbTip"><b>TIP</b>Hledej písmenkovou zkratkou, je to rychlejší: <i>F</i> Flat, <i>LF</i> Low Flat, <i>GB</i> Gear Ball</div></div>
+    <div class="tbDial"><svg viewBox="0 0 320 320">${segs}</svg>
+      <div class="tbCenter"><label class="tbSearch">${TB_LENS}<input class="tbQ" type="search" placeholder="hledat" value="${esc(startQ)}"
+          autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="done" aria-label="Hledat bit"></label>
+        <button type="button" class="tbBest" id="tbBest"></button></div></div>
+    <div class="twSide"><button class="qr-btn cancel" id="twBack">ZPĚT</button></div>`
+  const dial = box.querySelector(".tbDial"), q = box.querySelector(".tbQ"), bestBtn = document.getElementById("tbBest")
+  const keys = [...box.querySelectorAll("[data-bit]")], pOf = new Map(bits.map(p => [p.name, p]))
+  // velikost podle viditelné plochy (klávesnice na telefonu kolečko zmenší, nezakryje)
+  const vv = window.visualViewport
+  const fit = () => {
+    const h = vv ? vv.height : innerHeight
+    box.style.top = (vv ? vv.offsetTop : 0) + "px"; box.style.height = h + "px"; box.style.bottom = "auto"
+    dial.style.width = Math.max(150, Math.min(h * 0.9, innerWidth * 0.62, 460)) + "px"
+  }
+  const onKey = (e) => {
+    if (e.key === "Escape") { e.stopImmediatePropagation(); e.preventDefault(); close() }
+    else if ((e.key === "Enter" || e.key === " ") && e.target.matches?.(".tbK")) { e.preventDefault(); done(pOf.get(e.target.dataset.bit)) }
+  }
+  const close = () => {
+    box.classList.add("hidden"); box.style.top = box.style.height = box.style.bottom = ""
+    vv?.removeEventListener("resize", fit); vv?.removeEventListener("scroll", fit); removeEventListener("resize", fit)
+    document.removeEventListener("keydown", onKey, true)
+  }
+  const done = (p) => { close(); onPick(p.name, special(p)) }
+  let best = null
+  const showBest = (p, hint) => {
+    bestBtn.disabled = !p
+    bestBtn.innerHTML = p ? `<b>${esc(p.name)}</b><small>${esc(p.abbr || "")}${special(p) ? " · RATCHET V BITU" : ""}</small>` : `<small>${hint}</small>`
+  }
+  const filter = () => {
+    const t = trNorm(q.value)
+    best = null; let bs = 0, hits = 0
+    for (const k of keys) {
+      const p = pOf.get(k.dataset.bit), sc = score(p, t)
+      k.classList.toggle("off", !sc); k.setAttribute("tabindex", sc ? "0" : "-1")
+      if (sc) hits++
+      if (t && sc > bs) { bs = sc; best = p }
+    }
+    if (t && !hits) showBest(null, "NIC NENALEZENO")
+    else if (best) showBest(best)
+    else showBest(curP, "KLEPNI NA BIT NEBO HLEDEJ")
+    dial.classList.toggle("searching", !!t)
+  }
+  keys.forEach(k => {
+    k.onclick = () => done(pOf.get(k.dataset.bit))
+    k.onmouseenter = k.onfocus = () => showBest(pOf.get(k.dataset.bit))
+    k.onmouseleave = k.onblur = filter
+  })
+  q.addEventListener("input", filter)
+  q.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); const p = best || (trNorm(q.value) ? null : curP); if (p) done(p) } })
+  bestBtn.onclick = () => { const p = best || curP; if (p) done(p) }
+  document.getElementById("twBack").onclick = close
+  filter()
+  box.classList.remove("hidden")
+  fit(); vv?.addEventListener("resize", fit); vv?.addEventListener("scroll", fit); addEventListener("resize", fit)
+  document.addEventListener("keydown", onKey, true)
+  if (startQ || matchMedia("(pointer: fine)").matches) { q.focus({ preventScroll: true }); q.setSelectionRange(q.value.length, q.value.length) }
+}
+
 // našeptávač dílů (vlastní seznam – <datalist> na mobilu nefunguje spolehlivě)
 const trNorm = (x) => String(x ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[\s-]+/g, "")
 function trSuggest(f) {
@@ -2862,6 +2999,23 @@ function trSuggest(f) {
     })
     input.addEventListener("click", open); drop.onclick = open
     bit.addEventListener("change", hint); hint()
+    return
+  }
+  if (f.dataset.k === "bit") {                     // bit se vybírá na kolečku s hledáním
+    input.readOnly = true; input.setAttribute("inputmode", "none"); input.placeholder = "vyber na kolečku"
+    const open = (q = "") => {
+      if (!document.getElementById("trWheel").classList.contains("hidden")) return
+      trBitWheel(input.value.trim(), (name, special) => {
+        input.value = name
+        if (special) { const r = document.getElementById("nbRatchet"); if (r) r.value = "" }   // Turbo / Operate = ratchet v bitu
+        input.dispatchEvent(new Event("change"))
+      }, q)
+    }
+    input.addEventListener("click", () => open()); drop.onclick = () => open()
+    input.addEventListener("keydown", e => {
+      if (e.key === "Enter" || e.key === " " || e.key === "ArrowDown") { e.preventDefault(); open() }
+      else if (e.key.length === 1 && /\S/.test(e.key) && !e.ctrlKey && !e.metaKey) { e.preventDefault(); open(e.key) }
+    })
     return
   }
   const items = tr.parts.filter(p => cats.includes(p.category)).sort((a, b) => a.name.localeCompare(b.name, "cs"))
