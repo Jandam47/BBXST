@@ -88,7 +88,7 @@ def run(only=None):
         page.click('.tabs >> text=Top cut'); page.wait_for_selector('.b-match'); shot(page, '09_bracket')
         assert page.locator('.tabs >> text=Hráči').count() == 0, 'po startu bez záložky Hráči'
         page.goto(BASE + '#/me'); page.wait_for_selector('.stats'); shot(page, '11_profile')
-        page.click('text=Upravit profil'); page.wait_for_selector('#f-prof'); page.click('[data-av="🦈"]'); page.click('#f-prof button.primary')
+        page.click('.prof-gear'); page.click('.cw-sec[aria-label^="Profil"]'); page.click('.cw-sec[aria-label^="Upravit"]'); page.wait_for_selector('#f-prof'); page.click('[data-av="🦈"]'); page.click('#f-prof button.primary')
         page.wait_for_selector('.prof-head .av >> text=🦈')
         page.goto(BASE + '#/players'); page.wait_for_selector('.list'); shot(page, '12_players')
         page.goto(BASE + '#/chat'); page.wait_for_selector('.list'); shot(page, '13_chat_rooms')

@@ -57,7 +57,7 @@ export async function render(main, _p, ctx) {
         <span class="faint num" style="width:26px;text-align:right">${all.indexOf(p) + 1}</span>
         <span class="av">${p.avatar}</span>
         <div class="grow" style="min-width:0">
-          <div class="ellipsis" style="font-weight:600">${p.nick}${p.id === state.user?.id ? html`<span class="faint"> (ty)</span>` : ''}
+          <div class="ellipsis" style="font-weight:600">${p.nick}${p.id === state.user?.id ? html`<span class="faint"> (ty${state.profile?.privacy?.standings ? ' · ostatní tě tu nevidí' : ''})</span>` : ''}
             ${roleLabel(p.role) ? html` <span class="pill role" style="font-size:11px;padding:0 8px">${roleLabel(p.role)}</span>` : ''}</div>
           <div class="small muted ellipsis">${p.region || 'Kraj neuveden'} · ${plural(Number(p.tournaments), 'turnaj', 'turnaje', 'turnajů')}${Number(p.titles) ? ` · 🏆 ${p.titles}` : ''}</div>
         </div>

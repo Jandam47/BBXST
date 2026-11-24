@@ -71,7 +71,7 @@ export async function renderList(main, _p, ctx) {
     ${invites.map(i => html`<a class="banner-call invite" href="#/t/${i.tournament_id}">
       <span class="big">👥</span>
       <span><b>Pozvánka na trénink ${i.name}</b><br><span class="muted small">${i.community}${i.by ? ` · zve ${i.by}` : ''}${i.starts_at ? ` · ${fmtDate(i.starts_at)} ${fmtTime(i.starts_at)}` : ''}</span></span></a>`)}
-    ${lastBackup !== undefined && backupDue(lastBackup) ? html`<a class="banner-call backup" href="#/me">
+    ${lastBackup !== undefined && backupDue(lastBackup) ? html`<a class="banner-call backup" href="#/me?s=backup">
       <span class="big">⛁</span>
       <span><b>Čas na zálohu dat</b><br><span class="muted small">${lastBackup ? `Poslední záloha je z ${fmtDate(lastBackup)}.` : 'Zálohu jsi ještě nestáhl.'} Stáhneš ji v profilu.</span></span></a>` : ''}
     <div class="row between wrap" style="gap:12px">

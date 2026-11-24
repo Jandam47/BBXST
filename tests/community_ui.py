@@ -61,7 +61,8 @@ with sync_playwright() as p:
 
     # ── hlavní admin schválí v profilu ──
     c2, adam = ctx(b, 'adam@test.cz')
-    go(adam, '#/me'); adam.wait_for_selector('.admin-req')
+    go(adam, '#/me'); adam.wait_for_selector('.admin-strip'); adam.click('.admin-strip')
+    adam.dispatch_event('.cw-sec[aria-label^="Žádosti"]', 'click'); adam.wait_for_selector('.admin-req')
     shot(adam, '132_admin_requests')
     adam.click(f'[data-ok="{cid}"]'); adam.wait_for_selector('text=Nic nečeká')
     assert sql(f"select status from communities where id = '{cid}'") == 'approved'

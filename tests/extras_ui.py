@@ -50,15 +50,19 @@ with sync_playwright() as p:
 
     # ── admin vyřeší v profilu ──
     adm = ctx(b, 'adam@test.cz')
-    go(adm, '/me', '#admin-rep .rep-card')
+    go(adm, '/me', '.prof-gear-badge:not([hidden])')
+    adm.click('.prof-gear'); adm.dispatch_event('.cw-sec[aria-label^="Správa"]', 'click')
+    adm.wait_for_selector('.cw-sec[aria-label^="Nahlášený obsah"] .cw-badge')
+    adm.dispatch_event('.cw-sec[aria-label^="Nahlášený obsah"]', 'click'); adm.wait_for_selector('#admin-rep .rep-card')
     assert 'V-bucks' in adm.inner_text('#admin-rep') and 'Spam' in adm.inner_text('#admin-rep')
-    adm.locator('#admin-rep').scroll_into_view_if_needed()
     adm.screenshot(path=OUT + '194_admin_reports.png')
     adm.click('#admin-rep [data-rdel]'); adm.wait_for_selector('#admin-rep .empty')
     assert sql("select count(*) from chat_messages where body like 'Kupte si levné%'") == '0'
 
     # ── upozornění v profilu ──
-    go(h1, '/me', '#push-card h3')
+    go(h1, '/me', '.prof-gear')
+    h1.click('.prof-gear'); h1.click('.cw-sec[aria-label^="Aplikace"]'); h1.click('.cw-sec[aria-label^="Upozornění"]')
+    h1.wait_for_selector('#push-card h3')
     assert 'Upozornění na telefonu' in h1.inner_text('#push-card')
     h1.locator('#push-card').scroll_into_view_if_needed()
     h1.screenshot(path=OUT + '195_push_card.png')
@@ -66,8 +70,9 @@ with sync_playwright() as p:
     # ── smazání účtu ──
     h9 = ctx(b, 'hrac9@test.cz')
     uid = sql("select id from profiles where nick = 'Hrac9'")
-    go(h9, '/me', '[data-act=delete-account]')
-    h9.click('[data-act=delete-account]'); h9.wait_for_selector('#f-del')
+    go(h9, '/me', '.prof-gear')
+    h9.click('.prof-gear'); h9.click('.cw-sec[aria-label^="Profil"]'); h9.click('.cw-sec[aria-label^="Smazání"]')
+    h9.dispatch_event('.cw-sec[aria-label^="Smazat účet natrvalo"]', 'click'); h9.wait_for_selector('#f-del')
     h9.fill('#f-del input[name=nick]', 'hrac9')
     h9.screenshot(path=OUT + '196_delete_account.png')
     h9.click('#f-del button.danger'); h9.wait_for_url(re.compile(r'#/$')); h9.wait_for_timeout(800)

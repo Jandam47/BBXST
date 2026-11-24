@@ -7,7 +7,7 @@ const S = [
   ['start', 'První kroky', html`
     <p>Na turnaj se přihlásíš i bez účtu – jako <b>host</b>. Výsledky se ti ale ukládají do profilu jen s účtem. Účet si můžeš založit kdykoli později – e-mailem nebo přes <b>Discord</b> – a registrace se ti do něj přenesou.</p>
     <ul>
-      <li>Web najdeš na <b>bbxu.cz</b>. Aplikaci si přidej na plochu: <b>Profil → Aplikace na plochu</b>. BBXU (turnaje) a BBXST (počítadlo / judge) se instalují zvlášť – na plochu si dej obě.</li>
+      <li>Web najdeš na <b>bbxu.cz</b>. Aplikaci si přidej na plochu: <b>Profil → ozubené kolečko ⚙ → Aplikace → Instalace</b> (host bez účtu má kartu přímo v profilu). BBXU (turnaje) a BBXST (počítadlo / judge) se instalují zvlášť – na plochu si dej obě.</li>
       <li>V profilu si nastav nick, avatara a kraj. Nick je vidět v pořadí i na TV.</li>
     </ul>`],
   ['reg', 'Registrace a vstupenka', html`
@@ -16,6 +16,7 @@ const S = [
       <li>Díly vybíráš ze seznamu – začni psát a klepni na návrh. <b>Ratchet</b> se vybírá na kolečku: uvnitř počet zubů, venku výška. <b>Turbo / Operate</b> (ratchet je v bitu) jsou pod kolečkem.</li>
       <li><b>Bit</b> se vybírá taky na kolečku: okolo svítí všechny bity zkratkou ve třech řadách podle abecedy (od středu ven), uprostřed je hledání. Piš zkratku (F, LF, GB…) – co neodpovídá, zhasne; Enter nebo klepnutí na název uprostřed vybere. Turbo / Operate jsou žlutě.</li>
       <li>Po přihlášení máš v záložce <b>Můj Status</b> vstupenku s QR kódem. Ulož si ji do telefonu – v hale bývá slabý signál.</li>
+      <li>Vstupenku máš i v profilu: <b>⚙ → Vstupenka</b> (když jsi v turnaji). Telefon si ji pamatuje, takže se ukáže i bez signálu.</li>
       <li><b>Kontrola registrace:</b> na místě ukaž QR kód organizátorovi. Zkontroluje, že máš beyblady z přihlášky, a na vstupence pak svítí <i>✓ Registrace zkontrolována</i>. Když potom beyblady změníš, musí tě zkontrolovat znovu.</li>
       <li>Beyblady můžeš měnit, dokud turnaj nezačne. Pak už ne.</li>
       <li><b>Vstupné:</b> když se na turnaji platí, uvidíš v záhlaví turnaje 💰 a částku. Zaplatíš na místě pokladníkovi nebo organizátorovi – ukážeš mu QR kód a na vstupence pak svítí <i>💰 Vstupné zaplaceno</i>.</li>
@@ -117,13 +118,17 @@ const S = [
     </ul>`],
   ['notify', 'Upozornění na telefonu', html`
     <ul>
-      <li>V profilu zapni <b>Upozornění na telefonu</b>. Přijde ti, když jsi na řadě v aréně, když turnaj začne, výzva na tréninku, nová anketa nebo odpověď na tvůj dotaz.</li>
+      <li>Zapneš je v profilu přes <b>ozubené kolečko ⚙ → Aplikace → Upozornění</b>. Přijde ti, když jsi na řadě v aréně, když turnaj začne, výzva na tréninku, nová anketa nebo odpověď na tvůj dotaz.</li>
       <li>Upozornění na sledované hráče si zapneš v <b>Živě</b> u sekce Sledovaní.</li>
       <li>Na iPhonu to funguje jen v aplikaci přidané na plochu.</li>
     </ul>`],
   ['account', 'Účet a soukromí', html`
     <ul>
-      <li>Účet smažeš v profilu dole (potvrdíš nickem). Zmizí profil a zprávy; výsledky turnajů zůstanou bez tvého jména.</li>
+      <li>Úpravu profilu, změnu hesla a odhlášení najdeš v profilu pod <b>ozubeným kolečkem ⚙ → Profil</b>.</li>
+      <li><b>⚙ → Profil → Sdílet</b>: QR kód a odkaz na tvůj profil – kamarád ho naskenuje a hned tě najde.</li>
+      <li><b>⚙ → Profil → Soukromí</b>: můžeš skrýt statistiky beyů a endy, soupeře a vzájemnou bilanci, nebo se schovat ze Standings. Výsledky turnajů zůstávají veřejné.</li>
+      <li>Admini mají v kolečku <b>Správu</b>: žádosti o komunity, nahlášený obsah, chyby z telefonů, zálohu a lidi s funkcí. Žlutý odznak ukáže, že něco čeká.</li>
+      <li>Účet smažeš přes <b>⚙ → Profil → Smazání účtu → Smazat natrvalo</b> a potvrdíš nickem – omylem to nejde. Zmizí profil a zprávy; výsledky turnajů zůstanou bez tvého jména.</li>
       <li>Když něco nefunguje, aplikace chybu sama pošle adminům – nemusíš nic hlásit, ale klidně napiš přes <b>Dotazy a připomínky</b>.</li>
     </ul>`],
 ]

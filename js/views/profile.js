@@ -2,15 +2,17 @@
 //  Profil hráče: role, statistiky, historie turnajů, beyblady, rating
 // ════════════════════════════════════════════════════════════════
 import { sb, state, rpc, q, errMsg, refreshMe, isLoggedIn } from '../supa.js'
-import { adminErrors, adminBackup } from '../admin.js'
+import { adminErrors, adminBackup, backupDue } from '../admin.js'
 import { leagueBadges, leagueRolesCard } from './leagues.js'
 import { installCard } from '../install.js'
-import { html, mount, on, formData, toast, modal, busy, confirmBox, fmtDate, raw, plural, kindLabel, finishTiles } from '../ui.js'
-import { ROLES, REGIONS, roleLevel } from '../core.js'
+import { html, mount, on, formData, toast, modal, busy, confirmBox, fmtDate, raw, plural, kindLabel, finishTiles, qrSvg, qrPng } from '../ui.js'
+import { ROLES, REGIONS, roleLevel, qrPayload } from '../core.js'
 import { avatarPicker } from './auth.js'
 import { communityBadges, adminRequests } from './communities.js'
 import { adminReports } from '../report.js'
 import { pushStatus, enablePush, disablePush } from '../push.js'
+import { ICONS } from '../icons.js'
+import { openCreateWheel } from '../create-wheel.js'
 
 export async function renderMe(main) {
   if (isLoggedIn()) return render(main, [state.user.id])
@@ -116,6 +118,7 @@ export async function render(main, [id], ctx) {
   if (ctx && !ctx.isCurrent()) return
   if (!p || !p.nick) { mount(main, html`<div class="empty">${p && id === state.user?.id ? html`<button class="btn primary" onclick="location.reload()">Dokonči profil</button>` : 'Profil nenalezen.'}</div>`); return }
   const own = id === state.user?.id
+  const hidden = p.privacy || {}
   const lvl = roleLevel(p.role)
   const myLvl = state.level
   const canEditRoles = !own && myLvl >= 3 && lvl < myLvl
@@ -131,19 +134,12 @@ export async function render(main, [id], ctx) {
         <div class="muted">${p.region || 'Kraj neuveden'} · rating <b class="num" style="color:var(--text)">${p.rating}</b></div>
         <div class="row wrap" style="margin-top:6px;gap:6px">${ROLES.filter(x => x.level > 0 && x.level <= lvl).map(x => html`<span class="pill role">${x.label}</span>`)}${p.cashier ? html`<span class="pill role cash">💰 Pokladník</span>` : ''}</div>
       </div>
+      ${own ? html`<button class="prof-gear" data-act="settings" aria-label="Nastavení profilu a aplikace" title="Nastavení">${raw(ICONS.gear)}<span class="prof-gear-badge" hidden></span></button>` : ''}
     </div>
     ${communityBadges(comms)}
     ${leagueBadges(lgs.standings)}
     ${p.bio ? html`<p style="margin-top:14px;white-space:pre-line">${p.bio}</p>` : ''}
-    ${own ? html`<div class="row wrap" style="margin-top:14px">
-      <button class="btn sm" data-act="edit">Upravit profil</button>
-      <button class="btn sm ghost" data-act="pw">Změnit heslo</button>
-      <a class="btn sm ghost" href="#/help">Jak na to</a>
-      <button class="btn sm ghost" data-act="logout">Odhlásit</button></div>` : ''}
-    ${own && state.level >= 4 ? html`<section id="admin-req" class="admin-box"></section>` : ''}
-    ${own && state.level >= 3 ? html`<section id="admin-rep" class="admin-box"></section>` : ''}
-    ${own && state.level >= 3 ? html`<section id="admin-err" class="admin-box"></section>` : ''}
-    ${own && state.level >= 4 ? html`<section id="admin-bk" class="admin-box"></section>` : ''}
+    ${own && state.level >= 3 ? html`<div id="admin-strip"></div>` : ''}
 
     <div class="stats">
       <div class="stat"><div class="v">${tours.length}</div><div class="k">${tours.length === 1 ? 'turnaj' : tours.length >= 2 && tours.length <= 4 ? 'turnaje' : 'turnajů'}</div></div>
@@ -156,7 +152,8 @@ export async function render(main, [id], ctx) {
       </div>` : ''}
     </div>
 
-    ${h2hBlock(h2h, p, own)}
+    ${!own && hidden.h2h ? '' : h2hBlock(h2h, p, own)}
+    ${own && hidden.h2h && h2h?.opponents?.length ? html`<p class="hint">🔒 Soupeře a vzájemnou bilanci vidíš jen ty.</p>` : ''}
 
     ${ach.length ? html`<h2>Achievementy</h2>
     <div class="ach-grid">${ach.map(a => html`<a class="ach p${a.place}" href="#/t/${a.tournament_id}" title="${a.name}">
@@ -194,8 +191,10 @@ export async function render(main, [id], ctx) {
 
     ${finishTiles(bs.finishes?.given, bs.finishes?.taken) ? html`<h2>Endy</h2>
     ${finishTiles(bs.finishes?.given, bs.finishes?.taken)}
+    ${own && hidden.beys ? html`<p class="hint">🔒 Endy a statistiky beyů vidíš jen ty.</p>` : ''}
     <p class="hint">Velké číslo = kolikrát ${own ? 'jsi' : 'hráč'} soupeře takhle dorazil, malé = kolikrát ${own ? 'jsi' : 'byl'} takhle poražen${own ? '' : ''}.</p>` : ''}
 
+    ${!own && hidden.beys ? html`<p class="hint" style="margin-top:18px">🔒 Hráč má statistiky beyů a endy skryté.</p>` : ''}
     ${bs.build?.length ? html`<h2>Beyblady</h2>
     <div class="seg" id="bk" role="tablist">
       ${BEY_KINDS.map(([k, l], i) => html`<button type="button" data-k="${k}" class="${i ? '' : 'on'}" role="tab">${l}</button>`)}
@@ -215,18 +214,13 @@ export async function render(main, [id], ctx) {
       </a>`)}</div>` : ''}
 
     ${events.length ? html`<h2>Akce</h2><div class="list">${events.map(t => html`<a class="li" href="#/t/${t.id}"><span class="grow">${t.name}</span><span class="small faint">${kindLabel(t)} · ${fmtDate(t.starts_at)}</span></a>`)}</div>` : ''}
-    ${own ? html`<section class="card push-card" id="push-card" aria-live="polite"><div class="spinner" aria-label="Načítám"></div></section>` : ''}
-    ${own ? html`<section class="card inst-card" id="inst-card"></section>` : ''}
-    ${own ? html`<section class="danger-zone">
-      <h2>Účet</h2>
-      <p class="small muted">Smazáním účtu zmizí profil, zprávy, inzeráty i fotky. Výsledky turnajů zůstanou, ale bez tvého jména.</p>
-      <button class="btn sm danger" data-act="delete-account">Smazat účet</button></section>` : ''}`)
-  if (own && state.level >= 4) adminRequests(main.querySelector('#admin-req'))
-  if (own && state.level >= 3) adminReports(main.querySelector('#admin-rep'))
-  if (own && state.level >= 3) adminErrors(main.querySelector('#admin-err'))
-  if (own && state.level >= 4) adminBackup(main.querySelector('#admin-bk'))
-  if (own) pushCard(main.querySelector('#push-card'))
-  if (own) installCard(main.querySelector('#inst-card'))
+`)
+  const rerender = () => render(main, [id])
+  if (own && state.level >= 3) adminStrip(main, p, rerender)
+  if (own) {   // #/me?s=backup|reports|errors|requests|tickets|privacy|share → rovnou otevřít
+    const s = new URLSearchParams(location.hash.split('?')[1] || '').get('s')
+    if (s && OPEN[s]) { window.history.replaceState(null, '', '#/me'); OPEN[s](p, rerender) }
+  }
 
   on(main, 'change', '[data-lgrole]', async (e, sel) => {
     const r = lgs.roles.find(x => x.league === sel.dataset.lgrole)
@@ -255,10 +249,8 @@ export async function render(main, [id], ctx) {
     try { await rpc('set_cashier', { p_user: id, p_on: cb.checked }); toast('Funkce změněna.', 'ok'); render(main, [id]) }
     catch (err) { cb.checked = !cb.checked; toast(errMsg(err), 'err') }
   })
-  on(main, 'click', '[data-act=logout]', async () => { await disablePush(); await sb.auth.signOut(); toast('Odhlášeno.'); location.hash = '#/' })
-  on(main, 'click', '[data-act=pw]', () => import('./auth.js').then(m => m.newPasswordModal()))
-  on(main, 'click', '[data-act=edit]', () => editModal(p, () => render(main, [id])))
-  on(main, 'click', '[data-act=delete-account]', () => deleteAccountModal(p))
+  on(main, 'click', '[data-act=settings]', () => openSettingsWheel(p, rerender))
+  on(main, 'click', '[data-act=admin]', () => openSettingsWheel(p, rerender, 'admin'))
 }
 
 // smazání účtu: potvrzení nickem, nejdřív fotky z bazaru (dokud je hráč přihlášený), pak účet
@@ -337,4 +329,206 @@ async function pushCard(box) {
       pushCard(box)
     } catch (err) { toast(err.message || errMsg(err), 'err') }
   }))
+}
+
+// ── Nastavení (ozubené kolečko u jména): kolečko jako v BBXST ──
+//    Profil: upravit, heslo, sdílet, soukromí, odhlásit, Smazání účtu → Smazat natrvalo (+ potvrzení nickem)
+//    Vstupenka: QR do běžících turnajů (i bez signálu z localStorage)
+//    Aplikace: upozornění, instalace na plochu, nápověda
+//    Správa (admin 3+): žádosti, nahlášený obsah, chyby z telefonů, záloha, lidé s funkcí – s odznaky
+const sheet = (body, fill, opts = {}) => modal(html`${body}<button class="btn block" data-close style="margin-top:14px">Zavřít</button>`, {
+  onMount: (m, close) => {
+    if (opts.wide) m.classList.add('wide')
+    window.addEventListener('hashchange', close, { once: true })
+    fill?.(m, close)
+  },
+})
+const box = (cls, fill) => sheet(html`<section class="card ${cls}" id="${cls}" aria-live="polite"><div class="spinner" aria-label="Načítám"></div></section>`,
+  (m) => fill(m.querySelector('section')))
+const adminBox = (id, fill) => sheet(html`<section id="${id}" class="admin-box admin-sheet"><div class="spinner" aria-label="Načítám"></div></section>`,
+  (m) => fill(m.querySelector('section')), { wide: true })
+
+const OPEN = {
+  backup: () => adminBox('admin-bk', adminBackup),
+  reports: () => adminBox('admin-rep', adminReports),
+  errors: () => adminBox('admin-err', adminErrors),
+  requests: () => adminBox('admin-req', adminRequests),
+  staff: () => staffSheet(),
+  privacy: (p, rerender) => privacySheet(rerender),
+  share: (p) => shareSheet(p),
+  tickets: async () => {
+    const t = await myTickets()
+    if (t.length) ticketSheet(t[0]); else toast('Teď nemáš žádnou vstupenku do běžícího turnaje.')
+  },
+}
+
+export async function openSettingsWheel(p, rerender, start) {
+  const lvl = state.level
+  const [counts, tickets] = await Promise.all([lvl >= 3 ? rpc('admin_counts').catch(() => null) : null, myTickets()])
+  const c = counts || {}
+  const due = lvl >= 4 && counts && backupDue(c.backup_at)
+  const admin = { label: 'Správa', icon: 'shield', color: 'var(--bolt)', hidden: lvl < 3,
+    badge: (c.requests || 0) + (c.reports || 0) + (c.errors || 0) + (due ? 1 : 0) || null, children: [
+      { label: 'Žádosti ke schválení', short: 'Žádosti', icon: 'users', hidden: lvl < 4, badge: c.requests || null, run: OPEN.requests },
+      { label: 'Nahlášený obsah', short: 'Nahlášené', icon: 'flag', badge: c.reports || null, run: OPEN.reports },
+      { label: 'Chyby z telefonů', short: 'Chyby', icon: 'bug', badge: c.errors || null, run: OPEN.errors },
+      { label: 'Záloha dat', short: 'Záloha', icon: 'disk', hidden: lvl < 4, badge: due ? '!' : null, run: OPEN.backup },
+      { label: 'Lidé s funkcí', short: 'Funkce', icon: 'star', run: OPEN.staff },
+    ] }
+  const vis = (n) => n.children ? { ...n, children: n.children.filter(c => !c.hidden).map(vis) } : n
+  if (start === 'admin') return openCreateWheel(vis(admin), { title: 'Správa', hint: 'Co chceš vyřídit?', label: 'Správa' })
+  openCreateWheel(vis({ label: 'Nastavení', children: [
+    { label: 'Profil', icon: 'user', color: 'var(--cyan)', children: [
+      { label: 'Upravit profil', short: 'Upravit', icon: 'pen', run: () => editModal(p, rerender) },
+      { label: 'Změnit heslo', short: 'Heslo', icon: 'key', run: () => import('./auth.js').then(m => m.newPasswordModal()) },
+      { label: 'Sdílet profil', short: 'Sdílet', icon: 'share', run: () => shareSheet(p) },
+      { label: 'Soukromí', icon: 'lock', run: () => privacySheet(rerender) },
+      { label: 'Odhlásit', icon: 'logout', run: async () => { await disablePush(); await sb.auth.signOut(); toast('Odhlášeno.'); location.hash = '#/' } },
+      { label: 'Smazání účtu', short: 'Smazání', icon: 'warn', color: '#ff4d6d', children: [
+        { label: 'Smazat účet natrvalo', short: 'Smazat', icon: 'trash', run: () => deleteAccountModal(p) },
+      ] },
+    ] },
+    { label: 'Vstupenka', icon: 'ticket', color: '#00ffaa', hidden: !tickets.length,
+      ...(tickets.length === 1 ? { run: () => ticketSheet(tickets[0]) }
+        : { children: tickets.map(t => ({ label: t.name, icon: 'ticket', run: () => ticketSheet(t) })) }) },
+    { label: 'Aplikace', icon: 'phone', color: 'var(--magenta)', children: [
+      { label: 'Upozornění na telefonu', short: 'Upozornění', icon: 'bell', run: () => box('push-card', pushCard) },
+      { label: 'Aplikace na plochu', short: 'Instalace', icon: 'install', run: () => box('inst-card', installCard) },
+      { label: 'Nápověda', icon: 'help', go: '#/help' },
+    ] },
+    admin,
+  ] }), { title: 'Nastavení', hint: 'Co chceš nastavit?', label: 'Nastavení' })
+}
+
+// admin: odznak na kolečku + pruh „Správa: …“ pod záhlavím, když něco čeká
+async function adminStrip(main, p, rerender) {
+  const c = await rpc('admin_counts').catch(() => null)
+  if (!c || !main.isConnected) return
+  const due = state.level >= 4 && backupDue(c.backup_at)
+  const parts = [
+    c.requests && plural(c.requests, 'žádost', 'žádosti', 'žádostí'),
+    c.reports && plural(c.reports, 'nahlášení', 'nahlášení', 'nahlášení'),
+    c.errors && plural(c.errors, 'chyba', 'chyby', 'chyb'),
+    due && 'čas na zálohu',
+  ].filter(Boolean)
+  const n = (c.requests || 0) + (c.reports || 0) + (c.errors || 0) + (due ? 1 : 0)
+  const b = main.querySelector('.prof-gear-badge')
+  if (b && n) { b.hidden = false; b.textContent = n > 99 ? '99+' : n }
+  const strip = main.querySelector('#admin-strip')
+  if (strip && parts.length) mount(strip, html`<button class="admin-strip" data-act="admin">
+    <span class="as-ico">${raw(ICONS.shield)}</span><span class="grow"><b>Správa čeká</b><br><span class="small">${parts.join(' · ')}</span></span><span aria-hidden="true">›</span></button>`)
+}
+
+// ── vstupenky: běžící / chystané turnaje, kde jsem aktivně přihlášený; QR se drží v telefonu ──
+const tkKey = () => `bbxu_tickets:${state.user?.id}`
+async function myTickets() {
+  const regs = state.myRegs.filter(r => r.status === 'active')
+  try {
+    const ts = regs.length ? await q(sb.from('tournaments').select('id,name,starts_at,status,location')
+      .in('id', regs.map(r => r.tournament_id)).eq('kind', 'tournament').in('status', ['registration', 'swiss', 'topcut'])) : []
+    const list = (await Promise.all(ts.map(async t => {
+      const [r] = await rpc('my_registration', { p_tournament: t.id })
+      return r?.qr_token ? { id: t.id, name: t.name, starts_at: t.starts_at, status: t.status, location: t.location,
+        nick: r.nick, qr: r.qr_token, beys: [r.bey1, r.bey2, r.bey3].filter(Boolean), checked: !!r.checked_in_at } : null
+    }))).filter(Boolean).sort((a, b) => new Date(a.starts_at) - new Date(b.starts_at))
+    try { localStorage.setItem(tkKey(), JSON.stringify(list)) } catch {}
+    return list
+  } catch {   // bez signálu: poslední uložené
+    try { return JSON.parse(localStorage.getItem(tkKey()) || '[]').map(t => ({ ...t, offline: true })) } catch { return [] }
+  }
+}
+function ticketSheet(t) {
+  const text = qrPayload(t.id, t.qr)
+  sheet(html`
+    <div class="tk">
+      <div class="tk-label">Vstupenka</div>
+      <h2 class="tk-name">${t.name}</h2>
+      <div class="small muted">${fmtDate(t.starts_at)}${t.location ? ` · ${t.location}` : ''}</div>
+      <div class="tk-qr" aria-label="QR kód vstupenky">${qrSvg(text)}</div>
+      <div class="tk-nick">${t.nick}</div>
+      ${t.beys.length ? html`<div class="pass-beys">${t.beys.map(b => html`<span>${b}</span>`)}</div>` : ''}
+      ${t.checked ? html`<div class="pass-checkin on">✓ Registrace zkontrolována</div>` : ''}
+      <p class="hint">${t.offline ? 'Jsi bez signálu – ukazuju uloženou vstupenku. ' : ''}QR ukaž organizátorovi u kontroly registrace nebo judgovi. Funguje i bez signálu.</p>
+    </div>
+    <div class="row" style="gap:8px;margin-top:12px">
+      <a class="btn grow" href="#/t/${t.id}">Můj Status</a>
+      <button class="btn grow" data-tk-save>Uložit QR</button>
+    </div>`, (m) => on(m, 'click', '[data-tk-save]', () => {
+    const a = document.createElement('a')
+    a.href = qrPng(text, 10); a.download = `bbxu-${t.name}-${t.nick}.png`.replace(/[^\w.-]+/g, '_'); a.click()
+  }))
+}
+
+// ── sdílet profil: odkaz + QR (adresa podle toho, kde web běží) ──
+function shareSheet(p) {
+  const url = location.href.split('#')[0].replace(/index\.html$/, '') + '#/p/' + p.id
+  sheet(html`
+    <h2>Sdílet profil</h2>
+    <p class="small muted">Kdo naskenuje QR nebo otevře odkaz, uvidí tvůj profil.</p>
+    <div class="tk-qr" aria-label="QR kód profilu">${qrSvg(url)}</div>
+    <div class="tk-nick">${p.avatar} ${p.nick}</div>
+    <input class="input" readonly value="${url}" aria-label="Odkaz na profil" style="margin-top:12px;font-size:13px">
+    <div class="row" style="gap:8px;margin-top:10px">
+      ${navigator.share ? html`<button class="btn primary grow" data-sh="share">Poslat</button>` : ''}
+      <button class="btn grow" data-sh="copy">Kopírovat odkaz</button>
+    </div>`, (m) => {
+    on(m, 'click', '[data-sh=share]', () => navigator.share({ title: `${p.nick} · BBX Unity`, url }).catch(() => {}))
+    on(m, 'click', '[data-sh=copy]', async () => {
+      try { await navigator.clipboard.writeText(url); toast('Odkaz zkopírovaný.', 'ok') }
+      catch { m.querySelector('input').select(); toast('Zkopíruj odkaz ručně.') }
+    })
+  })
+}
+
+// ── soukromí (34): co ostatní v profilu neuvidí ──
+const PRIV = [
+  ['beys', 'Statistiky beyů a endy', 'Buildy, blady, ratchety, bity a endy uvidíš jen ty.'],
+  ['h2h', 'Soupeři a vzájemná bilance', 'Ostatní neuvidí tvoje nejčastější soupeře ani „Ty vs hráč“.'],
+  ['standings', 'Nebýt ve Standings', 'Nebudeš v seznamu hráčů podle ratingu (sám sebe tam uvidíš).'],
+]
+function privacySheet(rerender) {
+  sheet(html`
+    <h2>Soukromí</h2>
+    <p class="small muted">Co ostatní v tvém profilu neuvidí. Výsledky turnajů, pavouk, pořadí a meta zůstávají veřejné.</p>
+    <div class="card roles" style="margin-top:12px">${PRIV.map(([k, l, d]) => html`
+      <label class="check"><span>${l}<br><span class="faint small">${d}</span></span>
+        <input type="checkbox" data-priv="${k}" ${state.profile?.privacy?.[k] ? 'checked' : ''}></label>`)}</div>`, (m) => {
+    on(m, 'change', '[data-priv]', async (e, cb) => {
+      const next = { ...(state.profile?.privacy || {}), [cb.dataset.priv]: cb.checked }
+      for (const k of Object.keys(next)) if (!next[k]) delete next[k]
+      cb.disabled = true
+      try {
+        await q(sb.from('profiles').update({ privacy: next }).eq('id', state.user.id))
+        state.profile.privacy = next; toast(cb.checked ? 'Skryto před ostatními.' : 'Zase viditelné.', 'ok'); rerender()
+      } catch (err) { cb.checked = !cb.checked; toast(errMsg(err), 'err') }
+      cb.disabled = false
+    })
+  })
+}
+
+// ── lidé s funkcí (admin): přehled + hledání hráče; funkce se mění v jeho profilu ──
+async function staffSheet() {
+  const rows = await q(sb.from('profiles').select('id,nick,avatar,role,cashier').not('nick', 'is', null)
+    .or('role.neq.player,cashier.eq.true')).catch(() => [])
+  const groups = [...ROLES].reverse().filter(r => r.level > 0).map(r => [r, rows.filter(x => x.role === r.key)])
+  const cash = rows.filter(x => x.cashier)
+  const li = (x) => html`<a class="li" href="#/p/${x.id}"><span class="av">${x.avatar}</span><span class="grow ellipsis">${x.nick}</span></a>`
+  sheet(html`
+    <h2>Lidé s funkcí</h2>
+    <input class="input" type="search" id="st-q" placeholder="Najít hráče podle nicku" aria-label="Najít hráče" style="margin-top:8px">
+    <div id="st-r" class="list" style="margin-top:8px"></div>
+    ${groups.map(([r, l]) => l.length ? html`<h3 style="margin-top:14px">${r.label} <span class="faint small">${l.length}</span></h3><div class="list">${l.map(li)}</div>` : '')}
+    ${cash.length ? html`<h3 style="margin-top:14px">💰 Pokladník <span class="faint small">${cash.length}</span></h3><div class="list">${cash.map(li)}</div>` : ''}
+    <p class="hint">Funkci změníš v profilu hráče (karta Funkce).</p>`, (m) => {
+    let tm
+    on(m, 'input', '#st-q', (e, el) => {
+      clearTimeout(tm)
+      tm = setTimeout(async () => {
+        const v = el.value.trim()
+        const res = v.length < 2 ? [] : await q(sb.from('profiles').select('id,nick,avatar,role,cashier')
+          .ilike('nick', `%${v.replace(/[%_]/g, '\\$&')}%`).limit(10)).catch(() => [])
+        mount(m.querySelector('#st-r'), res.map(li))
+      }, 250)
+    })
+  }, { wide: true })
 }

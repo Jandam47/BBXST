@@ -55,6 +55,34 @@ export const ICONS = {
   help: svg(`<circle class="i1" cx="12" cy="12" r="8.5"/><path class="i2" d="M9.6 9.4a2.5 2.5 0 1 1 3.6 2.3c-.8.4-1.2 1-1.2 1.8v.6"/><path class="i2" d="M12 17.2h.01" stroke-width="2.4"/>`),
   // obálka s vykřičníkem
   mail: svg(`<rect class="i1" x="3.5" y="6" width="17" height="12.5" rx="1.5"/><path class="i1" d="m4 7 8 6.2L20 7"/><path class="i2" d="M18.5 2.5v3M18.5 7.6h.01"/>`),
+  // postava (profil)
+  user: svg(`<circle class="i1" cx="12" cy="8" r="3.6"/><path class="i1" d="M5 20c.6-3.8 3.4-6 7-6s6.4 2.2 7 6"/><path class="i2" d="M9.5 8.2a2.6 2.6 0 0 0 5 0"/>`),
+  // telefon (aplikace)
+  phone: svg(`<rect class="i1" x="7" y="2.8" width="10" height="18.4" rx="2"/><path class="i2" d="M10.5 5.6h3M11.2 18.2h1.6"/>`),
+  // zvonek
+  bell: svg(`<path class="i1" d="M6.5 16.5V11a5.5 5.5 0 0 1 11 0v5.5l1.5 1.8H5z"/><path class="i2" d="M10 20.3a2.1 2.1 0 0 0 4 0M12 3.2v2.2"/>`),
+  // šipka dolů do misky (instalace)
+  install: svg(`<path class="i2" d="M12 3.5v10M8 9.8l4 4 4-4"/><path class="i1" d="M4.5 14.5v4a1.5 1.5 0 0 0 1.5 1.5h12a1.5 1.5 0 0 0 1.5-1.5v-4"/>`),
+  // klíč
+  key: svg(`<circle class="i1" cx="8" cy="15" r="3.8"/><path class="i2" d="m10.8 12.3 8-8M16.3 6.8l2 2M14.2 8.9l1.6 1.6"/>`),
+  // dveře se šipkou (odhlásit)
+  logout: svg(`<path class="i1" d="M13.5 4.5H6.5A1.5 1.5 0 0 0 5 6v12a1.5 1.5 0 0 0 1.5 1.5h7"/><path class="i2" d="M10.5 12h9.5M16.8 8.6 20.2 12l-3.4 3.4"/>`),
+  // koš
+  trash: svg(`<path class="i1" d="M5 7h14M9.5 7V4.8h5V7M7 7l.9 12.2a1.5 1.5 0 0 0 1.5 1.3h5.2a1.5 1.5 0 0 0 1.5-1.3L17 7"/><path class="i2" d="M10.4 10.5v6.5M13.6 10.5v6.5"/>`),
+  // výstražný trojúhelník
+  warn: svg(`<path class="i1" d="M12 3.8 21 19.5H3z"/><path class="i2" d="M12 9.5v4.6M12 16.8h.01"/>`),
+  // sdílení (tři uzly)
+  share: svg(`<circle class="i1" cx="17.5" cy="5.5" r="2.6"/><circle class="i1" cx="6.5" cy="12" r="2.6"/><circle class="i1" cx="17.5" cy="18.5" r="2.6"/><path class="i2" d="m8.8 10.7 6.4-3.9M8.8 13.3l6.4 3.9"/>`),
+  // zámek (soukromí)
+  lock: svg(`<rect class="i1" x="5" y="10.5" width="14" height="10" rx="2"/><path class="i2" d="M8.3 10.5V7.8a3.7 3.7 0 0 1 7.4 0v2.7M12 14.5v2.4"/>`),
+  // štít (správa)
+  shield: svg(`<path class="i1" d="M12 3 19.5 6v5.4c0 4.6-3.2 8-7.5 9.6-4.3-1.6-7.5-5-7.5-9.6V6z"/><path class="i2" d="m8.8 12 2.2 2.2 4.3-4.4"/>`),
+  // disk (záloha)
+  disk: svg(`<ellipse class="i1" cx="12" cy="6" rx="7" ry="2.8"/><path class="i1" d="M5 6v12c0 1.5 3.1 2.8 7 2.8s7-1.3 7-2.8V6"/><path class="i2" d="M5 12c0 1.5 3.1 2.8 7 2.8s7-1.3 7-2.8"/>`),
+  // vlajka (nahlášení)
+  flag: svg(`<path class="i1" d="M6 21V4"/><path class="i2" d="M6 4.5h11l-2.3 3.8L17 12H6"/>`),
+  // brouk (chyby)
+  bug: svg(`<rect class="i1" x="7.5" y="8" width="9" height="12" rx="4.5"/><path class="i2" d="M9.5 8a2.5 2.5 0 0 1 5 0M7.5 13H4M20 13h-3.5M7.8 17.5 5 19.5M16.2 17.5 19 19.5M7.8 9.8 5 8M16.2 9.8 19 8M12 11v8"/>`),
   tv: svg(`<rect class="i1" x="3" y="6" width="18" height="12" rx="1.5"/><path class="i2" d="m8.5 2.8 3.5 3.2 3.5-3.2M8 21h8"/>`),
 }
 

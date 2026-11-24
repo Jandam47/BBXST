@@ -40,7 +40,7 @@ Komunikuj **česky**, celé UI je česky.
   (vnitřní → vnější, počet podle obvodu; Turbo / Operate žlutě), uprostřed hledání (zkratka → název → slovo → alias), nevyhovující zhasnou, Enter /
   tlačítko uprostřed vezme nejlepší shodu, písmeno na poli bitu otevře kolečko s hledáním. Tip na zkratky nahoře.
 - `js/config.js` – **obsahuje Adamovy živé klíče Supabase. Nikdy ho neměň ani nepřepisuj.**
-- `supabase/schema.sql`, `02-parts.sql`, `03-live-score.sql`, `04-security-hardening.sql`, `05-judge-handover.sql`, `06-formats-stats.sql`, `07-parts-update.sql`, `08-judge-per-match.sql`, `09-pause.sql`, `10-fashion.sql`, `11-finishes.sql`, `12-rated.sql`, `13-communities.sql`, `14-training-extras.sql`, `15-training-bots.sql`, `16-training-reset.sql`, `17-chat-bazar.sql`, `18-chat-tournament-state.sql`, `19-account-reports.sql`, `20-push.sql`, `21-checkin-errors-backup.sql`, `22-leagues.sql`, `23-meetings.sql`, `24-judge-count.sql`, `25-reg-check.sql`, `26-judge-scan.sql`, `27-live.sql`, `28-cashier.sql`, `29-polls-feedback.sql`, `30-seen-sync.sql`, `31-community-standings.sql`, `32-parts-shatter-horus.sql`, `33-parts-hasbro-2026-11.sql` – databáze (spuštěné v produkci, nové soubory
+- `supabase/schema.sql`, `02-parts.sql`, `03-live-score.sql`, `04-security-hardening.sql`, `05-judge-handover.sql`, `06-formats-stats.sql`, `07-parts-update.sql`, `08-judge-per-match.sql`, `09-pause.sql`, `10-fashion.sql`, `11-finishes.sql`, `12-rated.sql`, `13-communities.sql`, `14-training-extras.sql`, `15-training-bots.sql`, `16-training-reset.sql`, `17-chat-bazar.sql`, `18-chat-tournament-state.sql`, `19-account-reports.sql`, `20-push.sql`, `21-checkin-errors-backup.sql`, `22-leagues.sql`, `23-meetings.sql`, `24-judge-count.sql`, `25-reg-check.sql`, `26-judge-scan.sql`, `27-live.sql`, `28-cashier.sql`, `29-polls-feedback.sql`, `30-seen-sync.sql`, `31-community-standings.sql`, `32-parts-shatter-horus.sql`, `33-parts-hasbro-2026-11.sql`, `34-privacy-admin.sql` – databáze (spuštěné v produkci, nové soubory
   spouští Adam). Živé skóre: BBXST v judge módu posílá po každém bodu `live_score` → `matches.live_p1/p2`
   (TV rozpis, vstupenka, seznamy); trigger `bbx_clear_live` ho maže po uložení hry.
   Rozehraná hra: BBXST posílá s `live_score` i `p_state` → `matches.live_state` (souboje v orientaci p1/p2,
@@ -165,7 +165,7 @@ Komunikuj **česky**, celé UI je česky.
 - **Nahlášení** (19, `js/report.js`): ⚑ u zprávy v chatu (staré nahlášení z bazaru se dají dořešit); `report_create`
   (jen obsah, který hráč vidí, kopie obsahu do `snapshot`), admini (úroveň 3+) v profilu „Nahlášený obsah“
   (`report_list`, `report_resolve` smazat / ponechat, `report_count`).
-- **Smazání účtu** (19): profil → Účet → Smazat účet (potvrzení nickem). `delete_my_account` smaže auth.users
+- **Smazání účtu** (19): profil → ⚙ → Profil → Smazání účtu → Smazat natrvalo (potvrzení nickem). `delete_my_account` smaže auth.users
   (kaskádou profil, zprávy, bazar, členství, odběry); registrace zůstanou anonymně („Smazaný hráč XXXX“).
   Ne hlavní admin, ne leader komunity. Fotky z bazaru klient smaže přes `bazar_my_photos`.
 - **Sdílení výsledků** (`js/share.js`): skončený turnaj → „Sdílet výsledky“ = obrázek 1080×1350 (canvas: top 8,
@@ -206,6 +206,18 @@ Komunikuj **česky**, celé UI je česky.
   `bbx_settings`, `push_*`, `client_errors` (bez e-mailů a fotek); čas v `bbx_settings.last_backup`, `backup_status()`.
   Po 14 dnech (`backupDue`) banner na hlavní stránce.
 - **Nápověda** `#/help` (`js/views/help.js`, `?k=<sekce>` otevře sekci; sekce start, reg, play, points, standings, league, judge, live, org, training, chat, notify, account): tlačítko „?“ na hlavní stránce, „Jak na to“ v profilu. Při nové funkci pro uživatele doplň i nápovědu.
+- **Nastavení v profilu** (`openSettingsWheel` v profile.js): ozubené kolečko `.prof-gear` vpravo u jména (jen vlastní profil
+  s účtem) → kolečko **Profil** (Upravit, Heslo, Sdílet = QR + odkaz `#/p/<id>`, Soukromí, Odhlásit, Smazání účtu → Smazat natrvalo →
+  potvrzení nickem) · **Vstupenka** (jen když je hráč aktivně v turnaji registration/swiss/topcut; víc turnajů = podvýběr; QR přes
+  `my_registration`, cache `localStorage bbxu_tickets:<uid>` → funguje bez signálu) · **Aplikace** (Upozornění = `pushCard`,
+  Instalace = `installCard`, Nápověda) · **Správa** (admin 3+: Žádosti a Záloha jen hlavní admin, Nahlášené, Chyby, Lidé s funkcí =
+  přehled + hledání; odznaky z `admin_counts()` (34), stejný součet na kolečku a pruh „Správa čeká“ pod záhlavím).
+  Modaly přes `sheet()` se zavřou při změně adresy. Odkazy `#/me?s=backup|reports|errors|requests|staff|privacy|share|tickets`
+  otevřou rovnou daný modal (banner zálohy na hlavní stránce). Pod jménem už tlačítka ani admin karty nejsou; host bez účtu má
+  instalaci dál přímo na stránce.
+- **Soukromí** (34): `profiles.privacy` jsonb {beys, h2h, standings} (mění hráč sám přes update profilu). `bbx_private()` →
+  `player_bey_stats` a `player_h2h` vrací ostatním prázdno, `players_list` skrytého vynechá (kromě něj samého). Výsledky
+  turnajů, pavouk, meta a community standings zůstávají veřejné.
 - **Vzájemná bilance** (21): `player_h2h(p_user)` → profil: „Ty vs hráč“ (`vs_me`, posledních 5 zápasů) a nejčastější
   soupeři s účtem (výhry–prohry).
 - **Počítadlo judgování** (24): `player_judged(p_user)` = zápasy, kde hráč zapsal aspoň jednu hru (`games.judge_id`;
@@ -302,7 +314,7 @@ Potřebují lokální PostgreSQL 16, Node a pro UI Python Playwright + Chrome a 
 - `node tests/fashion.test.mjs` – fashion show v DB (po reset_db / ui-up): judge, hodnocení, rozstřel, boss, vyhlášení.
 - `node tests/chat.test.mjs` – chat (místnosti, přístup, hosté) a bazar (fotky, soukromá vlákna) v DB.
 - `node tests/polls.test.mjs` – ankety (zakládání, hlasování, anonymní / veřejné, konec), dotazy a připomínky (29), přečteno na serveru (30).
-- `node tests/extras.test.mjs` – kontrola registrací, chyby z telefonů, záloha, vzájemná bilance (21, 25).
+- `node tests/extras.test.mjs` – kontrola registrací, chyby z telefonů, záloha, vzájemná bilance (21, 25), soukromí a `admin_counts` (34).
 - `node tests/leagues.test.mjs` – ligy: práva správce / organizátorů, ligové turnaje, bodování a bilance (22).
 - `node tests/meetings.test.mjs` – meeting osobně / online, akce jen pro organizátory (23).
 - `node tests/judge-count.test.mjs` – počítadlo odjudgovaných zápasů (24).
@@ -311,7 +323,7 @@ Potřebují lokální PostgreSQL 16, Node a pro UI Python Playwright + Chrome a 
 - `node tests/account.test.mjs` – nahlášení a smazání účtu; `node tests/push.test.mjs` – odběry a push události (outbox).
 - `node tests/community.test.mjs` – komunity a komunitní trénink v DB (schválení, členové, trénink, výzvy, souboje, meta, standings 31).
 - `tests/ui-up.sh && python3 tests/ui_smoke.py && python3 tests/bbxst_judge.py && python3 tests/test_tools.py` – proklik v Chrome
-  (`tests/judge_handover.py`, `tests/formats_stats.py`, `tests/arenas_status.py`, `tests/fashion_ui.py`, `tests/community_ui.py`, `tests/bbxst_training.py`, `tests/training_bot_ui.py`, `tests/chat_ui.py`, `tests/komunikace_ui.py`, `tests/players_wheel_ui.py`, `tests/extras_ui.py`, `tests/checkin_ui.py`, `tests/leagues_ui.py`, `tests/install_ui.py`, `tests/create_wheel_ui.py`, `tests/tv_modes_ui.py`, `tests/points_hist_ui.py`, `tests/ratchet_wheel_ui.py`, `tests/live_ui.py` a `tests/cashier_ui.py` každý zvlášť po čerstvém `ui-up.sh`: převzetí judge;
+  (`tests/judge_handover.py`, `tests/formats_stats.py`, `tests/arenas_status.py`, `tests/fashion_ui.py`, `tests/community_ui.py`, `tests/bbxst_training.py`, `tests/training_bot_ui.py`, `tests/chat_ui.py`, `tests/komunikace_ui.py`, `tests/players_wheel_ui.py`, `tests/extras_ui.py`, `tests/checkin_ui.py`, `tests/leagues_ui.py`, `tests/install_ui.py`, `tests/create_wheel_ui.py`, `tests/tv_modes_ui.py`, `tests/points_hist_ui.py`, `tests/ratchet_wheel_ui.py`, `tests/live_ui.py` a `tests/cashier_ui.py`, `tests/profile_gear_ui.py` každý zvlášť po čerstvém `ui-up.sh`: převzetí judge;
   deathmatch přes testovací nástroje až po finále, vyhodnocení, meta, profil)
   (poslední: zkušební turnaj 16 hráčů přes testovací nástroje až po ukončení).
 Když měníš SQL, přidej nový soubor i do `tests/reset_db.sh`. Po změně logiky nebo DB pusť testy.

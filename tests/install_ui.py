@@ -26,7 +26,9 @@ with sync_playwright() as p:
     # profil: karta instalace
     pg.goto(BASE + 'index.html#/login'); pg.fill('input[name=email]', 'hrac1@test.cz'); pg.fill('input[name=password]', 'x')
     pg.click('#f-login button'); pg.wait_for_selector('.t-card')
-    pg.goto(BASE + 'index.html#/me'); pg.wait_for_selector('#inst-card .inst-row')
+    pg.goto(BASE + 'index.html#/me'); pg.wait_for_selector('.prof-gear')
+    pg.click('.prof-gear'); pg.click('.cw-sec[aria-label^="Aplikace"]'); pg.click('.cw-sec[aria-label^="Aplikace na plochu"]')
+    pg.wait_for_selector('#inst-card .inst-row')
     assert pg.locator('[data-inst=bbxu-help]').count() == 1
     pg.click('[data-inst=bbxu-help]'); assert 'Nainstalovat aplikaci' in pg.inner_text('#inst-hint')
     pg.evaluate(FAKE)
