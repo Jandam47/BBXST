@@ -239,8 +239,9 @@ Komunikuj **česky**, celé UI je česky.
   používej `window.history`. Přihlášení vrací na adresu bez `index.html` (`redirectTo` v auth.js). Manifesty se
   načítají s `?v=N` (zvyš při změně, ať telefony nečtou starý z cache). Nainstalované BBXST startuje na výšku
   (`orientation: portrait`), otočení tlačítkem v kolečku funguje v celé obrazovce i v nainstalované aplikaci.
-- **Měsíční kontrola dílů**: naplánovaná úloha (2. den v měsíci) porovná kyoganken s `bey_parts` a případně otevře PR
-  s novým `NN-parts-RRRR-MM.sql` (do DB nic nezapisuje).
+- **Měsíční kontrola dílů**: naplánovaná úloha (2. den v měsíci, 20:13) porovná kyoganken (Takara Tomy) i nové Hasbro
+  produkty (beysandbricks.com/hasbro-beyblades, obchody, zprávy) s `bey_parts` a případně otevře PR s novým
+  `NN-parts-RRRR-MM.sql` (Hasbro-only díly = Hasbro název, Hasbro názvy Takara dílů = aliases; do DB nic nezapisuje).
 - `vendor/` – supabase-js, qrcode-generator, html5-qrcode (lokálně, kvůli slabé síti v hale).
 - `sw.js` – service worker (síť první, cache jako záloha).
 - Vzhled: cyberpunk (černé pozadí s mřížkou, azurová `--cyan` + purpurová `--magenta`, žlutá `--bolt` jen pro
