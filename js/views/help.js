@@ -14,6 +14,7 @@ const S = [
     <ul>
       <li>U turnaje dej <b>Přihlásit se</b> a slož tři beyblady z dílů. Každý bey musí být jiný; u některých turnajů se nesmí opakovat ani jednotlivé díly.</li>
       <li>Díly vybíráš ze seznamu – začni psát a klepni na návrh. <b>Ratchet</b> se vybírá na kolečku: uvnitř počet zubů, venku výška. <b>Turbo / Operate</b> (ratchet je v bitu) jsou pod kolečkem.</li>
+      <li><b>Bit</b> se vybírá taky na kolečku: okolo svítí všechny bity zkratkou ve třech řadách podle abecedy (od středu ven), uprostřed je hledání. Piš zkratku (F, LF, GB…) – co neodpovídá, zhasne; Enter nebo klepnutí na název uprostřed vybere. Turbo / Operate jsou žlutě.</li>
       <li>Po přihlášení máš v záložce <b>Můj Status</b> vstupenku s QR kódem. Ulož si ji do telefonu – v hale bývá slabý signál.</li>
       <li><b>Kontrola registrace:</b> na místě ukaž QR kód organizátorovi. Zkontroluje, že máš beyblady z přihlášky, a na vstupence pak svítí <i>✓ Registrace zkontrolována</i>. Když potom beyblady změníš, musí tě zkontrolovat znovu.</li>
       <li>Beyblady můžeš měnit, dokud turnaj nezačne. Pak už ne.</li>

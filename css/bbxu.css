@@ -1366,6 +1366,47 @@ main.tv-land .tv-now .pt { font-size: clamp(10px, min(8cqh, 3cqw), 34px); }
 .rw-sp small { display: block; font-family: inherit; font-weight: 400; font-size: 12px; color: var(--faint); margin-top: 1px; }
 .rw-sp.on { background: var(--bolt); color: #111; }
 .rw-sp.on small { color: rgba(0,0,0,.6); }
+/* kolečko bitů */
+.bw-bg { align-items: flex-start; }
+.modal.bw { padding-left: 10px; padding-right: 10px; border-radius: 0 0 22px 22px; animation: none; }
+@media (min-width: 640px) { .bw-bg { align-items: center; } .modal.bw { border-radius: 22px; padding-left: 18px; padding-right: 18px; } }
+.bw-head { display: flex; align-items: center; gap: 10px; margin: 0 4px 8px; }
+.bw-head h3 { margin: 0; flex: 1; }
+.bw-cur { font-family: var(--display); font-weight: 700; color: #00ffaa; }
+.bw-tip { margin: 0 4px 10px; padding: 7px 10px; font-size: 12.5px; line-height: 1.45; color: var(--muted);
+  border-left: 2px solid var(--bolt); background: rgba(255,228,31,.06); border-radius: 0 8px 8px 0; }
+.bw-tip b { color: var(--bolt); margin-right: 4px; }
+.bw-tip span { font-family: var(--display); font-weight: 700; color: #fff; padding: 0 4px; border: 1px solid rgba(0,229,255,.45); border-radius: 4px; }
+.bw-dial { position: relative; width: min(100%, 400px); aspect-ratio: 1; margin: 0 auto; container-type: inline-size; }
+.bw-dial > svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.bw-k { cursor: pointer; outline: none; transition: opacity .15s; }
+.bw-k path { fill: color-mix(in srgb, var(--c) 14%, #070b16); stroke: var(--c); stroke-width: 1.1;
+  filter: drop-shadow(0 0 3px color-mix(in srgb, var(--c) 70%, transparent)); transition: fill .12s; }
+.bw-k text { fill: var(--c); font-family: var(--display); font-weight: 700; font-size: 15px; text-anchor: middle; pointer-events: none; letter-spacing: -.02em; }
+.bw-k text.m { font-size: 12.5px; fill: #fff; }
+.bw-k.int text { fill: var(--c); }
+.bw-k:hover path, .bw-k:focus-visible path { fill: color-mix(in srgb, var(--c) 34%, #070b16); filter: drop-shadow(0 0 7px var(--c)); }
+.bw-dial.searching .bw-k:not(.off) path { fill: color-mix(in srgb, var(--c) 28%, #070b16); filter: drop-shadow(0 0 6px var(--c)); }
+.bw-k.on path { fill: #00ffaa; stroke: #00ffaa; filter: drop-shadow(0 0 8px rgba(0,255,170,.8)); }
+.bw-k.on text { fill: #021; }
+.bw-k.off { opacity: .1; pointer-events: none; }
+.bw-k.off path { filter: none; }
+.bw-k.off text { fill: var(--c); }
+.bw-center { position: absolute; inset: 30%; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+  border: 1px solid rgba(0,229,255,.35); background: #050b11; box-shadow: 0 0 24px rgba(0,229,255,.12) inset; padding: 0 9%; }
+.bw-search { display: flex; align-items: center; gap: 6px; width: 100%; border-bottom: 1px solid rgba(0,229,255,.55); padding-bottom: 3px; }
+.bw-search svg { flex: none; width: clamp(15px, 4.6cqw, 20px); height: auto; fill: none; stroke: var(--cyan); stroke-width: 2.2; stroke-linecap: round;
+  filter: drop-shadow(0 0 4px rgba(0,229,255,.7)); }
+.bw-q { flex: 1; min-width: 0; background: none; border: 0; outline: 0; color: #fff; font: 700 clamp(16px, 4.4cqw, 20px) var(--display); padding: 2px 0; }
+.bw-q::placeholder { color: var(--faint); font-weight: 400; }
+.bw-q::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; }
+.bw-best { background: none; border: 0; color: #fff; cursor: pointer; display: flex; flex-direction: column; align-items: center; padding: 2px 4px;
+  min-height: 2.6em; border-radius: 8px; max-width: 100%; }
+.bw-best b { font-family: var(--display); font-size: clamp(13px, 4.6cqw, 18px); line-height: 1.15; text-align: center; }
+.bw-best small { font-size: clamp(10px, 3cqw, 12px); color: var(--faint); text-align: center; }
+.bw-best:not(:disabled):hover, .bw-best:not(:disabled):focus-visible { background: rgba(0,255,170,.08); }
+.bw-best:not(:disabled) b { color: #00ffaa; }
+
 
 /* ══ ŽIVĚ – přenos z arén (#/t/<id>/live) ══ */
 .btn-live { border-color: rgba(255,77,109,.55); color: #ff8098; }

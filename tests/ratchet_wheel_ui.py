@@ -11,6 +11,9 @@ def sql(q):
     return out.splitlines()[0].strip() if out else out
 
 def combo(page, sel, text):
+    if sel.endswith('[data-combo="bit"]'):   # bit = kolečko s hledáním
+        page.click(sel + ' input'); page.wait_for_selector('.bw-dial')
+        page.fill('.bw-q', text); page.keyboard.press('Enter'); page.wait_for_selector('.bw-dial', state='detached'); return
     page.click(sel + ' input'); page.fill(sel + ' input', text)
     page.wait_for_selector(sel + ' .combo-list:not([hidden]) li'); page.keyboard.press('Enter')
 
@@ -57,6 +60,44 @@ with sync_playwright() as p:
     # Esc zavře jen kolečko
     pg.click(R + ' input'); pg.wait_for_selector('.rw-dial'); pg.keyboard.press('Escape'); pg.wait_for_selector('.rw-dial', state='detached')
     assert pg.input_value(R + ' input') == '5-60'
+    # ── kolečko bitů ──
+    B = '[data-bey="2"] [data-combo="bit"]'
+    assert pg.get_attribute(B + ' input', 'readonly') is not None, 'bit se vybírá na kolečku'
+    combo(pg, '[data-bey="2"] [data-combo="blade"]', 'shark ed')
+    pg.click('[data-bey="2"] [data-combo="ratchet"] input'); pg.click('.rw-k[data-t="1"]'); pg.click('.rw-k[data-h="60"]')
+    pg.click(B + ' input'); pg.wait_for_selector('.bw-dial')
+    nbits = int(sql("select count(*) from bey_parts where category = 'bit' and active"))
+    assert pg.locator('.bw-k').count() == nbits, (pg.locator('.bw-k').count(), nbits)
+    assert pg.locator('.bw-k.off').count() == 0, 'bez hledání svítí všechny'
+    assert 'zkratk' in pg.inner_text('.bw-tip')
+    rows = [pg.locator(f'.bw-k.r{i}').count() for i in (1, 2, 3)]
+    assert sum(rows) == nbits and rows[0] < rows[1] < rows[2] and rows[0] >= 10, rows
+    pg.screenshot(path=OUT + '292_bw_dial.png')
+    pg.fill('.bw-q', 'g')
+    lit = pg.evaluate("[...document.querySelectorAll('.bw-k:not(.off)')].map(b => b.dataset.ab)")
+    assert pg.locator('.bw-k.off').count() > 20, lit
+    assert 'GB' in lit and 'F' not in lit and 'G' in lit, lit
+    assert pg.inner_text('.bw-best b') == 'Glide', pg.inner_text('.bw-best')
+    pg.fill('.bw-q', 'lf'); pg.wait_for_timeout(300); assert pg.inner_text('.bw-best b') == 'Low Flat'
+    assert pg.locator('.bw-k:not(.off)').count() == 1
+    pg.screenshot(path=OUT + '293_bw_search.png')
+    pg.fill('.bw-q', 'xyzq'); assert 'nic' in pg.inner_text('.bw-best')
+    pg.fill('.bw-q', ''); pg.click('.bw-k[data-bit="Low Flat"]'); pg.wait_for_selector('.bw-dial', state='detached')
+    assert pg.input_value(B + ' input') == 'Low Flat'
+    assert pg.inner_text('[data-bey="2"] .bey-preview') == '→ Shark Edge 1-60LF', pg.inner_text('[data-bey="2"] .bey-preview')
+    # znovu: aktuální bit zvýrazněný; písmeno na poli rovnou hledá; tlačítko uprostřed vezme shodu
+    pg.click(B + ' input'); pg.wait_for_selector('.bw-k.on[data-bit="Low Flat"]'); pg.click('[data-bw-back]')
+    pg.wait_for_selector('.bw-dial', state='detached'); assert pg.input_value(B + ' input') == 'Low Flat'
+    pg.focus(B + ' input'); pg.keyboard.press('r'); pg.wait_for_selector('.bw-dial')
+    assert pg.input_value('.bw-q') == 'r'
+    pg.keyboard.type('a'); pg.click('[data-bw-best]'); pg.wait_for_selector('.bw-dial', state='detached')
+    assert pg.input_value(B + ' input') == 'Rubber Accel'
+    # Turbo z kolečka bitů → ratchet pryč
+    pg.click(B + ' input'); pg.fill('.bw-q', 'tr'); pg.keyboard.press('Enter'); pg.wait_for_selector('.bw-dial', state='detached')
+    assert pg.input_value(B + ' input') == 'Turbo' and pg.input_value('[data-bey="2"] [data-combo="ratchet"] input') == ''
+    # Esc zavře jen kolečko
+    pg.click(B + ' input'); pg.wait_for_selector('.bw-dial'); pg.keyboard.press('Escape'); pg.wait_for_selector('.bw-dial', state='detached')
+    assert pg.input_value(B + ' input') == 'Turbo'
     # integrovaný blade → kolečko se neotevře
     combo(pg, '[data-bey="1"] [data-combo="blade"]', 'nether')
     assert pg.is_disabled('[data-bey="1"] [data-combo="ratchet"] input')

@@ -216,7 +216,7 @@ export function deckEditor(deck, n = 3) {
       </div>
       <div class="grid2">
         ${combo({ key: 'ratchet', label: 'Ratchet', cats: ['ratchet'], value: b.ratchet, placeholder: 'vyber na kolečku', wheel: true })}
-        ${combo({ key: 'bit', label: 'Bit', cats: ['bit'], value: b.bit, placeholder: 'např. Flat / F' })}
+        ${combo({ key: 'bit', label: 'Bit', cats: ['bit'], value: b.bit, placeholder: 'vyber na kolečku', wheel: true })}
       </div>
       <div class="bey-preview" aria-live="polite"></div>
     </fieldset>`)}</div>`
@@ -265,13 +265,28 @@ export function bindDeckEditor(root, cat, { distinct = true } = {}) {
       input.focus({ preventScroll: true })
     })
   }
+  const openBit = (input, q = '') => {
+    if (document.querySelector('.bw-bg')) return
+    const card = input.closest('[data-bey]')
+    bitWheel(cat, input.value.trim(), (name) => {
+      input.value = name
+      const w = input.closest('[data-combo]')
+      w.classList.add('ok'); w.classList.remove('bad')
+      refresh(card)
+      input.focus({ preventScroll: true })
+    }, q)
+  }
+  const open = (input, q) => input.closest('[data-combo]').dataset.combo === 'bit' ? openBit(input, q) : openWheel(input)
   root.addEventListener('click', (e) => {
     const rIn = e.target.closest('[data-wheel] input')
-    if (rIn) { e.preventDefault(); openWheel(rIn) }
+    if (rIn) { e.preventDefault(); open(rIn) }
   })
   root.addEventListener('keydown', (e) => {
     const rIn = e.target.closest('[data-wheel] input')
-    if (rIn && (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown')) { e.preventDefault(); openWheel(rIn) }
+    if (!rIn) return
+    if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown') { e.preventDefault(); open(rIn) }
+    // písmeno na poli bitu → kolečko rovnou s hledáním
+    else if (e.key.length === 1 && /\S/.test(e.key) && !e.ctrlKey && !e.metaKey && rIn.closest('[data-combo]').dataset.combo === 'bit') { e.preventDefault(); openBit(rIn, e.key) }
   })
   root.addEventListener('click', (e) => {
     const btn = e.target.closest('[data-type-btn]')
@@ -359,4 +374,111 @@ export function ratchetWheel(cat, cur, curBit, onPick) {
   document.addEventListener('keydown', onKey, true)
   document.body.append(bg)
   setTimeout(() => (box.querySelector('.rw-k.on') || box.querySelector('.rw-k.t:not(:disabled)'))?.focus({ preventScroll: true }), 30)
+}
+
+// ── kolečko bitů (výseče jako „Založ akci“): uprostřed hledání, okolo všechny bity zkratkou ve třech řadách
+//    podle abecedy (vnitřní → vnější); při hledání zhasnou ty, které neodpovídají; Enter / tlačítko uprostřed
+//    vezme nejlepší shodu ──
+const BW_LENS = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 21 21"/></svg>'
+const BW_C = 160, BW_RINGS = [[66, 96], [98, 127], [129, 158]], BW_COL = ['var(--cyan)', '#9d7bff', 'var(--magenta)']
+function bwSector(r0, r1, a0, a1) {
+  const p = (r, d) => { const t = (d - 90) * Math.PI / 180; return `${(BW_C + r * Math.cos(t)).toFixed(2)} ${(BW_C + r * Math.sin(t)).toFixed(2)}` }
+  const big = a1 - a0 > 180 ? 1 : 0
+  return `M${p(r1, a0)}A${r1} ${r1} 0 ${big} 1 ${p(r1, a1)}L${p(r0, a1)}A${r0} ${r0} 0 ${big} 0 ${p(r0, a0)}Z`
+}
+export function bitWheel(cat, cur, onPick, startQ = '') {
+  const lab = (r) => r.abbr || r.name.slice(0, 2)
+  const bits = [...(cat.byCat.bit || [])].sort((a, b) => lab(a).localeCompare(lab(b), 'en', { sensitivity: 'base' }))
+  // počty na řadu podle obvodu (vnější řada delší)
+  const mids = BW_RINGS.map(([a, b]) => (a + b) / 2), sum = mids.reduce((x, y) => x + y, 0)
+  const raw = mids.map(m => bits.length * m / sum), cnt = raw.map(Math.floor)
+  raw.map((v, i) => [v - cnt[i], i]).sort((x, y) => y[0] - x[0]).slice(0, bits.length - cnt.reduce((x, y) => x + y, 0)).forEach(([, i]) => cnt[i]++)
+  const curR = cat.find(['bit'], cur)
+  const score = (r, t) => {
+    if (!t) return 1
+    const a = norm(r.abbr || '')
+    if (a === t) return 100
+    if (a && a.startsWith(t)) return 80
+    if (r.n.startsWith(t)) return 70
+    if (r.name.split(/\s+/).some(w => norm(w).startsWith(t))) return 60
+    if (r.na.some(x => x.startsWith(t))) return 40
+    return 0
+  }
+  const bg = document.createElement('div')
+  bg.className = 'modal-bg rw-bg bw-bg'
+  bg.innerHTML = '<div class="modal rw bw" role="dialog" aria-modal="true" aria-label="Výběr bitu"></div>'
+  const box = bg.firstElementChild
+  const prevFocus = document.activeElement
+  const close = () => { bg.remove(); document.removeEventListener('keydown', onKey, true); prevFocus?.focus?.({ preventScroll: true }) }
+  const done = (r) => { close(); onPick(r.name) }
+  const onKey = (e) => {
+    if (e.key === 'Escape') { e.stopImmediatePropagation(); e.preventDefault(); close() }
+    else if ((e.key === 'Enter' || e.key === ' ') && e.target.matches?.('.bw-k')) { e.preventDefault(); done(rOf.get(e.target.dataset.bit)) }
+  }
+  let k0 = 0
+  const segs = BW_RINGS.map(([r0, r1], ri) => {
+    const list = bits.slice(k0, k0 += cnt[ri]), step = 360 / (list.length || 1), gap = (2.4 / r1) * 180 / Math.PI, rm = (r0 + r1) / 2
+    return list.map((r, i) => {
+      const mid = i * step, t = (mid - 90) * Math.PI / 180
+      const x = (BW_C + rm * Math.cos(t)).toFixed(1), y = (BW_C + rm * Math.sin(t)).toFixed(1), ab = lab(r)
+      return `<g class="bw-k r${ri + 1} ${r.integrated ? 'int' : ''} ${r === curR ? 'on' : ''}" data-bit="${esc(r.name)}" data-ab="${esc(ab)}" tabindex="0" role="button"
+          aria-label="${esc(r.name)}${r.integrated ? ' (ratchet v bitu)' : ''}" style="--c:${r.integrated ? 'var(--bolt)' : BW_COL[ri]}">
+        <title>${esc(r.name)}</title>
+        <path d="${bwSector(r0, r1, mid - step / 2 + gap / 2, mid + step / 2 - gap / 2)}"/>
+        <text x="${x}" y="${(+y + 5).toFixed(1)}" class="${ab.length > 1 ? 'm' : ''}">${esc(ab)}</text>
+      </g>`
+    }).join('')
+  }).join('')
+  box.innerHTML = `<div class="bw-head">
+      <button type="button" class="btn sm" data-bw-back>← Zpět</button>
+      <h3>Bit</h3>
+      <span class="bw-cur">${curR ? esc(curR.name) : ''}</span>
+    </div>
+    <p class="bw-tip"><b>Tip</b> Hledej písmenkovou zkratkou, je to rychlejší: <span>F</span> Flat · <span>LF</span> Low Flat · <span>GB</span> Gear Ball</p>
+    <div class="bw-dial">
+      <svg viewBox="0 0 320 320" aria-hidden="false">${segs}</svg>
+      <div class="bw-center">
+        <label class="bw-search">${BW_LENS}<input class="bw-q" type="search" placeholder="hledat" value="${esc(startQ)}"
+          autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="done" aria-label="Hledat bit"></label>
+        <button type="button" class="bw-best" data-bw-best></button>
+      </div>
+    </div>`
+  const q = box.querySelector('.bw-q'), bestBtn = box.querySelector('[data-bw-best]')
+  const keys = [...box.querySelectorAll('[data-bit]')]
+  const rOf = new Map(bits.map(r => [r.name, r]))
+  let best = null
+  const showBest = (r, hint) => {
+    bestBtn.disabled = !r
+    bestBtn.innerHTML = r ? `<b>${esc(r.name)}</b><small>${r.abbr ? esc(r.abbr) : ''}${r.integrated ? ' · ratchet v bitu' : ''}</small>`
+      : `<small>${hint}</small>`
+  }
+  const filter = () => {
+    const t = norm(q.value)
+    best = null; let bs = 0, hits = 0
+    for (const k of keys) {
+      const r = rOf.get(k.dataset.bit), sc = score(r, t)
+      k.classList.toggle('off', !sc); k.setAttribute('tabindex', sc ? '0' : '-1')
+      if (sc) hits++
+      if (t && sc > bs) { bs = sc; best = r }
+    }
+    if (t && hits === 0) showBest(null, 'nic nenalezeno')
+    else if (best) showBest(best)
+    else showBest(curR, 'klepni na bit nebo hledej')
+    box.querySelector('.bw-dial').classList.toggle('searching', !!t)
+  }
+  keys.forEach(k => {
+    k.onclick = () => done(rOf.get(k.dataset.bit))
+    k.onmouseenter = k.onfocus = () => showBest(rOf.get(k.dataset.bit))
+    k.onmouseleave = k.onblur = filter
+  })
+  q.addEventListener('input', filter)
+  q.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); const r = best || (norm(q.value) ? null : curR); if (r) done(r) } })
+  bestBtn.onclick = () => { const r = best || curR; if (r) done(r) }
+  box.querySelector('[data-bw-back]').onclick = close
+  filter()
+  bg.addEventListener('click', (e) => { if (e.target === bg) close() })
+  document.addEventListener('keydown', onKey, true)
+  document.body.append(bg)
+  // klávesnice: hledání hned; na dotyku jen když už se píše (jinak by klávesnice zakryla kolečko)
+  if (startQ || matchMedia('(pointer: fine)').matches) { q.focus({ preventScroll: true }); q.setSelectionRange(q.value.length, q.value.length) }
 }

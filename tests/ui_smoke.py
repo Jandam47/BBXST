@@ -41,6 +41,10 @@ def run(only=None):
                 page.click(sel + ' input'); page.wait_for_selector('.rw-dial')
                 page.click(f'.rw-k[data-t="{t}"]'); page.click(f'.rw-k[data-h="{h}"]'); page.wait_for_selector('.rw-dial', state='detached')
                 return
+            if key == 'bit':       # bit se vybírá na kolečku s hledáním
+                page.click(sel + ' input'); page.wait_for_selector('.bw-dial')
+                page.fill('.bw-q', text); page.keyboard.press('Enter'); page.wait_for_selector('.bw-dial', state='detached')
+                return
             page.click(sel + ' input'); page.fill(sel + ' input', text)
             page.wait_for_selector(sel + ' .combo-list:not([hidden]) li')
             if choose: page.click(sel + f' .combo-list li >> text={choose}')
@@ -54,9 +58,11 @@ def run(only=None):
         # bey 3: integrovaný ratchet → pole ratchet se zamkne
         pick(2, 'blade', 'nether'); pick(2, 'bit', 'ball', 'Ball')
         assert page.is_disabled('[data-bey="2"] [data-combo="ratchet"] input')
-        page.click('[data-bey="2"] [data-combo="bit"] input'); page.fill('[data-bey="2"] [data-combo="bit"] input', 'b')
-        page.wait_for_selector('[data-bey="2"] .combo-list:not([hidden]) li'); shot(page, '02b_combo_open')
-        page.keyboard.press('Escape'); page.fill('[data-bey="2"] [data-combo="bit"] input', 'Ball'); page.click('input[name=nick]')
+        page.click('[data-bey="2"] [data-combo="bit"] input'); page.wait_for_selector('.bw-dial'); page.fill('.bw-q', 'b')
+        shot(page, '02b_combo_open')
+        page.keyboard.press('Escape'); page.wait_for_selector('.bw-dial', state='detached')
+        assert page.input_value('[data-bey="2"] [data-combo="bit"] input') == 'Ball'
+        page.click('input[name=nick]')
         page.wait_for_timeout(300); shot(page, '02_reg_form')
         page.click('#f-reg button.primary'); page.wait_for_selector('[data-c=guest]'); shot(page, '03_guest_prompt')
         page.click('[data-c=guest]'); page.wait_for_selector('.pass'); shot(page, '04_pass_guest')
