@@ -116,6 +116,20 @@ with sync_playwright() as p:
     h.click('.tabbar a[data-tab=chat]'); h.wait_for_selector('.cw-overlay .cw-sec'); h.screenshot(path=OUT + '316_mono_wheel.png')
     h.keyboard.press('Escape')
     h.goto(BASE + '#/me'); h.wait_for_selector('.prof-gear')
+    h.click('.prof-gear'); sec(h, 'Aplikace'); sec(h, 'Vzhled')
+    assert h.locator('[data-theme-k]').count() == 5
+    for k, stroke in [('synth', 'rgb(255, 122, 61)'), ('toxic', 'rgb(57, 255, 136)'), ('ronin', 'rgb(255, 59, 78)')]:
+        h.click(f'[data-theme-k={k}]'); h.wait_for_selector(f'[data-theme-k={k}].on')
+        assert h.evaluate("document.documentElement.dataset.theme") == k
+        assert h.evaluate("getComputedStyle(document.querySelector('.nicon .i1')).stroke") == stroke, k
+    h.screenshot(path=OUT + '317_theme_sheet_all.png')
+    h.click('.modal [data-close]')
+    for k in ['synth', 'toxic', 'ronin']:
+        h.evaluate(f"localStorage.setItem('bbxu_theme', '{k}')")
+        for path, sel, name in [('#/', '.t-card', 'home'), (f'#/t/{tid}', '.tabs', 'tour'), ('#/me', '.prof-gear', 'me')]:
+            h.goto(BASE + path); h.reload(); h.wait_for_selector(sel); h.wait_for_timeout(400)
+            assert h.evaluate("document.documentElement.dataset.theme") == k
+            h.screenshot(path=OUT + f'32x_{k}_{name}.png')
     h.click('.prof-gear'); sec(h, 'Aplikace'); sec(h, 'Vzhled'); h.click('[data-theme-k=neon]')
     assert h.evaluate("document.documentElement.dataset.theme") is None
     h.click('.modal [data-close]')

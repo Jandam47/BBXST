@@ -18,7 +18,8 @@
 <link rel="stylesheet" href="css/bbxu.css">
 <script>
 // vzhled bez neonů (js/theme.js) – nastavit dřív, než se stránka vykreslí, ať neprobleskne barevná
-try { if (localStorage.getItem('bbxu_theme') === 'mono') { document.documentElement.dataset.theme = 'mono'; document.querySelector('meta[name=theme-color]').content = '#000000' } } catch (e) {}
+try { var th = { mono: '#000000', synth: '#130822', toxic: '#05110a', ronin: '#120507' }, tk = localStorage.getItem('bbxu_theme')
+  if (th[tk]) { document.documentElement.dataset.theme = tk; document.querySelector('meta[name=theme-color]').content = th[tk] } } catch (e) {}
 // instalace z profilu: zachytit nabídku prohlížeče hned, než se načte aplikace
 addEventListener('beforeinstallprompt', function (e) { window.__bip = e; dispatchEvent(new Event('bbx:installable')) })
 // BBXU platí jen pro index.html (BBXST se instaluje zvlášť) – holou adresu složky přepsat

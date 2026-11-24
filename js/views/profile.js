@@ -46,9 +46,9 @@ function sparkline(points) {
   const d = xy.map(([x, y], i) => `${i ? 'L' : 'M'}${x.toFixed(1)},${y.toFixed(1)}`).join(' ')
   const last = xy[xy.length - 1]
   return raw(`<svg class="spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" role="img" aria-label="Vývoj ratingu">
-    <line x1="0" x2="${w}" y1="${(h - (1000 - min) / (max - min) * h).toFixed(1)}" y2="${(h - (1000 - min) / (max - min) * h).toFixed(1)}" stroke="#2a3772" stroke-dasharray="4 4"/>
-    <path d="${d}" fill="none" stroke="#ffd21f" stroke-width="2.5" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>
-    <circle cx="${last[0]}" cy="${last[1]}" r="4" fill="#ffd21f"/></svg>`)
+    <line x1="0" x2="${w}" y1="${(h - (1000 - min) / (max - min) * h).toFixed(1)}" y2="${(h - (1000 - min) / (max - min) * h).toFixed(1)}" style="stroke:var(--line)" stroke-dasharray="4 4"/>
+    <path d="${d}" fill="none" style="stroke:var(--bolt)" stroke-width="2.5" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>
+    <circle cx="${last[0]}" cy="${last[1]}" r="4" style="fill:var(--bolt)"/></svg>`)
 }
 
 // pohár achievementu (1 zlatý, 2 stříbrný, 3 bronzový)
@@ -466,12 +466,12 @@ function ticketSheet(t) {
 
 // ── vzhled: Neon / Bez neonů (js/theme.js), platí pro tohle zařízení ──
 function themeSheet(after) {
-  const draw = (m) => mount(m.querySelector('.theme-opts'), THEMES.map(([k, l, d]) => html`
+  const draw = (m) => mount(m.querySelector('.theme-opts'), THEMES.map(([k, l, d, sw]) => html`
     <button type="button" class="theme-opt ${getTheme() === k ? 'on' : ''}" data-theme-k="${k}" aria-pressed="${getTheme() === k}">
-      <span class="theme-sw ${k}" aria-hidden="true"><i></i><i></i><i></i></span>
+      <span class="theme-sw ${k}" aria-hidden="true" style="--sw-bg:${sw[0]};--sw-1:${sw[1]};--sw-2:${sw[2]};--sw-3:${sw[3]}"><i></i><i></i><i></i></span>
       <span class="grow"><b>${l}</b><span class="small muted">${d}</span></span></button>`))
   sheet(html`<h2>Vzhled</h2>
-    <p class="small muted">Platí pro tohle zařízení. BBXST (počítadlo) zůstává, jak je.</p>
+    <p class="small muted">Platí pro tohle zařízení. Mění se jen barvy, rozložení zůstává. BBXST (počítadlo) zůstává, jak je.</p>
     <div class="theme-opts" role="group" aria-label="Vzhled aplikace"></div>`, (m) => {
     draw(m)
     on(m, 'click', '[data-theme-k]', (e, b) => { setTheme(b.dataset.themeK); draw(m); after?.() })

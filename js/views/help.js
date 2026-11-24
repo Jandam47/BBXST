@@ -125,7 +125,7 @@ const S = [
   ['account', 'Účet a soukromí', html`
     <ul>
       <li>Úpravu profilu, změnu hesla a odhlášení najdeš v profilu pod <b>ozubeným kolečkem ⚙ → Profil</b>.</li>
-      <li><b>⚙ → Aplikace → Vzhled</b>: přepneš mezi barevným <i>Neonem</i> a černobílým vzhledem <i>Bez neonů</i>. Platí pro tohle zařízení (host ho najde přímo v profilu).</li>
+      <li><b>⚙ → Aplikace → Vzhled</b>: vybereš barvy aplikace: <i>Neon</i> (původní), <i>Synthwave</i>, <i>Toxic</i>, <i>Ronin</i> nebo černobílý <i>Bez neonů</i>. Platí pro tohle zařízení (host ho najde přímo v profilu).</li>
       <li><b>⚙ → Profil → Sdílet</b>: QR kód a odkaz na tvůj profil – kamarád ho naskenuje a hned tě najde.</li>
       <li><b>⚙ → Profil → Soukromí</b>: můžeš skrýt statistiky beyů a endy, soupeře a vzájemnou bilanci, nebo se schovat ze Standings. Výsledky turnajů zůstávají veřejné.</li>
       <li>Admini mají v kolečku <b>Správu</b>: žádosti o komunity, nahlášený obsah, chyby z telefonů, zálohu a lidi s funkcí. Žlutý odznak ukáže, že něco čeká.</li>
