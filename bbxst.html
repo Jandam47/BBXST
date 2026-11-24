@@ -1608,22 +1608,29 @@ function toggleScanButtons() {
 }
 
 async function toggleFullscreen() {
-  if (!document.fullscreenElement) {
-    await document.documentElement.requestFullscreen()
-    try { await screen.orientation.lock("landscape"); isLandscape = true } catch(e) {}
-  } else {
-    document.exitFullscreen()
+  const el = document.documentElement
+  const fsEl = document.fullscreenElement || document.webkitFullscreenElement
+  if (fsEl) return (document.exitFullscreen || document.webkitExitFullscreen)?.call(document)
+  const req = el.requestFullscreen || el.webkitRequestFullscreen
+  if (!req) {   // iPhone: Safari celou obrazovku pro stránku neumí – jen aplikace na ploše
+    return jAlert(installedApp()
+      ? "Běžíš jako aplikace z plochy – víc přes celou obrazovku to na iPhonu nejde."
+      : `iPhone v prohlížeči celou obrazovku neumí. Přidej si BBXST na plochu (Sdílet → Přidat na plochu) – pak se otevírá přes celou obrazovku. <a href="bbxst.html?install=1">Návod</a>`)
   }
+  try { await req.call(el) } catch (e) { return }
+  try { await screen.orientation.lock("landscape"); isLandscape = true } catch(e) {}
 }
 
-document.addEventListener("fullscreenchange", () => {
-  if (!document.fullscreenElement) {
+const onFsChange = () => {
+  if (!(document.fullscreenElement || document.webkitFullscreenElement)) {
     isLandscape = screen.orientation
       ? screen.orientation.type.startsWith("landscape")
       : window.innerWidth > window.innerHeight
   }
   updateRotateSector()
-})
+}
+document.addEventListener("fullscreenchange", onFsChange)
+document.addEventListener("webkitfullscreenchange", onFsChange)
 
 // Detekce podpory orientation.lock (jen jednou při načtení)
 const orientationLockSupported = !!(screen.orientation && screen.orientation.lock)

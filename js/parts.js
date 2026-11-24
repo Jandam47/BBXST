@@ -132,7 +132,7 @@ export function bindCombos(root, cat, onPick = () => {}) {
     const t = norm(input.value)
     list.innerHTML = items.length ? items.map((r, i) => {
       const viaAlias = t && !r.n.includes(t) && r.na.some(a => a.includes(t))
-      return `<li role="option" data-i="${i}" class="${i === active ? 'on' : ''}">
+      return `<li role="option" data-i="${i}" data-name="${esc(r.name)}" class="${i === active ? 'on' : ''}">
         <span>${esc(r.name)}${viaAlias ? ` <small>(${esc(r.aliases.find(a => norm(a).includes(t)))})</small>` : ''}</span>
         <span class="tags">${cats.length > 1 ? `<em>${LABEL[r.category]}</em>` : ''}${r.abbr ? `<b>${esc(r.abbr)}</b>` : ''}${r.integrated ? '<em>s ratchetem</em>' : ''}</span></li>`
     }).join('') : `<li class="none">Nic takového v seznamu není</li>`
@@ -180,7 +180,10 @@ export function bindCombos(root, cat, onPick = () => {}) {
     const li = e.target.closest('.combo-list li[data-i]')
     if (!li) return
     e.preventDefault()
-    pick(li.closest('[data-combo]'), items[Number(li.dataset.i)])
+    // podle názvu, ne podle indexu – seznam mohl mezitím překreslit jiné pole
+    const wrap = li.closest('[data-combo]')
+    const r = cat.find(wrap.dataset.cats.split(','), li.dataset.name)
+    if (r) pick(wrap, r)
   })
   root.addEventListener('keydown', (e) => {
     const wrap = e.target.closest('[data-combo]')
