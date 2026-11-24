@@ -1673,3 +1673,50 @@ main.tv-land .tv-now .pt { font-size: clamp(10px, min(8cqh, 3cqw), 34px); }
 .cst-row.me { border-color: rgba(0,255,170,.5); }
 .cst-sub { display: flex; flex-wrap: wrap; gap: 2px 10px; }
 .cst-main { font-weight: 700; font-size: 18px; color: var(--bolt); min-width: 44px; text-align: right; }
+
+
+/* ════════════════════════════════════════════════════════════════
+   Vzhled „Bez neonů“ (html[data-theme=mono], js/theme.js): černobílý a šedý.
+   Proměnné do šedé, bez záře; grayscale na <html> doběhne i natvrdo psané barvy
+   (SVG ikony, emoji, inline styly). Filtr na kořeni nemění position: fixed.
+   ════════════════════════════════════════════════════════════════ */
+html[data-theme=mono] {
+  --ink: #000; --ink-2: #0c0c0c; --panel: #111; --panel-2: #181818;
+  --line: #3d3d3d; --line-soft: #242424;
+  --text: #f2f2f2; --muted: #a9a9a9; --faint: #6f6f6f;
+  --cyan: #cfcfcf; --magenta: #8f8f8f; --bolt: #ffffff; --bolt-ink: #000;
+  --blue: #d6d6d6; --red: #8a8a8a; --p1: #e8e8e8; --p2: #9a9a9a;
+  --ok: #e6e6e6; --warn: #b5b5b5;
+  --glow-c: none; --glow-m: none; --glow-y: none;
+  filter: grayscale(1);
+}
+html[data-theme=mono] body {
+  background: #000;
+  background-image: linear-gradient(rgba(255,255,255,.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.03) 1px, transparent 1px);
+  background-size: 32px 32px, 32px 32px;
+}
+html[data-theme=mono] body *, html[data-theme=mono] body *::before, html[data-theme=mono] body *::after {
+  text-shadow: none !important; box-shadow: none !important;
+}
+html[data-theme=mono] body svg *, html[data-theme=mono] body img { filter: none !important; }
+/* výběr musí být vidět i bez barev a záře: obrys */
+html[data-theme=mono] .seg .on, html[data-theme=mono] .seg button.on { outline: 1px solid #fff; outline-offset: -1px; }
+
+/* ── volba vzhledu ── */
+.theme-opts { display: grid; gap: 10px; margin-top: 12px; }
+.theme-opt { display: flex; align-items: center; gap: 14px; width: 100%; padding: 12px 14px; text-align: left; cursor: pointer;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 14px; color: var(--text); font: inherit; }
+.theme-opt.on { border-color: var(--bolt); outline: 1px solid var(--bolt); }
+.theme-opt:focus-visible { outline: 2px solid var(--bolt); outline-offset: 2px; }
+.theme-sw { flex: none; width: 58px; height: 42px; border-radius: 8px; border: 1px solid #333; position: relative; overflow: hidden; }
+.theme-sw.neon { background: #03050b; }
+.theme-sw.neon i { position: absolute; left: 8px; right: 8px; height: 4px; border-radius: 2px; }
+.theme-sw.neon i:nth-child(1) { top: 10px; background: #00e5ff; box-shadow: 0 0 8px #00e5ff; }
+.theme-sw.neon i:nth-child(2) { top: 19px; background: #ff2bd6; box-shadow: 0 0 8px #ff2bd6; right: 22px; }
+.theme-sw.neon i:nth-child(3) { top: 28px; background: #ffe41f; box-shadow: 0 0 8px #ffe41f; right: 30px; }
+.theme-sw.mono { background: #000; }
+.theme-sw.mono i { position: absolute; left: 8px; right: 8px; height: 4px; border-radius: 2px; }
+.theme-sw.mono i:nth-child(1) { top: 10px; background: #e8e8e8; }
+.theme-sw.mono i:nth-child(2) { top: 19px; background: #8a8a8a; right: 22px; }
+.theme-sw.mono i:nth-child(3) { top: 28px; background: #fff; right: 30px; }
+.theme-opt b { display: block; }

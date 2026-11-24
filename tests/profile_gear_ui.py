@@ -56,7 +56,7 @@ with sync_playwright() as p:
 
     # aplikace
     h.click('.prof-gear'); sec(h, 'Aplikace')
-    assert labels(h) == ['Upozornění na telefonu', 'Aplikace na plochu', 'Nápověda'], labels(h)
+    assert labels(h) == ['Upozornění na telefonu', 'Aplikace na plochu', 'Vzhled', 'Nápověda'], labels(h)
     h.screenshot(path=OUT + '304_settings_app.png')
     sec(h, 'Upozornění'); h.wait_for_selector('#push-card h3'); h.screenshot(path=OUT + '305_settings_push.png')
     h.click('.modal [data-close]'); h.wait_for_selector('#push-card', state='detached')
@@ -96,6 +96,29 @@ with sync_playwright() as p:
         h.click('.prof-gear'); sec(h, 'Vstupenka')
         if h.locator('.cw-overlay').count(): h.dispatch_event('.cw-sec[data-i="0"]', 'click')
         h.wait_for_selector('.tk-qr svg'); h.screenshot(path=OUT + '309_ticket.png'); h.click('.modal [data-close]')
+
+    # vzhled bez neonů: přepnout, přežije reload, lišta dole zůstane přilepená
+    h.goto(BASE + '#/me'); h.wait_for_selector('.prof-gear')
+    h.click('.prof-gear'); sec(h, 'Aplikace'); sec(h, 'Vzhled'); h.wait_for_selector('[data-theme-k=mono]')
+    h.click('[data-theme-k=mono]'); h.wait_for_selector('[data-theme-k=mono].on')
+    assert h.evaluate("document.documentElement.dataset.theme") == 'mono'
+    h.screenshot(path=OUT + '312_theme_sheet.png'); h.click('.modal [data-close]')
+    h.reload(); h.wait_for_selector('.prof-gear')
+    assert h.evaluate("document.documentElement.dataset.theme") == 'mono'
+    assert h.evaluate("getComputedStyle(document.querySelector('.nicon .i1')).stroke") == 'rgb(207, 207, 207)'
+    h.screenshot(path=OUT + '313_mono_profile.png')
+    y0 = h.evaluate("document.querySelector('.tabbar').getBoundingClientRect().top")
+    h.mouse.wheel(0, 900); h.wait_for_timeout(300)
+    assert h.evaluate("document.querySelector('.tabbar').getBoundingClientRect().top") == y0, 'tabbar musí zůstat dole'
+    h.goto(BASE + '#/'); h.wait_for_selector('.t-card'); h.screenshot(path=OUT + '314_mono_home.png')
+    tid = sql("select id from tournaments where status = 'finished' and kind = 'tournament' limit 1")
+    h.goto(BASE + f'#/t/{tid}'); h.wait_for_selector('.tabs'); h.wait_for_timeout(500); h.screenshot(path=OUT + '315_mono_tournament.png')
+    h.click('.tabbar a[data-tab=chat]'); h.wait_for_selector('.cw-overlay .cw-sec'); h.screenshot(path=OUT + '316_mono_wheel.png')
+    h.keyboard.press('Escape')
+    h.goto(BASE + '#/me'); h.wait_for_selector('.prof-gear')
+    h.click('.prof-gear'); sec(h, 'Aplikace'); sec(h, 'Vzhled'); h.click('[data-theme-k=neon]')
+    assert h.evaluate("document.documentElement.dataset.theme") is None
+    h.click('.modal [data-close]')
 
     # cizí profil nemá kolečko
     other = sql("select id from profiles where nick = 'Hrac2'")

@@ -17,6 +17,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Chakra+Petch:wght@500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/bbxu.css">
 <script>
+// vzhled bez neonů (js/theme.js) – nastavit dřív, než se stránka vykreslí, ať neprobleskne barevná
+try { if (localStorage.getItem('bbxu_theme') === 'mono') { document.documentElement.dataset.theme = 'mono'; document.querySelector('meta[name=theme-color]').content = '#000000' } } catch (e) {}
 // instalace z profilu: zachytit nabídku prohlížeče hned, než se načte aplikace
 addEventListener('beforeinstallprompt', function (e) { window.__bip = e; dispatchEvent(new Event('bbx:installable')) })
 // BBXU platí jen pro index.html (BBXST se instaluje zvlášť) – holou adresu složky přepsat

@@ -13,6 +13,7 @@ import { adminReports } from '../report.js'
 import { pushStatus, enablePush, disablePush } from '../push.js'
 import { ICONS } from '../icons.js'
 import { openCreateWheel } from '../create-wheel.js'
+import { THEMES, getTheme, setTheme } from '../theme.js'
 
 export async function renderMe(main) {
   if (isLoggedIn()) return render(main, [state.user.id])
@@ -26,8 +27,10 @@ export async function renderMe(main) {
     <a class="btn primary block" style="margin-top:16px" href="#/login/signup">Založit účet</a>
     ${ts.length ? html`<h2>Moje registrace</h2><div class="list">${ts.map(t => html`<a class="li" href="#/t/${t.id}"><span class="grow">${t.name}</span><span class="faint small">${fmtDate(t.starts_at)}</span></a>`)}</div>` : ''}
     <section class="card inst-card" id="inst-card"></section>
+    <button class="btn block" style="margin-top:14px" data-act="theme">Vzhled: ${THEMES.find(x => x[0] === getTheme())[1]}</button>
     <button class="btn ghost block" style="margin-top:24px" data-act="logout">Zapomenout hosta na tomhle zařízení</button>`)
   installCard(main.querySelector('#inst-card'))
+  on(main, 'click', '[data-act=theme]', () => themeSheet(() => renderMe(main)))
   on(main, 'click', '[data-act=logout]', async () => {
     if (!await confirmBox('Ztratíš přístup ke svým QR kódům na tomhle zařízení. Pokračovat?', { ok: 'Ano', danger: true })) return
     await sb.auth.signOut(); location.hash = '#/'
@@ -356,6 +359,7 @@ const OPEN = {
   staff: () => staffSheet(),
   privacy: (p, rerender) => privacySheet(rerender),
   share: (p) => shareSheet(p),
+  theme: () => themeSheet(),
   tickets: async () => {
     const t = await myTickets()
     if (t.length) ticketSheet(t[0]); else toast('Teď nemáš žádnou vstupenku do běžícího turnaje.')
@@ -394,6 +398,7 @@ export async function openSettingsWheel(p, rerender, start) {
     { label: 'Aplikace', icon: 'phone', color: 'var(--magenta)', children: [
       { label: 'Upozornění na telefonu', short: 'Upozornění', icon: 'bell', run: () => box('push-card', pushCard) },
       { label: 'Aplikace na plochu', short: 'Instalace', icon: 'install', run: () => box('inst-card', installCard) },
+      { label: 'Vzhled', icon: 'contrast', run: () => themeSheet() },
       { label: 'Nápověda', icon: 'help', go: '#/help' },
     ] },
     admin,
@@ -457,6 +462,20 @@ function ticketSheet(t) {
     const a = document.createElement('a')
     a.href = qrPng(text, 10); a.download = `bbxu-${t.name}-${t.nick}.png`.replace(/[^\w.-]+/g, '_'); a.click()
   }))
+}
+
+// ── vzhled: Neon / Bez neonů (js/theme.js), platí pro tohle zařízení ──
+function themeSheet(after) {
+  const draw = (m) => mount(m.querySelector('.theme-opts'), THEMES.map(([k, l, d]) => html`
+    <button type="button" class="theme-opt ${getTheme() === k ? 'on' : ''}" data-theme-k="${k}" aria-pressed="${getTheme() === k}">
+      <span class="theme-sw ${k}" aria-hidden="true"><i></i><i></i><i></i></span>
+      <span class="grow"><b>${l}</b><span class="small muted">${d}</span></span></button>`))
+  sheet(html`<h2>Vzhled</h2>
+    <p class="small muted">Platí pro tohle zařízení. BBXST (počítadlo) zůstává, jak je.</p>
+    <div class="theme-opts" role="group" aria-label="Vzhled aplikace"></div>`, (m) => {
+    draw(m)
+    on(m, 'click', '[data-theme-k]', (e, b) => { setTheme(b.dataset.themeK); draw(m); after?.() })
+  })
 }
 
 // ── sdílet profil: odkaz + QR (adresa podle toho, kde web běží) ──

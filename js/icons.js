@@ -71,6 +71,8 @@ export const ICONS = {
   trash: svg(`<path class="i1" d="M5 7h14M9.5 7V4.8h5V7M7 7l.9 12.2a1.5 1.5 0 0 0 1.5 1.3h5.2a1.5 1.5 0 0 0 1.5-1.3L17 7"/><path class="i2" d="M10.4 10.5v6.5M13.6 10.5v6.5"/>`),
   // výstražný trojúhelník
   warn: svg(`<path class="i1" d="M12 3.8 21 19.5H3z"/><path class="i2" d="M12 9.5v4.6M12 16.8h.01"/>`),
+  // půlkruh (vzhled)
+  contrast: svg(`<circle class="i1" cx="12" cy="12" r="8.5"/><path class="i2" d="M12 3.5a8.5 8.5 0 0 1 0 17zM12 7.5h4M12 11h5.5M12 14.5h5M12 18h2.5"/>`),
   // sdílení (tři uzly)
   share: svg(`<circle class="i1" cx="17.5" cy="5.5" r="2.6"/><circle class="i1" cx="6.5" cy="12" r="2.6"/><circle class="i1" cx="17.5" cy="18.5" r="2.6"/><path class="i2" d="m8.8 10.7 6.4-3.9M8.8 13.3l6.4 3.9"/>`),
   // zámek (soukromí)

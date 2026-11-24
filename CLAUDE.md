@@ -215,6 +215,11 @@ Komunikuj **česky**, celé UI je česky.
   Modaly přes `sheet()` se zavřou při změně adresy. Odkazy `#/me?s=backup|reports|errors|requests|staff|privacy|share|tickets`
   otevřou rovnou daný modal (banner zálohy na hlavní stránce). Pod jménem už tlačítka ani admin karty nejsou; host bez účtu má
   instalaci dál přímo na stránce.
+- **Vzhled** (`js/theme.js`): Neon (výchozí) / Bez neonů = `html[data-theme=mono]` – šedé proměnné, bez `box-shadow` /
+  `text-shadow` / filtrů uvnitř, plus `filter: grayscale(1)` na `<html>` (dobarví i natvrdo psané barvy a SVG; na kořeni
+  nerozbije `position: fixed`). Volba v `localStorage bbxu_theme` (jen zařízení), inline skript v hlavičce index.html ji
+  nastaví před vykreslením, mění se v ⚙ → Aplikace → Vzhled (host: tlačítko v profilu). BBXST se nemění.
+  Nové barvy v CSS piš přes proměnné, ať mono funguje bez úprav.
 - **Soukromí** (34): `profiles.privacy` jsonb {beys, h2h, standings} (mění hráč sám přes update profilu). `bbx_private()` →
   `player_bey_stats` a `player_h2h` vrací ostatním prázdno, `players_list` skrytého vynechá (kromě něj samého). Výsledky
   turnajů, pavouk, meta a community standings zůstávají veřejné.
