@@ -115,19 +115,19 @@ export async function render(main, [id]) {
     clearTimeout(flashT); flashT = setTimeout(() => el.classList.remove('on'), 4500)
   }
 
-  // ── jedna strana arény: deck hráče; zahrané v aktuální sadě šedě s výsledkem, zbylé svítí ──
+  // ── jedna strana arény: zahrané beye aktuální sady v řádcích (obrys zelený = výhra, červený = prohra,
+  //    šedý = remíza), pod nimi „pool“ = beye z decku, které v sadě ještě nehrály (pořadí se neurčuje dopředu)
   function sideBeys(set, s, reg) {
     const deck = (decks.get(reg) || []).filter(Boolean)
     const played = set.map(b => b[`p${s}_bey`])
-    const rows = set.map((b, i) => {
-      const res = !b.slot ? html`<span class="lv-r d">R</span>`
-        : b.slot === s ? html`<span class="lv-r w">${ptLabel(b)}</span>` : html`<span class="lv-r l">−</span>`
-      return html`<li class="done ${i === set.length - 1 ? 'last' : ''}"><span class="lv-bn">${b[`p${s}_bey`] || '—'}</span>${res}</li>`
+    const rows = set.map(b => {
+      const won = b.slot === s, draw = !b.slot
+      const res = draw ? html`<span class="lv-r d">R</span>` : won ? html`<span class="lv-r w">${ptLabel(b)}</span>` : html`<span class="lv-r l">−</span>`
+      return html`<li class="${draw ? 'd' : won ? 'w' : 'l'}"><span class="lv-bn">${b[`p${s}_bey`] || '—'}</span>${res}</li>`
     })
-    const left = deck.filter(x => !played.includes(x))
-    for (const x of left) rows.push(html`<li class="next"><span class="lv-bn">${x}</span></li>`)
-    for (let i = rows.length; i < 3; i++) rows.push(html`<li class="hid"><span class="lv-bn">?</span></li>`)
-    return html`<ol class="lv-beys">${rows}</ol>`
+    const pool = deck.filter(x => !played.includes(x))
+    return html`${rows.length ? html`<ol class="lv-beys">${rows}</ol>` : ''}
+      ${pool.length ? html`<div class="lv-pool"><span class="lv-pool-h">pool</span><div class="lv-pool-b">${pool.map(x => html`<span>${x}</span>`)}</div></div>` : ''}`
   }
   // endy strany v aktuální hře
   function sideFin(battles, s) {

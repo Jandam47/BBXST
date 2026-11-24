@@ -57,8 +57,9 @@ Komunikuj **česky**, celé UI je česky.
   rozehraná hra pod živým skóre (`load(id, { hist: false })`). 7× +1 se vejde na řádek i na 360 px.
 - **Živě** (`js/views/live.js`, `#/t/<id>/live`, tlačítko Živě vedle TV rozpis, bez přihlášení): přenos z arén pro
   diváky doma. Aréna: hráči, skóre, endy strany (X/B/O/S), deck obou hráčů (`live_decks` z 27, až po startu – pořadí
-  si hráči určují na začátku sady a nemění ho): v aktuální sadě (souboje po 3) zahrané šedě s výsledkem (zelené
-  +body / červené − / R), zbylé svítí; čekající zápas ukáže oba decky. Historie bodů, fronta. Sledovaní hráči
+  si hráči určují na začátku sady a nemění ho): v aktuální sadě (souboje po 3) zahrané v řádcích s výsledkem
+  (obrys zelený = výhra, červený = prohra, šedý = remíza), pod nimi „pool“ = zbytek decku (bey se určuje až po
+  souboji, pořadí není dané); čekající zápas ukáže oba decky jako pool. Historie bodů, fronta. Sledovaní hráči
   (`localStorage bbxu_follow:<turnaj>`; s účtem tlačítko „Upozornit na telefon“ = `live_follow_set` / `live_follow_list`
   + push z triggeru `bbx_push_follow`: jde na arénu, výsledek). Feed „Dění“ (zaškrtávací arény, `bbxu_live_feed_off:<turnaj>`, sledovaní hráči vždy) + vyskakovací `.lv-flash` (rozdíl proti
   minulému načtení), statistiky turnaje v rozbalovacím okénku (endy, nejúspěšnější beye, nejvíc Xtreme / bodů),

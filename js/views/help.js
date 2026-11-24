@@ -80,7 +80,7 @@ const S = [
     </ul>`],
   ['live', 'Živě a TV rozpis', html`
     <ul>
-      <li><b>Živě</b> (tlačítko v záhlaví turnaje) je přenos pro diváky – funguje i bez přihlášení, klidně na TV doma. U každé arény: skóre, endy obou stran a decky hráčů. Beye zahrané v aktuální sadě jsou šedé s výsledkem (<i>+body</i> zeleně, <i>−</i> červeně, <i>R</i> remíza), zbylé svítí.</li>
+      <li><b>Živě</b> (tlačítko v záhlaví turnaje) je přenos pro diváky – funguje i bez přihlášení, klidně na TV doma. U každé arény: skóre, endy obou stran a decky hráčů. Beye zahrané v aktuální sadě jsou v řádcích – zelený obrys = vyhrál, červený = prohrál, šedý = remíza. Pod nimi je <b>pool</b>: beye, které v sadě ještě nehrály (pořadí se dopředu neví).</li>
       <li><b>★ Sledovat hráče</b>: vybraní hráči jsou nahoře – kde hrají, proti komu a jak dopadli. S účtem si zapneš <b>Upozornit na telefon</b>: přijde ti, když sledovaný jde na arénu a jak zápas skončil.</li>
       <li><b>Dění</b> ukazuje každý bod a výsledek, jak padají; zaškrtávacími okénky vybereš, ze kterých arén. Velké věci (Xtreme, výsledek sledovaného) vyskočí přes obrazovku.</li>
       <li><b>🎬 Režie</b> ukáže jednu arénu přes celou obrazovku. Arénu přepneš v liště nahoře, <b>AUTO</b> sama skáče tam, kde se něco děje.</li>

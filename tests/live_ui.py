@@ -42,11 +42,12 @@ with sync_playwright() as p:
     assert pg.inner_text(card + ' .lv-sc').replace('\n', '').replace(' ', '') == '3:3', pg.inner_text(card + ' .lv-sc')
     left = pg.evaluate(f"[...document.querySelectorAll('{card} .lv-set > div:first-child li')].map(l => [l.className, l.innerText.replace(/\\n/g,' ')])")
     right = pg.evaluate(f"[...document.querySelectorAll('{card} .lv-set > div:last-child li')].map(l => [l.className, l.innerText.replace(/\\n/g,' ')])")
-    # 4. souboj = 2. sada: zahraný bey šedě s výsledkem, zbylé dva z decku svítí
-    assert left[0] == ['done last', f'{D1[1]} +2 B'], left
-    assert [x[0] for x in left[1:]] == ['next', 'next'] and {x[1] for x in left[1:]} == {D1[0], D1[2]}, left
-    assert right[0][0] == 'done last' and '−' in right[0][1], right
-    assert len(right) == 3, right
+    # 4. souboj = 2. sada: zahraný bey v řádku (výhra = zelený obrys, prohra = červený), zbytek decku v poolu
+    assert left == [['w', f'{D1[1]} +2 B']], left
+    assert right[0][0] == 'l' and '−' in right[0][1] and len(right) == 1, right
+    pool1 = pg.evaluate(f"[...document.querySelectorAll('{card} .lv-set > div:first-child .lv-pool-b span')].map(x => x.textContent)")
+    assert set(pool1) == {D1[0], D1[2]}, pool1
+    assert pg.inner_text(f'{card} .lv-set > div:first-child .lv-pool-h') == 'pool'
     assert 'sada 2' in pg.inner_text(card + ' .lv-setno')
     fin = pg.inner_text(card + ' .lv-p.l .lv-fin').replace('\n', ' ')
     assert 'B' in fin and 'S' in fin, fin

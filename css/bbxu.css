@@ -1428,12 +1428,18 @@ main.tv-land .tv-now .pt { font-size: clamp(10px, min(8cqh, 3cqw), 34px); }
 .lv-set > div:last-child .lv-beys li { flex-direction: row-reverse; }
 .lv-bn { min-width: 0; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .lv-set > div:last-child .lv-bn { text-align: right; }
-.lv-beys li.done .lv-bn { color: var(--faint); }
-.lv-beys li.done { background: rgba(255,255,255,.02); }
-.lv-beys li.next .lv-bn { color: var(--text); font-weight: 600; }
-.lv-beys li.next { background: rgba(0,229,255,.07); }
-.lv-beys li.last .lv-bn { color: var(--muted); }
-.lv-beys li.hid { border: 1px dashed rgba(255,255,255,.14); background: none; color: var(--faint); }
+.lv-beys li { color: var(--text); font-weight: 600; border: 1.5px solid transparent; }
+.lv-beys li.w { border-color: var(--win); background: rgba(46,240,168,.06); }
+.lv-beys li.l { border-color: var(--loss); background: rgba(255,77,109,.06); }
+.lv-beys li.d { border-color: rgba(255,255,255,.3); }
+/* pool: beye, které v sadě ještě nehrály */
+.lv-pool { margin-top: 6px; }
+.lv-pool-h { display: block; font-size: clamp(10px, .7vw, 13px); color: var(--faint); letter-spacing: .06em; margin-bottom: 3px; }
+.lv-pool-b { display: flex; flex-wrap: wrap; gap: 4px; }
+.lv-pool-b span { font-size: clamp(11px, .85vw, 18px); color: var(--muted); padding: .15em .5em; border-radius: 6px; border: 1px dashed rgba(255,255,255,.18); max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lv-set > div:last-child .lv-pool { text-align: right; }
+.lv-set > div:last-child .lv-pool-b { justify-content: flex-end; }
+.lv-dir .lv-pool-b span { font-size: clamp(13px, 1.3vw, 26px); }
 .lv-r { flex: none; font-family: var(--display); font-weight: 700; font-size: .9em; padding: 0 .4em; border-radius: 5px; font-variant-numeric: tabular-nums; }
 .lv-r.w { color: var(--win); background: rgba(46,240,168,.14); }
 .lv-r.l { color: var(--loss); background: rgba(255,77,109,.14); min-width: 1.6em; text-align: center; }
