@@ -52,6 +52,7 @@ const S = [
       <li><b>Deathmatch:</b> každý s každým jednou.</li>
       <li><b>Volný los</b> dostane nejhůř umístěný hráč, který ho ještě neměl – počítá se jako výhra 7:0.</li>
       <li><b>Top cut</b> je double elimination: po první prohře hraješ dál v pavouku poražených.</li>
+      <li>Záložka <b>Hráči</b> dole otevře kolečko: <b>Standings</b> (všichni hráči podle ratingu), Komunity, Ligy a – když jsi v komunitě – <b>Trénink</b> (standings jen z komunitních tréninků).</li>
     </ul>`],
   ['league', 'Ligy', html`
     <p>Ligové turnaje se po skončení sčítají do tabulky ligy (Hráči → Ligy). Výchozí bodování:</p>
@@ -104,6 +105,7 @@ const S = [
       <li><b>SETUP</b>: mód 3v3 / 1v1, body na hru, tournament mode (bey se v sadě neopakuje) a sestavy. Podržením beye upravíš jeho díly – ratchet i bit se vybírají na kolečku jako v registraci.</li>
       <li>Tahací <b>RESET</b> začne novou hru, odehrané souboje zůstanou v historii. Trénovat jde i proti botovi.</li>
       <li>Trénink se nepočítá do ratingu. Comba a historie najdeš v tréninku i na stránce komunity.</li>
+      <li><b>Standings z tréninků</b> (Hráči → Trénink, nebo odkaz na stránce komunity) vidí jen členové komunity: pořadí jen ze soubojů na jejích trénincích – výhry, úspěšnost nebo body, za celé období, 90 nebo 30 dní.</li>
     </ul>`],
   ['chat', 'Komunikace: chat, ankety, dotazy', html`
     <ul>

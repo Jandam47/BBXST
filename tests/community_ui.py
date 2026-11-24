@@ -48,8 +48,8 @@ with sync_playwright() as p:
 
     # ── organizátor založí komunitu ──
     c1, org = ctx(b, 'org@test.cz')
-    go(org, '#/players'); org.wait_for_selector('.people-tabs')
-    org.click('.people-tabs >> text=Komunity'); org.wait_for_selector('[data-act=new]')
+    org.click('.tabbar a[data-tab=players]'); org.wait_for_selector('.cw-overlay .cw-sec')
+    org.click('.cw-sec[data-i="1"]'); org.wait_for_selector('[data-act=new]')     # kolečko Hráči → Komunity
     org.click('[data-act=new]'); org.wait_for_selector('#f-comm')
     org.fill('#f-comm [name=name]', 'BBX Pardubice')
     org.select_option('#f-comm [name=region]', 'Pardubický')

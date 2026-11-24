@@ -1641,3 +1641,10 @@ main.tv-land .tv-now .pt { font-size: clamp(10px, min(8cqh, 3cqw), 34px); }
 .fb-reply p { margin: 2px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
 .fb-newtag { color: #00ffaa; }
 .fb-answer { display: grid; gap: 8px; margin-top: 8px; }
+
+/* standings komunitního tréninku */
+.cst-filters { gap: 8px; margin: 12px 0; }
+.cst-rank { width: 26px; text-align: right; color: var(--faint); font-variant-numeric: tabular-nums; }
+.cst-row.me { border-color: rgba(0,255,170,.5); }
+.cst-sub { display: flex; flex-wrap: wrap; gap: 2px 10px; }
+.cst-main { font-weight: 700; font-size: 18px; color: var(--bolt); min-width: 44px; text-align: right; }

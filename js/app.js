@@ -33,6 +33,7 @@ const routes = [
   [/^\/players$/, Players.render, 'players'],
   [/^\/communities$/, Communities.renderList, 'players'],
   [/^\/c\/([0-9a-f-]{36})$/, Communities.renderDetail, 'players'],
+  [/^\/c\/([0-9a-f-]{36})\/standings$/, Communities.renderStandings, 'players'],
   [/^\/leagues$/, Leagues.renderList, 'players'],
   [/^\/l\/([0-9a-f-]{36})$/, Leagues.renderDetail, 'players'],
   [/^\/meta$/, Meta.render, 'meta'],
@@ -235,6 +236,11 @@ async function boot() {
     history.replaceState(null, '', location.pathname + '#/')
   }
   window.addEventListener('hashchange', route)
+  // záložka Hráči: kolečko Standings · Komunity · Ligy · Trénink (bez přechodu)
+  document.querySelector('.tabbar a[data-tab="players"]')?.addEventListener('click', (e) => {
+    e.preventDefault()
+    Players.openPlayersWheel()
+  })
   // záložka Komunikace: kolečko nad aktuální stránkou (bez přechodu)
   document.querySelector('.tabbar a[data-tab="chat"]')?.addEventListener('click', (e) => {
     e.preventDefault()

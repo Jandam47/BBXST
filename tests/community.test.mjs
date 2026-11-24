@@ -221,6 +221,21 @@ const past = det.trainings.find(t => t.id === tid)
 assert.equal(past.status, 'finished'); assert.ok(past.finished_at && past.battles > 0)
 step('skončený trénink: historie celého tréninku, comba podle majitele, historie tréninků v komunitě')
 
+// ── standings komunitního tréninku (31) ──
+const stg = await one(pl[1], 'community_standings', [cid])
+assert.equal(stg.community.id, cid); assert.ok(Number(stg.trainings) >= 1)
+assert.ok(stg.players.length >= 2 && stg.players.every(p => p.user_id), 'jen hráči s účtem, bez botů')
+const truth = (await db.query(`select r.user_id, count(*)::int n from public.bbx_training_battles(null, $1) x
+  join registrations r on r.id = x.reg_id where not r.is_bot and r.user_id is not null group by r.user_id`, [cid])).rows
+for (const t of truth) assert.equal(stg.players.find(p => p.user_id === t.user_id).battles, t.n)
+for (const p of stg.players) assert.equal(p.battles, p.wins + p.draws + p.losses)
+assert.ok(stg.players.every((p, i, a) => !i || a[i - 1].wins >= p.wins), 'řazení podle výher')
+assert.equal((await one(pl[1], 'community_standings', [cid, new Date(Date.now() + 864e5).toISOString()])).players.length, 0, 'filtr období')
+await fails(outsider, 'select community_standings($1)', [cid], /členové/)
+await fails(null, 'select community_standings($1)', [cid])
+assert.ok((await one(boss, 'community_standings', [cid])).players.length, 'admin vidí')
+step('standings z tréninků: jen členové, jen účty, počty sedí, filtr období')
+
 // ── zamítnutí ─────────────────────────────────────────────────────
 const cid2 = await one(org, 'community_create', ['Druhá ' + sfx])
 await as(boss, 'select community_review($1, false, $2)', [cid2, 'Duplicitní'])

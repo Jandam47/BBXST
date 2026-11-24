@@ -28,8 +28,8 @@ with sync_playwright() as p:
 
     # ── hlavní admin založí ligu ──
     adm = ctx(b, 'adam@test.cz')
-    go(adm, '/players', '.people-tabs')
-    adm.click('.people-tabs a[href="#/leagues"]'); adm.wait_for_selector('[data-act=new]')
+    adm.click('.tabbar a[data-tab=players]'); adm.wait_for_selector('.cw-overlay .cw-sec')
+    adm.click('.cw-sec[data-i="2"]'); adm.wait_for_selector('[data-act=new]')     # kolečko Hráči → Ligy
     adm.click('[data-act=new]'); adm.wait_for_selector('#f-league')
     adm.fill('#f-league [name=name]', 'Pardubická liga – zima 2026')
     adm.fill('#f-league [name=description]', 'Ligové turnaje v Pardubicích od listopadu do února. Nejlepší tři dostanou pohár.')

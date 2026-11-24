@@ -5,7 +5,6 @@
 // ════════════════════════════════════════════════════════════════
 import { rpc, state, errMsg } from '../supa.js'
 import { html, mount, on, formData, toast, modal, busy, confirmBox, fmtDate, plural } from '../ui.js'
-import { peopleTabs } from './communities.js'
 import { roleLevel } from '../core.js'
 
 export const SCORE_KEYS = [['participation', 'Účast'], ['topcut', 'Postup do top cutu'], ['p1', '1. místo'], ['p2', '2. místo'], ['p3', '3. místo'], ['p4', '4. místo']]
@@ -30,7 +29,6 @@ export async function renderList(main, _p, ctx) {
   </a>`
   const active = list.filter(l => l.active), old = list.filter(l => !l.active)
   mount(main, html`
-    ${peopleTabs('leagues')}
     <div class="row between wrap" style="gap:12px;margin-top:14px">
       <h1>Ligy</h1>
       ${canCreate ? html`<button class="btn primary sm" data-act="new">+ Liga</button>` : ''}
@@ -75,14 +73,13 @@ export async function renderDetail(main, [id], ctx) {
   const load = async () => { d = await rpc('league_detail', { p_id: id }) }
   await load()
   if (!ctx.isCurrent()) return
-  if (!d) { mount(main, html`${peopleTabs('leagues')}<div class="empty" style="margin-top:14px">Liga neexistuje.</div>`); return }
+  if (!d) { mount(main, html`<div class="empty" style="margin-top:14px">Liga neexistuje.</div>`); return }
 
   const draw = () => {
     const l = d.league, st = d.standings
     const manage = d.can.edit || d.can.organizers
     const me = state.user?.id
     mount(main, html`
-      ${peopleTabs('leagues')}
       <header class="t-head lg-head" style="margin-top:14px">
         <span class="pill ${l.active ? 'live' : ''}">${l.active ? 'Liga' : 'Archiv'}</span>
         <h1 style="margin-top:6px">${l.name}</h1>

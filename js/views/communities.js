@@ -10,11 +10,6 @@ import { REGIONS } from '../core.js'
 const fmtMonth = (d) => new Date(d).toLocaleDateString('cs-CZ', { month: 'short', year: '2-digit' })
 export const COMM_ROLE = { leader: 'Community leader', sub: 'Sub-community leader', member: 'Člen' }
 
-// přepínač Hráči | Komunity (sdílí ho i seznam hráčů)
-export const peopleTabs = (on_) => html`<nav class="tabs people-tabs" aria-label="Hráči, komunity a ligy">
-  <a href="#/players" class="${on_ === 'players' ? 'on' : ''}">Hráči</a>
-  <a href="#/communities" class="${on_ === 'communities' ? 'on' : ''}">Komunity</a>
-  <a href="#/leagues" class="${on_ === 'leagues' ? 'on' : ''}">Ligy</a></nav>`
 
 export async function renderList(main, _p, ctx) {
   const list = await rpc('community_list')
@@ -24,8 +19,7 @@ export async function renderList(main, _p, ctx) {
   const mineOther = list.filter(c => c.status !== 'approved')
 
   mount(main, html`
-    ${peopleTabs('communities')}
-    <div class="row between wrap" style="gap:12px;margin-top:14px">
+    <div class="row between wrap" style="gap:12px;margin-top:4px">
       <h1>Komunity</h1>
       ${canCreate ? html`<button class="btn primary sm" data-act="new">+ Komunita</button>` : ''}
     </div>
@@ -120,8 +114,7 @@ export async function renderDetail(main, [id], ctx) {
     const open = d.trainings.filter(t => t.status === 'registration')
     const past = d.trainings.filter(t => t.status !== 'registration')
     mount(main, html`
-      ${peopleTabs('communities')}
-      <header class="t-head" style="margin-top:14px">
+      <header class="t-head" style="margin-top:4px">
         ${c.status !== 'approved' ? html`<span class="pill ${c.status === 'pending' ? 'live' : ''}">${c.status === 'pending' ? 'Čeká na schválení' : 'Zamítnuto'}</span>` : ''}
         <h1 style="margin-top:6px">${c.name}</h1>
         <div class="meta">${c.region ? html`<span>📍 ${c.region}</span>` : ''}<span>${plural(d.members.length, 'člen', 'členové', 'členů')}</span>
@@ -165,7 +158,7 @@ export async function renderDetail(main, [id], ctx) {
             <div class="small faint">${fmtDate(when)}${t.location ? ` · ${t.location}` : ''} · ${plural(Number(t.players), 'hráč', 'hráči', 'hráčů')} · ${plural(Number(t.battles), 'souboj', 'souboje', 'soubojů')}</div></div>
           <span class="faint" aria-hidden="true">›</span></a>` })}</div>`
         : html`<div class="empty">Skončené tréninky se uloží sem – s historií soubojů a comby.</div>`}
-      <p class="small" style="margin-top:8px"><a href="#/meta?c=${c.id}">Meta komunity z tréninků →</a></p>` : ''}
+      <p class="small" style="margin-top:8px">${member || d.is_admin ? html`<a href="#/c/${c.id}/standings">Standings z tréninků</a> · ` : ''}<a href="#/meta?c=${c.id}">Meta komunity z tréninků →</a></p>` : ''}
 
       <h2>Členové</h2>
       <div class="list">${d.members.map(m => html`<div class="li comm-mem"><span class="av">${m.avatar || '👤'}</span>
@@ -238,4 +231,57 @@ export async function adminRequests(box) {
     })
   })
   draw()
+}
+
+// ── Standings komunitního tréninku (31): jen souboje z tréninků komunity, jen pro členy ──
+const SINCE = [['all', 'Vše', null], ['90', '90 dní', 90], ['30', '30 dní', 30]]
+const SORTS = {
+  wins: (a, b) => b.wins - a.wins || (b.points - b.points_lost) - (a.points - a.points_lost) || a.battles - b.battles,
+  rate: (a, b) => (b.win_rate || 0) - (a.win_rate || 0) || b.battles - a.battles,
+  points: (a, b) => (b.points - b.points_lost) - (a.points - a.points_lost) || b.points - a.points,
+}
+export async function renderStandings(main, [id], ctx) {
+  let since = 'all', sort = 'wins', d
+  const load = async () => {
+    const days = SINCE.find(x => x[0] === since)[2]
+    d = await rpc('community_standings', { p_community: id, p_since: days ? new Date(Date.now() - days * 864e5).toISOString() : null })
+  }
+  try { await load() } catch (e) {
+    if (!ctx.isCurrent()) return
+    return mount(main, html`<div class="empty"><h2>Standings tréninku</h2><p class="muted">${errMsg(e)}</p>
+      <a class="btn" href="#/c/${id}">Na stránku komunity</a></div>`)
+  }
+  if (!ctx.isCurrent()) return
+  const draw = () => {
+    const list = [...d.players].sort(SORTS[sort])
+    const me = state.user?.id
+    mount(main, html`
+      <a class="small" href="#/c/${id}">← ${d.community.name}</a>
+      <h1 style="margin-top:6px">Standings z tréninků</h1>
+      <p class="muted small" style="margin-top:4px">Jen souboje z komunitních tréninků · ${plural(Number(d.trainings), 'trénink', 'tréninky', 'tréninků')} · ${plural(list.length, 'hráč', 'hráči', 'hráčů')}</p>
+      <div class="row wrap cst-filters">
+        <div class="seg sm" role="radiogroup" aria-label="Období">${SINCE.map(([k, l]) => html`<button type="button" data-since="${k}" class="${since === k ? 'on' : ''}" role="radio" aria-checked="${since === k}">${l}</button>`)}</div>
+        <div class="seg sm" role="radiogroup" aria-label="Řadit podle">${[['wins', 'Výhry'], ['rate', 'Úspěšnost'], ['points', 'Body']].map(([k, l]) => html`<button type="button" data-sort="${k}" class="${sort === k ? 'on' : ''}" role="radio" aria-checked="${sort === k}">${l}</button>`)}</div>
+      </div>
+      ${list.length ? html`<div class="list cst-list">${list.map((p, i) => html`
+        <a class="li cst-row ${p.user_id === me ? 'me' : ''}" href="#/p/${p.user_id}">
+          <span class="cst-rank num">${i + 1}</span>
+          <span class="av">${p.avatar || '👤'}</span>
+          <div class="grow" style="min-width:0">
+            <div class="ellipsis" style="font-weight:600">${p.nick}${p.user_id === me ? html`<span class="faint"> (ty)</span>` : ''}</div>
+            <div class="small muted cst-sub"><span title="výhry – remízy – prohry">${p.wins}–${p.draws}–${p.losses}</span>
+              <span>body ${p.points}:${p.points_lost}</span>${p.xtreme ? html`<span>X ${p.xtreme}</span>` : ''}
+              <span>${plural(Number(p.trainings), 'trénink', 'tréninky', 'tréninků')}</span></div>
+          </div>
+          <span class="cst-main num">${sort === 'rate' ? `${p.win_rate ?? 0} %` : sort === 'points' ? (p.points - p.points_lost > 0 ? '+' : p.points - p.points_lost < 0 ? '−' : '') + Math.abs(p.points - p.points_lost) : p.wins}</span>
+        </a>`)}</div>`
+        : html`<div class="empty">Za tohle období tu nejsou žádné souboje z tréninků.</div>`}
+      <p class="small faint" style="margin-top:10px">Počítá se každý souboj zapsaný v BBXST na trénincích komunity (bez botů). V–R–P = výhry, remízy, prohry; X = Xtreme výhry.</p>`)
+  }
+  draw()
+  on(main, 'click', '[data-sort]', (e) => { sort = e.target.closest('[data-sort]').dataset.sort; draw() })
+  on(main, 'click', '[data-since]', async (e) => {
+    since = e.target.closest('[data-since]').dataset.since
+    try { await load(); if (ctx.isCurrent()) draw() } catch (err) { toast(errMsg(err), 'err') }
+  })
 }
