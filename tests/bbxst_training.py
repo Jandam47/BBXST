@@ -98,8 +98,10 @@ with sync_playwright() as p:
     print('battles:', rows)
     assert 'xtreme' in rows and ':2:over:' in rows and 'Dran Sword' in rows
     # remíza
-    a.click('#trainBar .drawBtn'); a.wait_for_selector('#pickOverlay:not(.hidden)')
-    a.locator('#pickLeft .beyPick').first.click(); a.locator('#pickRight .beyPick').first.click()
+    assert a.evaluate('tr.match.settings.tourney') is True, 'tournament mode je v tréninku výchozí'
+    a.click('#trainBar .drawBtn'); a.wait_for_timeout(500)
+    if a.locator('#pickOverlay:not(.hidden)').count():          # tournament mode: poslední bey sady se doplní sám
+        a.locator('#pickLeft .beyPick:not([disabled])').first.click(); a.locator('#pickRight .beyPick:not([disabled])').first.click()
     a.wait_for_timeout(800)
     assert sql(f"select count(*) from training_battles where match_id = '{mid}' and scorer_slot = 0") == '1'
     # revert

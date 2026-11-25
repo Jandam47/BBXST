@@ -117,7 +117,7 @@ await fails(pl[2], 'select training_state($1)', [mid], /tvoje/)
 await fails(pl[1], `select training_battle($1, gen_random_uuid(), 1, 2, 'burst', 0, 0)`, [mid], /aktivní/)
 await as(pl[0], 'select training_respond($1, true)', [mid])
 let st = await one(pl[0], 'training_state', [mid])
-assert.equal(st.status, 'active'); assert.equal(st.me, 2); assert.equal(st.settings.mode, '3v3'); assert.equal(st.settings.win, 7)
+assert.equal(st.status, 'active'); assert.equal(st.me, 2); assert.equal(st.settings.mode, '3v3'); assert.equal(st.settings.win, 7) ; assert.equal(st.settings.tourney, true, 'tournament mode je výchozí')
 assert.equal(st.settings.lineup.p1.length, 3); assert.equal(st.settings.lineup.p2[0].name, 'Dran Sword 3-60F')
 // nastavení: do 5 bodů, 1v1
 st = await one(pl[1], 'training_setup', [mid, JSON.stringify({ mode: '1v1', win: 5 })])
