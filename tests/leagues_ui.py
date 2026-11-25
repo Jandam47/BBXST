@@ -33,10 +33,13 @@ with sync_playwright() as p:
     adm.click('[data-act=new]'); adm.wait_for_selector('#f-league')
     adm.fill('#f-league [name=name]', 'Pardubická liga – zima 2026')
     adm.fill('#f-league [name=description]', 'Ligové turnaje v Pardubicích od listopadu do února. Nejlepší tři dostanou pohár.')
+    assert adm.eval_on_selector('#f-league [name=region]', 'e => e.required'), 'liga má kraj povinný'
+    adm.select_option('#f-league [name=region]', 'Pardubický')
     adm.screenshot(path=OUT + '220_league_form.png')
     adm.click('#f-league button.primary'); adm.wait_for_selector('.lg-head h1')
     lid = adm.url.split('#/l/')[1]
-    assert sql(f"select name from leagues where id = '{lid}'") == 'Pardubická liga – zima 2026'
+    assert sql(f"select name || '/' || region from leagues where id = '{lid}'") == 'Pardubická liga – zima 2026/Pardubický'
+    assert 'Pardubický' in adm.inner_text('.lg-head .rg-tag')
     assert 'Tabulka se naplní' in adm.inner_text('#lg-body')
 
     # ── správce ligy ──
@@ -54,11 +57,25 @@ with sync_playwright() as p:
     zid = sql("select id from tournaments where name = 'Zimní Pardubice Open'")
     go(org, f'/t/{zid}/edit', '.lg-pick select')
     org.select_option('.lg-pick select', lid)
+    # kraj určí liga – select se zamkne
+    org.wait_for_function("() => document.querySelector('#f-t [name=region]').disabled")
+    assert org.eval_on_selector('#f-t [name=region]', 'e => e.value') == 'Pardubický' and org.is_visible('#region-hint')
+    org.select_option('.lg-pick select', '')
+    assert not org.eval_on_selector('#f-t [name=region]', 'e => e.disabled')
+    org.select_option('.lg-pick select', lid)
     org.locator('.lg-pick').scroll_into_view_if_needed()
     org.screenshot(path=OUT + '222_editor_league.png')
     org.click('#f-t button.primary.block'); org.wait_for_selector(f'.t-head .lg-tag[href="#/l/{lid}"]')
-    assert sql(f"select league_id from tournaments where id = '{zid}'") == lid
+    assert sql(f"select league_id || '/' || region from tournaments where id = '{zid}'") == lid + '/Pardubický'
+    assert 'Pardubický' in org.inner_text('.t-head .rg-tag')
     go(org, '/', '.t-card .lg-tag')
+    # filtr kraje na hlavní stránce
+    org.select_option('#t-region', 'Pardubický')
+    cards = org.locator('.t-card').count()
+    assert cards >= 1 and org.locator('.t-card .rg-tag').count() == cards
+    org.select_option('#t-region', 'Zlínský'); org.wait_for_selector('[data-act=all-regions]')
+    org.click('[data-act=all-regions]'); org.wait_for_selector('.t-card')
+    assert org.eval_on_selector('#t-region', 'e => e.value') == ''
     org.screenshot(path=OUT + '223_home_league_tag.png', clip={'x': 0, 'y': 0, 'width': 390, 'height': 600})
     # nový turnaj z ligy má ligu předvybranou
     go(org, f'/l/{lid}', '.lg-head')

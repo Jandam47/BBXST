@@ -80,6 +80,7 @@ const S = [
       <li>U každého hráče je i bilance: zápasy výhry–prohry a body <b>+</b> získané / <b>−</b> ztracené ve všech ligových zápasech. Volné losy se nepočítají.</li>
       <li>Při shodě bodů rozhoduje počet výher, pak rozdíl bodů.</li>
       <li>Ligu zakládá hlavní admin a jmenuje jejího správce. Ligové turnaje smí zakládat správce, organizátoři, které do ligy přidá, a admini.</li>
+      <li>Každá liga patří ke kraji. Ligový turnaj dostane kraj ligy sám.</li>
     </ul>`],
   ['judge', 'Pro judge (BBXST)', html`
     <ul>
@@ -103,6 +104,7 @@ const S = [
   ['org', 'Pro organizátory', html`
     <ul>
       <li>Akci založíš na hlavní stránce tlačítkem <b>Založ akci</b> → kolečko: Casual (trénink, meeting), Fashion, Turnaje (Deathmatch, Klasika 3v3, ligový turnaj).</li>
+      <li>U turnaje vyplň <b>kraj</b> (u ostatních akcí je nepovinný). Hráči si pak na hlavní stránce vyfiltrují akce ze svého kraje.</li>
       <li><b>Kontrola registrací</b> (záložka Hráči): načti QR kód nebo klepni na hráče, odškrtej tři beyblady a <i>Potvrdit registraci</i>. Kdo nepřišel → <i>Vyřadit</i>. Zelená = zkontrolováno, žlutá = čeká, červená = vyřazen.</li>
       <li>Turnaj jde spustit, až jsou všichni zkontrolovaní. Výjimečně <i>⚠ Spustit bez kontroly registrací</i>.</li>
       <li><b>Vstupné:</b> v editoru turnaje zaškrtni <i>Platí se vstupné</i>, napiš částku a vyber, kdo ho vybírá – pokladníka (funkci mu dá admin v profilu) nebo sebe jako organizátora. Při kontrole registrace pak zaškrtneš <i>Zaplatil vstupné</i>. Pokladník vidí v záložce Hráči jen vstupné: načte QR kód nebo klepne na hráče a zaškrtne platbu. Nahoře vidí, kolik hráčů zaplatilo a kolik je vybráno.</li>

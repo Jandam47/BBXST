@@ -3,7 +3,7 @@
 // ════════════════════════════════════════════════════════════════
 import { sb, state, rpc, q, errMsg, isLoggedIn, canManage } from '../supa.js'
 import { html, mount, on, formData, toast, busy, statusPill, fmtDate, fmtTime, toLocalInput, fromLocalInput, plural, EVENT_TYPES, kindLabel } from '../ui.js'
-import { DEFAULT_BO, FORMATS } from '../core.js'
+import { DEFAULT_BO, FORMATS, REGIONS } from '../core.js'
 import { trainingForm } from './communities.js'
 import { backupDue } from '../admin.js'
 import { createTree, openCreateWheel } from '../create-wheel.js'
@@ -20,6 +20,9 @@ export async function renderList(main, _p, ctx) {
   if (!ctx.isCurrent()) return
   const mine = new Set(state.myRegs.map(r => r.tournament_id))
   let query = '', filter = 'upcoming'
+  let region = ''
+  try { region = localStorage.getItem('bbxu_home_region') || '' } catch {}
+  if (region && !REGIONS.includes(region)) region = ''
 
   // banner „tvůj zápas“ u probíhajícího turnaje
   const runningMine = all.filter(t => mine.has(t.id) && (t.status === 'swiss' || t.status === 'topcut'))
@@ -41,7 +44,8 @@ export async function renderList(main, _p, ctx) {
   const draw = () => {
     const ql = query.trim().toLowerCase()
     const list = all.filter(t => {
-      if (ql && !(`${t.name} ${t.location || ''} ${t.organizer_nick || ''} ${t.league || ''}`.toLowerCase().includes(ql))) return false
+      if (region && t.region !== region) return false
+      if (ql && !(`${t.name} ${t.location || ''} ${t.region || ''} ${t.organizer_nick || ''} ${t.league || ''}`.toLowerCase().includes(ql))) return false
       if (filter === 'upcoming') return !['finished', 'canceled'].includes(t.status)
       if (filter === 'mine') return mine.has(t.id)
       if (filter === 'past') return ['finished', 'canceled'].includes(t.status)
@@ -49,6 +53,7 @@ export async function renderList(main, _p, ctx) {
     })
     mount(main.querySelector('#t-list'), list.length ? list.map(card) : html`
       <div class="empty">${filter === 'upcoming' ? 'Teď není vypsaný žádný turnaj ani akce.' : filter === 'mine' ? 'Zatím nejsi v žádném turnaji.' : 'Nic nenalezeno.'}
+      ${region ? html`<br><span class="muted small">Zobrazený kraj: ${region}</span><br><button class="btn" data-act="all-regions">Všechny kraje</button>` : ''}
       ${filter !== 'past' ? html`<br><button class="btn" data-f="past">Projít odehrané</button>` : ''}</div>`)
   }
 
@@ -60,6 +65,7 @@ export async function renderList(main, _p, ctx) {
         <span>${kindLabel(t)}</span>
         ${t.league ? html`<span class="lg-tag">🏆 ${t.league}</span>` : ''}
         ${t.event_type === 'meeting' && t.meeting_mode === 'online' ? html`<span>🌐 online</span>` : t.location ? html`<span>📍 ${t.location}</span>` : ''}
+        ${t.region ? html`<span class="rg-tag">🗺 ${t.region}</span>` : ''}
         ${t.visibility === 'staff' ? html`<span class="vis-tag">🔒 jen organizátoři</span>` : ''}
         <span>👥 ${plural(Number(t.players), 'hráč', 'hráči', 'hráčů')}${t.max_players ? ` / ${t.max_players}` : ''}</span>
         ${mine.has(t.id) ? html`<span style="color:var(--bolt)">✓ Jsi přihlášený</span>` : ''}
@@ -81,7 +87,13 @@ export async function renderList(main, _p, ctx) {
         ${tree ? html`<button class="btn primary sm create-btn" data-act="create" aria-haspopup="dialog">+ Založ akci</button>` : ''}
       </div>
     </div>
-    <input class="input" style="margin-top:14px" type="search" placeholder="Hledat podle názvu, místa nebo organizátora" id="t-q" aria-label="Hledat turnaj">
+    <div class="row home-find" style="margin-top:14px;gap:8px">
+      <input class="input" type="search" placeholder="Hledat…" id="t-q" aria-label="Hledat turnaj">
+      <select class="input" id="t-region" aria-label="Kraj">
+        <option value="">Všechny kraje</option>
+        ${REGIONS.map(r => html`<option value="${r}" ${r === region ? 'selected' : ''}>${r}</option>`)}
+      </select>
+    </div>
     <div class="tabs" role="tablist">
       <button type="button" data-f="upcoming" class="on">Nadcházející</button>
       ${mine.size ? html`<button type="button" data-f="mine">Moje</button>` : ''}
@@ -92,6 +104,14 @@ export async function renderList(main, _p, ctx) {
     ${!isLoggedIn() ? html`<p class="hint" style="text-align:center;margin-top:24px">Máš účet? <a href="#/login">Přihlas se</a> – výsledky se ti budou ukládat do profilu.</p>` : ''}`)
 
   on(main, 'input', '#t-q', (e, el) => { query = el.value; draw() })
+  on(main, 'click', '[data-act=all-regions]', () => {
+    const sel = main.querySelector('#t-region'); sel.value = ''; sel.dispatchEvent(new Event('change', { bubbles: true }))
+  })
+  on(main, 'change', '#t-region', (e, el) => {
+    region = el.value
+    try { region ? localStorage.setItem('bbxu_home_region', region) : localStorage.removeItem('bbxu_home_region') } catch {}
+    draw()
+  })
   on(main, 'click', '[data-act=create]', () => openCreateWheel(tree))
   on(main, 'click', '[data-f]', (e, el) => {
     filter = el.dataset.f
@@ -131,6 +151,12 @@ export async function renderEditor(main, [kindArg, id]) {
     const cur = await q(sb.from('leagues').select('id,name').eq('id', t.league_id).maybeSingle()).catch(() => null)
     if (cur) leagues = [cur, ...leagues]
   }
+  // kraj ligy – ligový turnaj ho dostane automaticky (trigger bbx_tournament_region)
+  const lgRegion = {}
+  if (leagues.length) {
+    const rs = await q(sb.from('leagues').select('id,region').in('id', leagues.map(l => l.id))).catch(() => [])
+    for (const r of rs) lgRegion[r.id] = r.region
+  }
   if (!id) {
     const want = new URLSearchParams(location.hash.split('?')[1] || '').get('league')
     if (want && leagues.some(l => l.id === want)) t.league_id = want
@@ -163,6 +189,12 @@ export async function renderEditor(main, [kindArg, id]) {
           <label class="f"><span>Konec (nepovinné)</span><input class="input" type="datetime-local" name="ends_at" value="${toLocalInput(t.ends_at)}"></label>
         </div>
         <label class="f" id="f-loc"><span>${online ? 'Odkaz na schůzku' : 'Místo'}</span><input class="input" name="location" maxlength="${online ? 300 : 120}" type="${online ? 'url' : 'text'}" value="${t.location || ''}" placeholder="${online ? 'https://discord.gg/… nebo Meet / Teams' : 'Klub, adresa'}"></label>
+        <label class="f" id="f-region"><span>Kraj${isEv ? ' (nepovinné)' : ''}</span>
+          <select class="input" name="region" ${!isEv ? 'required' : ''}>
+            <option value="">${isEv ? '— bez kraje —' : 'Vyber kraj'}</option>
+            ${REGIONS.map(r => html`<option value="${r}" ${(t.region || (!id ? state.profile?.region : '')) === r ? 'selected' : ''}>${r}</option>`)}
+          </select>
+          <small class="hint" id="region-hint" hidden></small></label>
         <label class="f"><span>Popis</span><textarea class="input" name="description" maxlength="2000" placeholder="${meet ? 'Program, o čem se bude mluvit…' : 'Pravidla, startovné, co si vzít s sebou…'}">${t.description || ''}</textarea></label>
         ${isEv ? html`
         <div id="f-meet" class="stack" ${meet ? '' : 'hidden'}>
@@ -276,6 +308,18 @@ export async function renderEditor(main, [kindArg, id]) {
     // první zapnutí: předvyber organizátora, ať je hned komu platit
     if (el.checked && !main.querySelector('[name=cashier]:checked')) main.querySelector('[name=cashier]').checked = true
   })
+  // ligový turnaj: kraj určuje liga
+  const syncRegion = () => {
+    const sel = main.querySelector('[name=region]'), hint = main.querySelector('#region-hint')
+    const lid = main.querySelector('[name=league_id]')?.value || null
+    const r = lid ? lgRegion[lid] : null
+    if (r) sel.value = r
+    sel.disabled = !!r
+    hint.hidden = !r
+    hint.textContent = r ? 'Kraj určuje liga.' : ''
+  }
+  syncRegion()
+  on(main, 'change', '[name=league_id]', syncRegion)
   on(main, 'change', '#top-preset', (e, el) => { main.querySelector('#top-custom').hidden = el.value !== 'custom' })
   on(main, 'change', '[name=format]', (e, el) => {
     const dm = el.value === 'deathmatch'
@@ -288,7 +332,9 @@ export async function renderEditor(main, [kindArg, id]) {
       name: d.name.trim(), description: d.description.trim() || null, location: d.location.trim() || null,
       starts_at: fromLocalInput(d.starts_at), ends_at: fromLocalInput(d.ends_at),
       max_players: d.max_players ? Number(d.max_players) : null, kind: t.kind,
+      region: f.querySelector('[name=region]').value || null,
     }
+    if (!isEv && !row.region) return toast('Vyber kraj turnaje.', 'err')
     if (!isEv) {
       Object.assign(row, {
         arena_count: Number(d.arena_count),

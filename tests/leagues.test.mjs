@@ -148,6 +148,23 @@ const tl = await as(null, 'select league from tournament_list() where id = $1', 
 assert.equal(tl[0].league, 'Pardubická liga ' + sfx)
 step('přehled lig, umístění v profilu, název ligy v seznamu turnajů')
 
+// ── kraj (38): ligový turnaj = kraj ligy, změna kraje ligy přepíše její turnaje ──
+assert.equal((await as(null, 'select region from tournament_list() where id = $1', [t1]))[0].region, null)
+await as(boss, 'select league_save($1, $2, $3, null, true, $4)', [lid, 'Pardubická liga ' + sfx, 'Zima 2026', 'Pardubický'])
+assert.equal((await one(null, 'league_detail', [lid])).league.region, 'Pardubický')
+assert.equal((await db.query('select region from tournaments where id = $1', [t1])).rows[0].region, 'Pardubický', 'turnaje ligy převezmou kraj')
+const tR = await mk(org, 'Krajový ' + sfx)
+assert.equal((await db.query('select region from tournaments where id = $1', [tR])).rows[0].region, 'Pardubický')
+await as(org, "update tournaments set region = 'Zlínský' where id = $1", [tR])
+assert.equal((await db.query('select region from tournaments where id = $1', [tR])).rows[0].region, 'Pardubický', 'ligový turnaj kraj nezmění')
+const [tF] = await as(org2, "insert into tournaments (name, region) values ($1, 'Zlínský') returning id, region", ['Volný ' + sfx])
+assert.equal(tF.region, 'Zlínský')
+await fails(org2, "insert into tournaments (name, region) values ($1, 'Mordor')", ['Špatný ' + sfx], /region/)
+await fails(boss, 'select league_save(null, $1, null, null, true, $2)', ['Kraj ' + sfx, 'Mordor'], /region/)
+assert.equal((await one(null, 'league_list')).find(x => x.id === lid).region, 'Pardubický')
+assert.equal((await as(null, 'select region from tournament_list() where id = $1', [tR]))[0].region, 'Pardubický')
+step('kraj: liga s krajem, ligové turnaje ho převezmou, neplatný kraj neprojde')
+
 // vlastní bodování a archiv
 await as(boss, "select league_save($1, $2, null, '{\"p1\": 10, \"participation\": 0}', false)", [lid, 'Pardubická liga ' + sfx])
 L = await one(null, 'league_detail', [lid])

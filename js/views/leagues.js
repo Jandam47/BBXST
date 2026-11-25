@@ -5,7 +5,7 @@
 // ════════════════════════════════════════════════════════════════
 import { rpc, state, errMsg } from '../supa.js'
 import { html, mount, on, formData, toast, modal, busy, confirmBox, fmtDate, plural } from '../ui.js'
-import { roleLevel } from '../core.js'
+import { roleLevel, REGIONS } from '../core.js'
 
 export const SCORE_KEYS = [['participation', 'Účast'], ['topcut', 'Postup do top cutu'], ['p1', '1. místo'], ['p2', '2. místo'], ['p3', '3. místo'], ['p4', '4. místo']]
 const DEFAULT_SCORING = { participation: 1, topcut: 1, p1: 5, p2: 3, p3: 2, p4: 1 }
@@ -23,6 +23,7 @@ export async function renderList(main, _p, ctx) {
   const card = (l) => html`<a class="card lg-card ${l.active ? '' : 'archived'} ${l.my_role ? 'mine' : ''}" href="#/l/${l.id}">
     <div class="row between" style="gap:8px;align-items:flex-start"><h3 class="ellipsis">${l.name}</h3>
       ${l.active ? (l.my_role ? html`<span class="pill ok">${l.my_role === 'manager' ? 'správce' : 'organizátor'}</span>` : '') : html`<span class="pill">archiv</span>`}</div>
+    ${l.region ? html`<div class="small rg-tag">🗺 ${l.region}</div>` : ''}
     ${l.description ? html`<p class="small muted clamp2">${l.description}</p>` : ''}
     ${l.leader ? html`<div class="lg-leader"><span class="av">${l.leader.avatar || '🌀'}</span><span class="grow ellipsis"><small class="faint">vede</small> ${l.leader.nick}</span><b class="num">${l.leader.points}</b></div>` : ''}
     <div class="small faint">${plural(Number(l.finished), 'odehraný turnaj', 'odehrané turnaje', 'odehraných turnajů')}${Number(l.tournaments) > Number(l.finished) ? ` · ${Number(l.tournaments) - Number(l.finished)} v plánu` : ''} · ${plural(Number(l.players), 'hráč', 'hráči', 'hráčů')}${l.manager ? ` · správce ${l.manager.nick}` : ''}</div>
@@ -46,6 +47,12 @@ function leagueForm(l, done) {
     <h2>${l ? 'Upravit ligu' : 'Nová liga'}</h2>
     <form class="stack" id="f-league">
       <label class="f"><span>Název</span><input class="input" name="name" minlength="2" maxlength="60" required value="${l?.name || ''}" placeholder="Pardubická liga – zima 2026"></label>
+      <label class="f"><span>Kraj</span>
+        <select class="input" name="region" required>
+          <option value="">Vyber kraj</option>
+          ${REGIONS.map(r => html`<option value="${r}" ${(l ? l.region : state.profile?.region) === r ? 'selected' : ''}>${r}</option>`)}
+        </select>
+        <small class="hint">Ligové turnaje dostanou kraj ligy automaticky.</small></label>
       <label class="f"><span>Popis</span><textarea class="input" name="description" rows="3" maxlength="1000" placeholder="Pro koho je, kdy začíná a končí, co se vyhrává…">${l?.description || ''}</textarea></label>
       <fieldset class="lg-score-f"><legend>Bodování</legend>
         ${SCORE_KEYS.map(([k, lbl]) => html`<label><span>${lbl}</span><input class="input num" type="number" min="0" max="100" step="1" name="${k}" value="${sc[k]}" required></label>`)}
@@ -60,7 +67,7 @@ function leagueForm(l, done) {
       const scoring = Object.fromEntries(SCORE_KEYS.map(([k]) => [k, Math.round(Number(f.elements[k].value))]))
       await busy(f.querySelector('button.primary'), async () => {
         try {
-          const id = await rpc('league_save', { p_id: l?.id || null, p_name: d.name, p_description: d.description, p_scoring: scoring, p_active: l ? f.elements.active.checked : true })
+          const id = await rpc('league_save', { p_id: l?.id || null, p_name: d.name, p_description: d.description, p_scoring: scoring, p_active: l ? f.elements.active.checked : true, p_region: d.region || null })
           close(); toast(l ? 'Uloženo.' : 'Liga je založená.', 'ok'); done(id)
         } catch (err) { toast(errMsg(err), 'err') }
       })
@@ -83,7 +90,7 @@ export async function renderDetail(main, [id], ctx) {
       <header class="t-head lg-head" style="margin-top:14px">
         <span class="pill ${l.active ? 'live' : ''}">${l.active ? 'Liga' : 'Archiv'}</span>
         <h1 style="margin-top:6px">${l.name}</h1>
-        <div class="meta"><span>${plural(d.tournaments.filter(t => t.status === 'finished').length, 'odehraný turnaj', 'odehrané turnaje', 'odehraných turnajů')}</span>
+        <div class="meta">${l.region ? html`<span class="rg-tag">🗺 ${l.region}</span>` : ''}<span>${plural(d.tournaments.filter(t => t.status === 'finished').length, 'odehraný turnaj', 'odehrané turnaje', 'odehraných turnajů')}</span>
           <span>${plural(st.length, 'hráč', 'hráči', 'hráčů')}</span></div>
         ${l.description ? html`<p class="desc">${l.description}</p>` : ''}
         ${scoringChips(l.scoring)}

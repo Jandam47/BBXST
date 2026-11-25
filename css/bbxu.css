@@ -1822,3 +1822,9 @@ html[data-theme=ronin] {
   --blue: #ff7d7d; --red: #ff3b4e; --p1: #ff5d6c; --p2: #ffc46b; --ok: #4af0a0; --warn: #ffb020;
   --cyan-rgb: 255,59,78; --magenta-rgb: 255,138,61; --bolt-rgb: 255,201,74; --gold-rgb: 255,185,60; --ink-rgb: 11,3,4;
 }
+
+/* kraj (38) */
+.rg-tag { color: var(--muted); }
+.home-find #t-q { flex: 1 1 auto; min-width: 0; }
+.home-find #t-region { flex: 0 0 auto; width: auto; max-width: 58%; }
+.f select:disabled { opacity: .75; }

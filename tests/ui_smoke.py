@@ -113,6 +113,7 @@ def run(only=None):
         page.goto(BASE + '#/new'); page.wait_for_selector('#f-t'); shot(page, '18_new_tournament')
         page.fill('input[name=name]', 'Testovací turnaj'); page.fill('input[name=starts_at]', '2026-12-12T10:00')
         page.select_option('#top-preset', 'custom'); page.fill('input[name=top_custom]', '6')
+        page.select_option('#f-t [name=region]', 'Pardubický')
         page.click('#f-t button.primary'); page.wait_for_selector('.t-head h1 >> text=Testovací turnaj'); shot(page, '19_new_created')
         page.goto(BASE + '#/t/' + page.evaluate("(()=>{return null})()") if False else BASE + '#/')
         c.close()

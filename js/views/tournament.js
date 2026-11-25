@@ -155,6 +155,7 @@ export async function render(main, [id, tabArg]) {
           ${t.event_type === 'meeting' && t.meeting_mode === 'online'
             ? html`<span>🌐 Online${/^https?:\/\//i.test(t.location || '') ? html` · <a class="meet-link" href="${t.location}" target="_blank" rel="noopener noreferrer">Připojit se</a>` : ''}</span>`
             : t.location ? html`<span>📍 ${t.location}</span>` : ''}
+          ${t.region ? html`<span class="rg-tag">🗺 ${t.region}</span>` : ''}
           ${t.visibility === 'staff' ? html`<span class="vis-tag" style="color:var(--warn)">🔒 Jen pro organizátory</span>` : ''}
           ${t.kind === 'tournament' ? html`<span>⚔ ${t.format === 'deathmatch' ? `Deathmatch${t.status !== 'registration' ? ` (${t.swiss_rounds} kol)` : ''}` : `${t.swiss_rounds} kol swiss`}${t.top_cut ? (t.top_cut === 2 ? ', finále' : `, top ${t.top_cut}`) : ''}${t.unique_parts ? ' · díly se neopakují' : ''}${t.rated === false ? ' · bez ratingu' : ''}</span>` : html`<span>${kindLabel(t)}</span>`}
           ${d.league ? html`<a class="lg-tag" href="#/l/${d.league.id}">🏆 ${d.league.name}</a>` : ''}

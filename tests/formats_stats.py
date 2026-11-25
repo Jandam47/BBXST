@@ -32,6 +32,7 @@ with sync_playwright() as p:
     assert page.is_checked('input[name=unique_parts]')
     page.fill('input[name=arena_count]', '3')
     shot(page, '70_new_deathmatch')
+    page.select_option('#f-t [name=region]', 'Pardubický')
     page.click('#f-t button.primary'); page.wait_for_selector('.t-head')
     t_id = sql("select id from tournaments where name = 'Deathmatch Night'")
     assert sql(f"select format || '|' || unique_parts from tournaments where id = '{t_id}'") == 'deathmatch|true'

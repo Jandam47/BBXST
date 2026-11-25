@@ -97,6 +97,7 @@ with sync_playwright() as p:
     assert adm.get_attribute('input[type=hidden][name=league_id]', 'value') == lid and adm.inner_text('h1') == 'Nový ligový turnaj'
     assert 'Pardubická liga' in adm.inner_text('.format-fixed')
     adm.fill('[name=name]', 'Liga kolo 1'); adm.fill('[name=starts_at]', '2026-12-06T10:00')
+    adm.select_option('#f-t [name=region]', 'Pardubický')
     adm.click('#f-t button.primary.block'); adm.wait_for_selector('.t-head .lg-tag')
     assert sql("select format || '/' || (league_id = '" + lid + "') from tournaments where name = 'Liga kolo 1'") == 'swiss/true'
     # Esc zavře kolečko

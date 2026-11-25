@@ -47,6 +47,7 @@ with sync_playwright() as p:
     assert org.locator('.cash-opt:has-text("Hrac9")').count() == 1
     org.click('.cash-opt:has-text("Hrac9")')
     org.locator('.fee-card').screenshot(path=OUT + '310_fee_editor.png')
+    org.select_option('#f-t [name=region]', 'Pardubický')
     org.click('#f-t button.primary.block'); org.wait_for_selector('.t-head .fee-tag')
     assert '150 Kč' in org.inner_text('.fee-tag')
     assert sql(f"select fee || ':' || entry_fee || ':' || cardinality(cashiers) from tournaments where id = '{tid}'") == 'true:150:2'

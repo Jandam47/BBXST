@@ -40,7 +40,7 @@ Komunikuj **česky**, celé UI je česky.
   (vnitřní → vnější, počet podle obvodu; Turbo / Operate žlutě), uprostřed hledání (zkratka → název → slovo → alias), nevyhovující zhasnou, Enter /
   tlačítko uprostřed vezme nejlepší shodu, písmeno na poli bitu otevře kolečko s hledáním. Tip na zkratky nahoře.
 - `js/config.js` – **obsahuje Adamovy živé klíče Supabase. Nikdy ho neměň ani nepřepisuj.**
-- `supabase/schema.sql`, `02-parts.sql`, `03-live-score.sql`, `04-security-hardening.sql`, `05-judge-handover.sql`, `06-formats-stats.sql`, `07-parts-update.sql`, `08-judge-per-match.sql`, `09-pause.sql`, `10-fashion.sql`, `11-finishes.sql`, `12-rated.sql`, `13-communities.sql`, `14-training-extras.sql`, `15-training-bots.sql`, `16-training-reset.sql`, `17-chat-bazar.sql`, `18-chat-tournament-state.sql`, `19-account-reports.sql`, `20-push.sql`, `21-checkin-errors-backup.sql`, `22-leagues.sql`, `23-meetings.sql`, `24-judge-count.sql`, `25-reg-check.sql`, `26-judge-scan.sql`, `27-live.sql`, `28-cashier.sql`, `29-polls-feedback.sql`, `30-seen-sync.sql`, `31-community-standings.sql`, `32-parts-shatter-horus.sql`, `33-parts-hasbro-2026-11.sql`, `34-privacy-admin.sql`, `35-favorites.sql`, `36-stats.sql`, `37-tournament-stats.sql` – databáze (spuštěné v produkci, nové soubory
+- `supabase/schema.sql`, `02-parts.sql`, `03-live-score.sql`, `04-security-hardening.sql`, `05-judge-handover.sql`, `06-formats-stats.sql`, `07-parts-update.sql`, `08-judge-per-match.sql`, `09-pause.sql`, `10-fashion.sql`, `11-finishes.sql`, `12-rated.sql`, `13-communities.sql`, `14-training-extras.sql`, `15-training-bots.sql`, `16-training-reset.sql`, `17-chat-bazar.sql`, `18-chat-tournament-state.sql`, `19-account-reports.sql`, `20-push.sql`, `21-checkin-errors-backup.sql`, `22-leagues.sql`, `23-meetings.sql`, `24-judge-count.sql`, `25-reg-check.sql`, `26-judge-scan.sql`, `27-live.sql`, `28-cashier.sql`, `29-polls-feedback.sql`, `30-seen-sync.sql`, `31-community-standings.sql`, `32-parts-shatter-horus.sql`, `33-parts-hasbro-2026-11.sql`, `34-privacy-admin.sql`, `35-favorites.sql`, `36-stats.sql`, `37-tournament-stats.sql`, `38-regions.sql` – databáze (spuštěné v produkci, nové soubory
   spouští Adam). Živé skóre: BBXST v judge módu posílá po každém bodu `live_score` → `matches.live_p1/p2`
   (TV rozpis, vstupenka, seznamy); trigger `bbx_clear_live` ho maže po uložení hry.
   Rozehraná hra: BBXST posílá s `live_score` i `p_state` → `matches.live_state` (souboje v orientaci p1/p2,
@@ -231,6 +231,11 @@ Komunikuj **česky**, celé UI je česky.
   registrace, i hráči bez účtu, bez botů a testovacích „T-…“; shoda = víc vítězů; Iron law = judge; Blitzkrieg / T.Y.T. = jedna
   hra). Po skončení vidí každý, během jen organizátor. Nahoře v záložce Vyhodnocení (`tournamentStatsHtml` v tournament.js).
   Logiku statů drží 36 i 37 – měníš-li výpočet, uprav obě.
+- **Kraj** (38): `tournaments.region` a `leagues.region` (stejné kraje jako profil, `REGIONS` v core.js). Turnaj má kraj
+  povinný (editor, výchozí kraj z profilu), ostatní akce nepovinný. Liga se zakládá ke kraji (`league_save(…, p_region)`);
+  trigger `bbx_tournament_region` dá ligovému turnaji kraj ligy (v editoru se select zamkne), komunitnímu tréninku kraj
+  komunity; změna kraje ligy přepíše i její turnaje. `tournament_list`, `league_list`, `league_detail` vrací kraj. Hlavní
+  stránka: filtr „Všechny kraje“ (`localStorage bbxu_home_region`), štítek 🗺 na kartě, v záhlaví turnaje i ligy.
 - **Oblíbené buildy a decky** (35, `js/favorites.js`, `js/views/favorites.js`, `#/oblibene`, `?tab=decky`): ★ `.prof-fav` vedle
   ozubeného kolečka → „Choose wheel“ (Oblíbené buildy · Decky · Nový build). `fav_builds` (bey ve tvaru decku, trigger
   `bbx_fav_build_fill` normalizuje díly a skládá `name` přes `bbx_compose_bey`, duplicita názvu = chyba, max 60) a `fav_decks`

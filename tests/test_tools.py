@@ -13,6 +13,7 @@ with sync_playwright() as p:
     pg.goto(BASE + '#/new'); pg.wait_for_selector('#f-t')
     pg.fill('input[name=name]', 'Zkušební turnaj 16'); pg.fill('input[name=starts_at]', '2026-12-01T10:00')
     pg.select_option('#top-preset', '4'); pg.fill('input[name=arena_count]', '4')
+    pg.select_option('#f-t [name=region]', 'Pardubický')
     pg.click('#f-t button.primary'); pg.wait_for_selector('.tabs >> text=Řízení')
     pg.click('.tabs >> text=Řízení'); pg.wait_for_selector('summary >> text=Testovací')
     pg.click('summary >> text=Testovací'); pg.click('[data-act=test-players]')
