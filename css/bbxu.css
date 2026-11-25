@@ -353,12 +353,42 @@ a.li:hover { background: var(--panel-2); }
 .prof-head { display: flex; gap: 16px; align-items: center; }
 .prof-head h1 { word-break: break-word; }
 .prof-head { position: relative; }
-.prof-gear { align-self: flex-start; flex: none; width: 44px; height: 44px; display: grid; place-items: center; padding: 0; border-radius: 50%;
+.prof-gear, .prof-fav { align-self: flex-start; flex: none; width: 44px; height: 44px; display: grid; place-items: center; padding: 0; border-radius: 50%;
   background: var(--ink-2); border: 1px solid rgba(var(--cyan-rgb),.45); cursor: pointer; box-shadow: 0 0 12px rgba(var(--cyan-rgb),.18); transition: transform .3s, box-shadow .2s; }
-.prof-gear .nicon { width: 26px; height: 26px; }
+.prof-gear .nicon, .prof-fav .nicon { width: 26px; height: 26px; }
 .prof-gear:hover, .prof-gear:focus-visible { box-shadow: 0 0 18px rgba(var(--cyan-rgb),.45); transform: rotate(45deg); outline: none; }
 @media (prefers-reduced-motion: reduce) { .prof-gear:hover, .prof-gear:focus-visible { transform: none; } }
 .prof-gear { position: relative; }
+.prof-btns { display: flex; gap: 8px; align-self: flex-start; flex: none; }
+.prof-fav { border-color: rgba(var(--bolt-rgb),.5); box-shadow: 0 0 12px rgba(var(--bolt-rgb),.18); }
+.prof-fav .nicon .i1, .prof-fav .nicon .i2 { stroke: var(--bolt); }
+.prof-fav:hover, .prof-fav:focus-visible { transform: scale(1.08); box-shadow: 0 0 18px rgba(var(--bolt-rgb),.45); }
+/* oblíbené buildy a decky */
+.fav-list { display: grid; gap: 10px; margin-top: 14px; }
+.fav-card { display: flex; align-items: flex-start; gap: 12px; padding: 12px 14px; }
+.fav-name { font: 700 17px var(--display); color: var(--text); }
+.fav-note { color: var(--bolt); margin-top: 2px; }
+.fav-acts { display: flex; gap: 6px; flex: none; }
+.fav-acts .nicon { width: 18px; height: 18px; }
+.fav-deck-list { margin: 6px 0 2px; padding-left: 20px; color: var(--muted); font-size: 14px; }
+.fav-pick { display: grid; gap: 6px; margin-top: 8px; max-height: 46vh; overflow: auto; }
+.fav-pick-it { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 12px; text-align: left; cursor: pointer;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 12px; color: var(--text); font: inherit; }
+.fav-pick-it.on { border-color: var(--bolt); background: rgba(var(--bolt-rgb),.07); }
+.fav-pick-it:focus-visible { outline: 2px solid var(--bolt); outline-offset: 2px; }
+.fav-num { flex: none; width: 26px; height: 26px; border-radius: 50%; border: 1px solid var(--line); display: grid; place-items: center;
+  font: 800 13px var(--display); color: var(--bolt-ink); }
+.fav-pick-it.on .fav-num { background: var(--bolt); border-color: var(--bolt); }
+.fav-bar { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 10px; }
+.fav-bar .btn { flex: 1 1 auto; }
+.fav-h1 { display: flex; align-items: center; gap: 10px; }
+.fav-h1 .nicon { width: 30px; height: 30px; flex: none; }
+.fav-h1 .nicon .i1, .fav-h1 .nicon .i2 { stroke: var(--bolt); }
+.fav-bar .hint { margin: 0; }
+.fav-choose .li { width: 100%; text-align: left; cursor: pointer; background: none; border: 0; color: inherit; font: inherit; }
+.bey-card.fav-filled { animation: favFill .9s ease-out; }
+@keyframes favFill { from { box-shadow: 0 0 0 2px var(--bolt), 0 0 22px rgba(var(--bolt-rgb),.5); } to { box-shadow: none; } }
+@media (prefers-reduced-motion: reduce) { .bey-card.fav-filled { animation: none; } }
 .prof-gear-badge { position: absolute; top: -5px; right: -6px; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 10px;
   background: var(--bolt); color: #0a0a0a; font: 800 11px/20px var(--display); text-align: center; box-shadow: 0 0 8px rgba(var(--bolt-rgb),.6); }
 .admin-strip { display: flex; align-items: center; gap: 12px; width: 100%; margin-top: 14px; padding: 10px 14px; text-align: left; cursor: pointer;

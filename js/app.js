@@ -20,6 +20,7 @@ import * as Communities from './views/communities.js'
 import * as Help from './views/help.js'
 import * as Leagues from './views/leagues.js'
 import * as Live from './views/live.js'
+import * as Favorites from './views/favorites.js'
 
 const cfg = window.BBX_CONFIG
 
@@ -39,6 +40,7 @@ const routes = [
   [/^\/meta$/, Meta.render, 'meta'],
   [/^\/p\/([0-9a-f-]{36})$/, Profile.render, 'me'],
   [/^\/me$/, Profile.renderMe, 'me'],
+  [/^\/oblibene$/, Favorites.render, 'me'],
   [/^\/chat(?:\/([a-z0-9-]+))?$/, Chat.render, 'chat'],
   [/^\/komunikace$/, Komunikace.render, 'chat'],
   [/^\/ankety(?:\/([0-9a-f-]{36}))?$/, Polls.render, 'chat'],

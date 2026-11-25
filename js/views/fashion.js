@@ -626,7 +626,7 @@ async function walkinModal(d, reload) {
       <div class="row"><button type="button" class="btn grow" data-close>Zpět</button><button class="btn primary grow">Přidat</button></div>
     </form>`, {
     onMount: (b, close) => {
-      const getDeck = bindDeckEditor(b.querySelector('[data-deck]'), cat, { distinct: false })
+      const getDeck = bindDeckEditor(b.querySelector('[data-deck]'), cat, { distinct: false, favorites: false })
       on(b, 'submit', '#f-walk', async (e, f) => {
         e.preventDefault()
         let deck

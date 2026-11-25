@@ -56,14 +56,14 @@ export function toast(msg, kind = '', ms = 3800) {
 }
 
 // ── modal ─────────────────────────────────────────────
-export function modal(content, { onMount, dismissable = true } = {}) {
+export function modal(content, { onMount, onClose, dismissable = true } = {}) {
   const bg = document.createElement('div')
   bg.className = 'modal-bg'
   bg.innerHTML = `<div class="modal" role="dialog" aria-modal="true">${renderVal(content)}</div>`
   document.body.append(bg)
   const box = bg.firstElementChild
   let closed = false
-  const close = () => { if (closed) return; closed = true; bg.remove(); document.removeEventListener('keydown', esc_) }
+  const close = () => { if (closed) return; closed = true; bg.remove(); document.removeEventListener('keydown', esc_); onClose?.() }
   const esc_ = (e) => { if (e.key === 'Escape' && dismissable) close() }
   document.addEventListener('keydown', esc_)
   if (dismissable) bg.addEventListener('click', e => { if (e.target === bg) close() })

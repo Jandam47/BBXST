@@ -225,7 +225,7 @@ export function deckEditor(deck, n = 3) {
     </fieldset>`)}</div>`
 }
 
-export function bindDeckEditor(root, cat, { distinct = true } = {}) {
+export function bindDeckEditor(root, cat, { distinct = true, favorites = true } = {}) {
   const cards = [...root.querySelectorAll('[data-bey]')]
   const val = (card, key) => card.querySelector(`[data-combo="${key}"] input`)?.value.trim() || ''
   const readBey = (card) => card.dataset.type === 'cx'
@@ -301,8 +301,28 @@ export function bindDeckEditor(root, cat, { distinct = true } = {}) {
   })
   cards.forEach(refresh)
 
+  // vyplní kartu i beyem (oblíbené buildy / deck); díly zůstanou upravitelné
+  const KEYS = ['blade', 'lock', 'main', 'over', 'assist', 'ratchet', 'bit']
+  const setBey = (i, b) => {
+    const card = cards[i]
+    if (!card || !b) return
+    card.dataset.type = b.type === 'cx' ? 'cx' : 'bx'
+    card.querySelectorAll('[data-type-btn]').forEach(x => x.classList.toggle('on', x.dataset.typeBtn === card.dataset.type))
+    for (const k of KEYS) {
+      const w = card.querySelector(`[data-combo="${k}"]`), input = w?.querySelector('input')
+      if (!input) continue
+      input.value = b[k] || ''
+      w.classList.toggle('ok', !!(b[k] && cat.find(w.dataset.cats.split(','), b[k]))); w.classList.remove('bad')
+    }
+    refresh(card)
+    card.classList.add('fav-filled'); setTimeout(() => card.classList.remove('fav-filled'), 900)
+  }
+  const api = { count: cards.length, setBey, isComplete: (i) => cards[i]?.classList.contains('complete'),
+    nameOf: (i) => composeName(cat, readBey(cards[i])) }
+  if (favorites) import('./favorites.js').then(m => m.deckToolbar(root, api)).catch(() => {})
+
   // vrátí deck, nebo vyhodí chybu s popisem, co chybí
-  return function getDeck() {
+  function getDeck() {
     const deck = cards.map(readBey)
     const names = deck.map(b => composeName(cat, b))
     names.forEach((n, i) => {
@@ -319,6 +339,8 @@ export function bindDeckEditor(root, cat, { distinct = true } = {}) {
     if (distinct && new Set(names.map(n => n.toLowerCase())).size < names.length) throw new Error('Každý beyblade musí být jiný.')
     return deck.map(b => Object.fromEntries(Object.entries(b).filter(([, v]) => v !== '')))
   }
+  getDeck.setBey = setBey
+  return getDeck
 }
 
 // ── kolečko ratchetů (stejně jako v BBXST): vnitřní kruh zuby, vnější výška; Turbo / Operate = ratchet v bitu ──

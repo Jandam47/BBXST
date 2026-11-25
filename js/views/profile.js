@@ -137,7 +137,10 @@ export async function render(main, [id], ctx) {
         <div class="muted">${p.region || 'Kraj neuveden'} · rating <b class="num" style="color:var(--text)">${p.rating}</b></div>
         <div class="row wrap" style="margin-top:6px;gap:6px">${ROLES.filter(x => x.level > 0 && x.level <= lvl).map(x => html`<span class="pill role">${x.label}</span>`)}${p.cashier ? html`<span class="pill role cash">💰 Pokladník</span>` : ''}</div>
       </div>
-      ${own ? html`<button class="prof-gear" data-act="settings" aria-label="Nastavení profilu a aplikace" title="Nastavení">${raw(ICONS.gear)}<span class="prof-gear-badge" hidden></span></button>` : ''}
+      ${own ? html`<div class="prof-btns">
+        <button class="prof-fav" data-act="choose" aria-label="Choose wheel – oblíbené buildy a decky" title="Oblíbené buildy a decky">${raw(ICONS.star)}</button>
+        <button class="prof-gear" data-act="settings" aria-label="Nastavení profilu a aplikace" title="Nastavení">${raw(ICONS.gear)}<span class="prof-gear-badge" hidden></span></button>
+      </div>` : ''}
     </div>
     ${communityBadges(comms)}
     ${leagueBadges(lgs.standings)}
@@ -253,6 +256,7 @@ export async function render(main, [id], ctx) {
     catch (err) { cb.checked = !cb.checked; toast(errMsg(err), 'err') }
   })
   on(main, 'click', '[data-act=settings]', () => openSettingsWheel(p, rerender))
+  on(main, 'click', '[data-act=choose]', () => import('./favorites.js').then(m => m.openChooseWheel()))
   on(main, 'click', '[data-act=admin]', () => openSettingsWheel(p, rerender, 'admin'))
 }
 

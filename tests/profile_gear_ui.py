@@ -105,7 +105,7 @@ with sync_playwright() as p:
     h.screenshot(path=OUT + '312_theme_sheet.png'); h.click('.modal [data-close]')
     h.reload(); h.wait_for_selector('.prof-gear')
     assert h.evaluate("document.documentElement.dataset.theme") == 'mono'
-    assert h.evaluate("getComputedStyle(document.querySelector('.nicon .i1')).stroke") == 'rgb(207, 207, 207)'
+    assert h.evaluate("getComputedStyle(document.querySelector('.prof-gear .nicon .i1')).stroke") == 'rgb(207, 207, 207)'
     h.screenshot(path=OUT + '313_mono_profile.png')
     y0 = h.evaluate("document.querySelector('.tabbar').getBoundingClientRect().top")
     h.mouse.wheel(0, 900); h.wait_for_timeout(300)
@@ -121,7 +121,7 @@ with sync_playwright() as p:
     for k, stroke in [('synth', 'rgb(255, 122, 61)'), ('toxic', 'rgb(57, 255, 136)'), ('ronin', 'rgb(255, 59, 78)')]:
         h.click(f'[data-theme-k={k}]'); h.wait_for_selector(f'[data-theme-k={k}].on')
         assert h.evaluate("document.documentElement.dataset.theme") == k
-        assert h.evaluate("getComputedStyle(document.querySelector('.nicon .i1')).stroke") == stroke, k
+        assert h.evaluate("getComputedStyle(document.querySelector('.prof-gear .nicon .i1')).stroke") == stroke, k
     h.screenshot(path=OUT + '317_theme_sheet_all.png')
     h.click('.modal [data-close]')
     for k in ['synth', 'toxic', 'ronin']:

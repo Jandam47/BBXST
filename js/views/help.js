@@ -16,6 +16,7 @@ const S = [
       <li>Díly vybíráš ze seznamu – začni psát a klepni na návrh. <b>Ratchet</b> se vybírá na kolečku: uvnitř počet zubů, venku výška. <b>Turbo / Operate</b> (ratchet je v bitu) jsou pod kolečkem.</li>
       <li><b>Bit</b> se vybírá taky na kolečku: okolo svítí všechny bity zkratkou ve třech řadách podle abecedy (od středu ven), uprostřed je hledání. Piš zkratku (F, LF, GB…) – co neodpovídá, zhasne; Enter nebo klepnutí na název uprostřed vybere. Turbo / Operate jsou žlutě.</li>
       <li>Po přihlášení máš v záložce <b>Můj Status</b> vstupenku s QR kódem. Ulož si ji do telefonu – v hale bývá slabý signál.</li>
+      <li><b>Oblíbené buildy a decky:</b> v profilu klepni na hvězdičku ★ vedle ozubeného kolečka (Choose wheel). Ulož si buildy, které hraješ, a slož z nich decky. Při registraci pak nad beyi klepni na <b>★ Podle decku</b> nebo <b>★ Z oblíbených</b> – beye se vyplní a ještě je můžeš upravit.</li>
       <li>Vstupenku máš i v profilu: <b>⚙ → Vstupenka</b> (když jsi v turnaji). Telefon si ji pamatuje, takže se ukáže i bez signálu.</li>
       <li><b>Kontrola registrace:</b> na místě ukaž QR kód organizátorovi. Zkontroluje, že máš beyblady z přihlášky, a na vstupence pak svítí <i>✓ Registrace zkontrolována</i>. Když potom beyblady změníš, musí tě zkontrolovat znovu.</li>
       <li>Beyblady můžeš měnit, dokud turnaj nezačne. Pak už ne.</li>

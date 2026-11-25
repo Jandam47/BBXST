@@ -403,7 +403,7 @@ async function walkinModal(d, reload) {
       <button class="btn primary block">Přidat do turnaje</button>
     </form>`, {
     onMount: (box, close) => {
-      const getDeck = bindDeckEditor(box.querySelector('[data-deck]'), cat)
+      const getDeck = bindDeckEditor(box.querySelector('[data-deck]'), cat, { favorites: false })   // hráč bez telefonu – ne oblíbené organizátora
       on(box, 'submit', '#f-walkin', async (e, f) => {
         e.preventDefault()
         const nick = formData(f).nick.trim()
