@@ -118,6 +118,16 @@ with sync_playwright() as p:
     f = fin.split(',')
     assert f[0] == 'over' and f[1] == '-' and 'xtreme' in f and f.count('burst') >= 1, fin
 
+    # ZPĚT: zavře nabídku dalšího zápasu, judge mód zůstane zapnutý (bez načteného zápasu)
+    page.evaluate('jHide()')
+    ar = sql(f"select arena from matches where tournament_id = '{t_id}' and status = 'pending' and p1_reg is not null and p2_reg is not null order by arena, wave limit 1")
+    page.evaluate(f"afterMatchNext({{ tournament_id: '{t_id}', arena: {ar} }})"); page.wait_for_selector('#jStay')
+    page.screenshot(path=OUT + '35b_bbxst_next_stay.png')
+    if True:
+        assert [b.inner_text() for b in page.locator('#jBox .jRow button').all()] == ['◂ BBXU', 'ZPĚT', 'NAČÍST ZÁPAS']
+        page.click('#jStay'); page.wait_for_selector('#jOverlay.hidden', state='attached')
+        assert page.evaluate("document.body.classList.contains('judge') && !document.body.classList.contains('has-match')")
+        assert 'bbxst.html' in page.url
     # QR cesta: naskenuj dva hráče dalšího zápasu (obráceně) a ověř mapování stran
     page.evaluate('jHide(); unloadJudge()')
     m2 = sql(f"select id, p1_reg, p2_reg from matches where tournament_id = '{t_id}' and status = 'pending' and p1_reg is not null and p2_reg is not null order by arena, wave limit 1").split('|')

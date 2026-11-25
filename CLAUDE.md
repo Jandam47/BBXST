@@ -71,6 +71,8 @@ Komunikuj **česky**, celé UI je česky.
   pavouk (`bracketHtml` z tournament.js, „Skrýt odehrané“), poslední výsledky, pořadí. **Režie**: jedna aréna přes celou
   plochu, lišta arén + AUTO (aréna s posledním děním, drží aspoň 12 s). Volby v `localStorage bbxu_live_*`.
   Realtime + polling 15 s.
+- BBXST po dohraném zápase (`afterMatchNext`): „Další na aréně N“ s tlačítky ◂ BBXU · ZPĚT (jen zavře nabídku, judge mód
+  zůstane zapnutý bez zápasu) · NAČÍST ZÁPAS.
 - BBXST judge menu → aréna: vybraný zápas (výchozí ten na řadě / rozehraný) velkým písmem v `.jNext`, zbytek fronty
   pod ním menším (`.jQ`, klepnutím se vybere).
 - BBXST judge → sken QR (26): `judge_scan_qr(token)` pustí jen aktivního hráče v běžícím turnaji (swiss / topcut), který

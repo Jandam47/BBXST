@@ -2141,7 +2141,9 @@ async function afterMatchNext(next) {
   jShow(`<h3>DALŠÍ NA ARÉNĚ ${next.arena}</h3>
     <p><b style="color:var(--cyan)">${esc(m.p1.nick)}</b> vs <b style="color:var(--red)">${esc(m.p2.nick)}</b></p>
     <div class="jRow"><button class="qr-btn cancel" onclick="backToBBXU()">◂ BBXU</button>
+    <button class="qr-btn cancel" id="jStay" title="Zůstat v BBXST, judge mód zůstane zapnutý">ZPĚT</button>
     <button class="qr-btn confirm" id="jNext">NAČÍST ZÁPAS</button></div>`)
+  document.getElementById("jStay").onclick = () => jHide()   // judge mód zůstane, jen zavřít nabídku
   document.getElementById("jNext").onclick = () => { jHide(); loadMatch(m) }
 }
 
