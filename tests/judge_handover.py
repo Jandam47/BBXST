@@ -10,14 +10,15 @@ def sql(q):
     return subprocess.check_output(['psql', '-h', '/tmp/pg', '-p', '5499', '-U', 'postgres', '-d', 'bbx', '-tAc', q]).decode().strip()
 
 def drag(page, sel, dx):
-    box = page.locator(sel).bounding_box()
+    box = page.locator(sel + ' >> visible=true').first.bounding_box()
     x, y = box['x'] + box['width'] / 2, box['y'] + box['height'] / 2
     page.mouse.move(x, y); page.mouse.down()
     for i in range(1, 9): page.mouse.move(x + dx * i / 8, y)
     page.mouse.up()
 
 def score_point(page, side, pts):
-    drag(page, f'.dragBtn[data-points="{pts}"]', -220 if side == 1 else 220)
+    sel = '.dragBtn[data-finish="burst"]' if pts == 2 else f'.dragBtn[data-points="{pts}"]'     # judge: +2 BURST
+    drag(page, sel, -220 if side == 1 else 220)
     page.wait_for_timeout(150)
     if page.locator('#pickFinish:not(.hidden)').count():
         page.click('.finishPick[data-f="burst"]'); page.wait_for_timeout(150)

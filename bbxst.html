@@ -246,6 +246,13 @@ body {
   color: white;
 }
 
+/* judge / training: dvě +2 (BURST / OVER) místo jedné */
+.dragPair { display: none; gap: 14px; justify-content: center; }
+.dragPair .dragBtn { padding: 22px 18px; font-size: 18px; letter-spacing: 1.5px; white-space: nowrap; }
+body.judge .dragPair, body.training .dragPair { display: flex; }
+body.judge .center .dragWrapper, body.training .center .dragWrapper { display: none; }
+body.judge .center, body.training .center { gap: 24px; }
+
 /* ===== DRAG ARROWS ===== */
 .dragWrapper {
   position: relative;
@@ -834,7 +841,9 @@ body.judge.has-match.can-swap .swapBtn, body.training.has-tmatch.can-swap .swapB
 .jBox h3 { font-family: 'Orbitron', monospace; font-size: 14px; letter-spacing: 3px; color: var(--gold); margin-bottom: 12px; }
 .jBox p { color: rgba(200,240,255,0.8); margin-bottom: 10px; line-height: 1.4; }
 .jBox select { width: 100%; padding: 12px; border-radius: 10px; background: #0a1520; color: white; border: 1px solid #1a3a4a; font-family: 'Rajdhani', sans-serif; font-size: 17px; font-weight: 600; margin-bottom: 10px; }
-.jRow { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+.jRow { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; justify-content: center; }
+.jRow .qr-btn { white-space: nowrap; }
+.jBox > h3, .jBox > p { text-align: center; }
 .jRow > * { flex: 1; }
 .jMatch { padding: 12px; border-radius: 12px; border: 1px solid #1a3a4a; background: #0a1520; margin-bottom: 8px; cursor: pointer; }
 .jMatch.sel { border-color: var(--gold); box-shadow: 0 0 14px rgba(255,215,0,0.2); }
@@ -1063,6 +1072,11 @@ body.judge.has-match.can-swap .swapBtn, body.training.has-tmatch.can-swap .swapB
     <div class="dragBtn" data-points="2" id="hintBtn">+2</div>
     <div class="arrowGroup rightArrow"><span>›</span><span>›</span></div>
   </div>
+  <!-- judge / training: +2 rovnou s druhem endu, bez dalšího výběru -->
+  <div class="dragPair">
+    <div class="dragBtn fin" data-points="2" data-finish="burst">+2 BURST</div>
+    <div class="dragBtn fin" data-points="2" data-finish="over">+2 OVER</div>
+  </div>
   <div class="dragBtn" data-points="1">+1</div>
 </div>
 
@@ -1094,7 +1108,7 @@ body.judge.has-match.can-swap .swapBtn, body.training.has-tmatch.can-swap .swapB
 </button>
 <div class="judgeBar" id="judgeBar">
   <button class="judgeTag" id="judgeTag" onclick="backToBBXU()">◂ BBXU</button>
-  <div class="judgeInfo" id="judgeInfo">Naskenuj QR obou hráčů</div>
+  <div class="judgeInfo" id="judgeInfo"></div>
   <button class="judgeBtn drawBtn" id="drawBtn" onclick="openPicker(0, 0)">= REMÍZA</button>
   <button class="judgeBtn" id="judgeMatchBtn" onclick="openManualMatch()">VYBRAT ZÁPAS</button>
 </div>
@@ -1454,8 +1468,8 @@ document.querySelectorAll(".dragBtn").forEach(b => {
     hapticInterval = null
     navigator.vibrate?.(0)
     if (commit) {
-      if (dx < -80) scoreFromDrag(1, +b.dataset.points)
-      if (dx > 80)  scoreFromDrag(2, +b.dataset.points)
+      if (dx < -80) scoreFromDrag(1, +b.dataset.points, b.dataset.finish)
+      if (dx > 80)  scoreFromDrag(2, +b.dataset.points, b.dataset.finish)
     }
     dragging = false; dx = 0
   }
@@ -1986,7 +2000,7 @@ function renderJudgeBar() {
     btn.textContent = "ZRUŠIT"; btn.onclick = cancelMatch
   } else {
     const one = judge.sides[1] || judge.sides[2]
-    info.textContent = one ? (one.opp_nick ? `${one.nick} · ${one.tournament_name} · ${one.match?.arena ? `aréna ${one.match.arena} · ` : ""}naskenuj soupeře ${one.opp_nick}` : "Naskenuj druhého hráče") : "Naskenuj QR obou hráčů"
+    info.textContent = one ? (one.opp_nick ? `${one.nick} · ${one.tournament_name} · ${one.match?.arena ? `aréna ${one.match.arena} · ` : ""}naskenuj soupeře ${one.opp_nick}` : "Naskenuj druhého hráče") : ""
     btn.textContent = "VYBRAT ZÁPAS"; btn.onclick = () => openManualMatch()
   }
 }
@@ -2274,19 +2288,19 @@ async function openManualMatch(pre = {}) {
 
 /* ── bod → výběr beyů ── */
 let pick = null
-function scoreFromDrag(side, pts) {
-  if (trainingMode) return trScore(side, pts)
+function scoreFromDrag(side, pts, finish) {
+  if (trainingMode) return trScore(side, pts, finish)
   if (!judgeMode) return addScore(side, pts)
   if (!judge.match) return showOverlay("NEJDŘÍV NAČTI ZÁPAS", "xtreme")
   if (matchOver) return
-  openPicker(side, pts)
+  openPicker(side, pts, finish)
 }
 
-function openPicker(side, pts) {
+function openPicker(side, pts, finish) {
   if (trainingMode) { if (!trActive()) return }
   else if (!judgeHasMatch() || (matchOver && side !== 0)) return
   // druh endu: +3 xtreme, +1 spin, +2 vybere judge (over / burst)
-  pick = { side, pts, finish: side === 0 ? null : pts === 3 ? "xtreme" : pts === 1 ? "spin" : null, beys: { 1: null, 2: null } }
+  pick = { side, pts, finish: side === 0 ? null : pts === 3 ? "xtreme" : pts === 1 ? "spin" : (finish || null), beys: { 1: null, 2: null } }
   for (const s of [1, 2]) {
     const avail = judge.sides[s].beys.filter(b => b && !cycleUsed(s).includes(b))
     if (avail.length === 1) pick.beys[s] = avail[0]     // poslední bey v kole se doplní sám
@@ -2678,9 +2692,9 @@ function trRender(fromServer) {
   }
 }
 
-function trScore(side, pts) {
+function trScore(side, pts, finish) {
   if (!trActive()) { showOverlay("VYBER SOUPEŘE", "xtreme"); return trOpenCircle() }
-  openPicker(side, pts)
+  openPicker(side, pts, finish)
 }
 
 async function trCommit(battle) {

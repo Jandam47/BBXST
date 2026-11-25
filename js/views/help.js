@@ -87,7 +87,7 @@ const S = [
       <li>Zápas načteš třemi způsoby: v BBXU <b>Judge menu</b> → Rozhodovat, v BBXST <b>menu → aréna</b> (zápas na řadě je velkým písmem, fronta pod ním), nebo <b>naskenuj QR</b> vstupenky obou hráčů.</li>
       <li>Skenovat jde jen hráče, který teď v běžícím turnaji hraje. Po prvním skenu uvidíš turnaj, arénu a jméno soupeře – <b>druhý sken musí být přesně ten soupeř</b>, jinak BBXST upozorní. Zápas se pak načte sám.</li>
       <li>Zápas je pak tvůj – jiný judge ho nepřevezme bez organizátora.</li>
-      <li>Po každém bodu vyber, kterým beyem se hrálo. U +2 nejdřív zvol <b>OVER</b> nebo <b>BURST</b>.</li>
+      <li>Po každém bodu vyber, kterým beyem se hrálo. Místo jedné +2 jsou dvě tahací tlačítka – <b>+2 BURST</b> a <b>+2 OVER</b> (stejně v tréninku), takže end už se zvlášť nevybírá.</li>
       <li><b>⇄</b> prohodí strany při 0:0, když hráči stojí obráceně. Po každé sadě tří soubojů svítí <b>OTOČ ARÉNU</b>.</li>
       <li>Skóre se po každém bodu posílá na TV, do Živě i hráčům. Když vypadne signál, hra se uloží v telefonu a odešle se sama – nic se nezapočítá dvakrát.</li>
       <li><b>PASS JUDGE</b> (zlaté tlačítko vlevo dole) předá rozehraný zápas jinému judgovi i se skóre. <b>ZRUŠIT</b> hru zahodí.</li>

@@ -9,13 +9,15 @@ def sql(q):
     return subprocess.check_output(['psql', '-h', '/tmp/pg', '-p', '5499', '-U', 'postgres', '-d', 'bbx', '-tAc', q]).decode().strip()
 
 def drag(page, sel, dx):
-    box = page.locator(sel).bounding_box()
+    box = page.locator(sel + ' >> visible=true').first.bounding_box()
     x, y = box['x'] + box['width'] / 2, box['y'] + box['height'] / 2
     page.mouse.move(x, y); page.mouse.down()
     for i in range(1, 9): page.mouse.move(x + dx * i / 8, y)
     page.mouse.up()
 
 def score_point(page, side, pts_sel, finish='burst'):
+    if pts_sel.endswith('[data-points="2"]') and page.locator(f'.dragBtn[data-finish="{finish}"] >> visible=true').count():
+        pts_sel = f'.dragBtn[data-finish="{finish}"]'          # judge: +2 BURST / +2 OVER
     drag(page, pts_sel, -220 if side == 1 else 220)
     page.wait_for_timeout(150)
     if page.locator('#pickFinish:not(.hidden)').count():
@@ -67,10 +69,11 @@ with sync_playwright() as p:
     page.click('#swapBtn'); page.wait_for_timeout(1500)
 
     # bod +2 vlevo → výběr beyů
-    drag(page, '.dragBtn[data-points="2"]', -220); page.wait_for_selector('#pickFinish:not(.hidden)')
-    assert page.is_hidden('#pickCols')
-    page.screenshot(path=OUT + '33a_bbxst_finish.png')
-    page.click('.finishPick[data-f="over"]'); page.wait_for_selector('#pickCols:not(.hidden)')
+    # judge mód: místo jedné +2 jsou dvě – +2 BURST a +2 OVER (end se už nevybírá)
+    assert page.is_hidden('#hintBtn') and page.is_visible('.dragBtn[data-finish="burst"]') and page.is_visible('.dragBtn[data-finish="over"]')
+    page.screenshot(path=OUT + '33a_bbxst_plus2_pair.png')
+    drag(page, '.dragBtn[data-finish="over"]', -220); page.wait_for_selector('#pickCols:not(.hidden)')
+    assert page.is_hidden('#pickFinish')
     assert 'OVER' in page.inner_text('#pickTitle')
     page.locator('#pickLeft .beyPick').first.click(); page.wait_for_timeout(100)
     page.screenshot(path=OUT + '33_bbxst_pick.png')
@@ -179,6 +182,7 @@ with sync_playwright() as p:
 
     # ruční výběr zápasu
     page.evaluate('cancelMatch()'); page.wait_for_timeout(200)
+    assert page.inner_text('#judgeInfo').strip() == '', 'bez zápasu žádná poznámka „naskenuj QR“'
     page.click('#judgeMatchBtn'); page.wait_for_selector('#mTiles .aTile'); page.wait_for_timeout(500)
     tiles = page.locator('.aTile').count()
     assert tiles >= 1, 'chybí dlaždice arén'

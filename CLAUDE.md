@@ -10,7 +10,8 @@ Komunikuj **česky**, celé UI je česky.
   turnaje, judge arény, hráči, profily, chat, TV rozpis (`#/t/<id>/tv`). Vanilla JS, ES moduly, **žádný build**.
 - `bbxst.html` – **BBXST** scoreboard (jeden soubor, klasické `<script>`, globální proměnné). Casual mód =
   počítadlo; judge mód = načtení zápasu (QR / aréna / `?match=<id>&t=<turnaj>` z BBXU), výběr beyů po každém
-  bodu (po přetažení +2 judge nejdřív vybere OVER / BURST), remíza, prohození stran při 0:0 (⇄), hláška „OTOČ ARÉNU“ po každé sadě 3 soubojů, odeslání přes RPC
+  bodu (v judge i training módu jsou místo jedné +2 dvě tahací – `.dragPair` „+2 BURST“ / „+2 OVER“ s `data-finish`, end se už
+  nevybírá; casual má dál jednu +2 se šipkami), remíza, prohození stran při 0:0 (⇄), hláška „OTOČ ARÉNU“ po každé sadě 3 soubojů, odeslání přes RPC
   `submit_game` s offline frontou (`client_id` zajišťuje, že se hra nezapočítá dvakrát).
   **Training mód** (komunitní trénink): zelené tahací tlačítko TRAINING nad judge (jen když je hráč na otevřeném
   tréninku, `my_training`) → kolečko hráčů → výzva (`training_challenge`, soupeř potvrdí) → oba telefony zapisují
@@ -82,7 +83,8 @@ Komunikuj **česky**, celé UI je česky.
   plochu, lišta arén + AUTO (aréna s posledním děním, drží aspoň 12 s). Volby v `localStorage bbxu_live_*`.
   Realtime + polling 15 s.
 - BBXST po dohraném zápase (`afterMatchNext`): „Další na aréně N“ s tlačítky ◂ BBXU · ZPĚT (jen zavře nabídku, judge mód
-  zůstane zapnutý bez zápasu) · NAČÍST ZÁPAS.
+  zůstane zapnutý bez zápasu) · NAČÍST ZÁPAS. Dialogy `.jBox` mají nadpis, text i řadu tlačítek na středu.
+  Lišta judge bez zápasu nemá poznámku (`#judgeInfo` prázdné); při skenu QR ukáže „naskenuj soupeře X“.
 - BBXST judge menu → aréna: vybraný zápas (výchozí ten na řadě / rozehraný) velkým písmem v `.jNext`, zbytek fronty
   pod ním menším (`.jQ`, klepnutím se vybere).
 - BBXST judge → sken QR (26): `judge_scan_qr(token)` pustí jen aktivního hráče v běžícím turnaji (swiss / topcut), který

@@ -25,7 +25,7 @@ def go(page, h):
     page.goto(BASE + '#' + h); page.wait_for_timeout(700)
 
 def drag(page, sel, dx, dy=0):
-    box = page.locator(sel).bounding_box()
+    box = page.locator(sel + ' >> visible=true').first.bounding_box()
     x, y = box['x'] + box['width'] / 2, box['y'] + box['height'] / 2
     page.mouse.move(x, y); page.mouse.down()
     for i in range(1, 9): page.mouse.move(x + dx * i / 8, y + dy * i / 8)
