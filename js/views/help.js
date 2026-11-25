@@ -54,7 +54,16 @@ const S = [
       <li><b>Deathmatch:</b> každý s každým jednou.</li>
       <li><b>Volný los</b> dostane nejhůř umístěný hráč, který ho ještě neměl – počítá se jako výhra 7:0.</li>
       <li><b>Top cut</b> je double elimination: po první prohře hraješ dál v pavouku poražených.</li>
-      <li>Záložka <b>Hráči</b> dole otevře kolečko: <b>Standings</b> (všichni hráči podle ratingu), Komunity, Ligy a – když jsi v komunitě – <b>Trénink</b> (standings jen z komunitních tréninků).</li>
+      <li>Záložka <b>Hráči</b> dole otevře kolečko: <b>Standings</b> (všichni hráči podle ratingu), Komunity, Ligy, <b>Stats ladder</b> a – když jsi v komunitě – <b>Trénink</b> (standings jen z komunitních tréninků).</li>
+    </ul>
+    <h3>Stats</h3>
+    <p>Z každého turnaje si odneseš stats. Na <b>Stats ladderu</b> vidíš, kdo kterému statu vládne – top 3 nebo top 10, podle sezóny (od 1. ledna) nebo celkem, podle kraje a ligy. V komunitě je i <b>komunitní ladder</b> z tréninků. V profilu uvidíš svoje stats a medaile za 1.–3. místo.</p>
+    <ul>
+      <li><b>Breakdancer / Game over / Glueless / Xtreme hunter</b> – Spin / Over / Burst / Xtreme finish dané soupeřům.</li>
+      <li><b>Tableflip</b> – vyhraná hra, ve které jsi prohrával o 5 a víc bodů. <b>No time to lose</b> – výhra 7:0.</li>
+      <li><b>Blitzkrieg</b> a <b>T.Y.T.</b> – nejrychlejší a nejdelší hry (měří BBXST).</li>
+      <li><b>Série</b> – nejdelší řada vyhraných zápasů. <b>King of draws</b> – nejvíc remíz. <b>Iron law</b> – nejvíc odjudgovaných zápasů.</li>
+      <li><b>Rickety</b> – kolikrát se tvůj bey rozpadl. <b>No rod???</b> – turnaje bez Wizard Rod v decku.</li>
     </ul>`],
   ['league', 'Ligy', html`
     <p>Ligové turnaje se po skončení sčítají do tabulky ligy (Hráči → Ligy). Výchozí bodování:</p>

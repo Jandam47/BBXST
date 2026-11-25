@@ -48,7 +48,7 @@ with sync_playwright() as p:
     url0 = h3.url
     h3.click('.tabbar a[data-tab=players]'); h3.wait_for_selector('.cw-overlay .cw-sec')
     assert h3.inner_text('.cw-title') == 'Hráči' and h3.url == url0, 'kolečko nad stránkou, bez přechodu'
-    assert wheel_labels(h3) == ['Standings', 'Komunity', 'Ligy'], wheel_labels(h3)
+    assert wheel_labels(h3) == ['Standings', 'Komunity', 'Ligy', 'Stats ladder'], wheel_labels(h3)
     h3.click('.cw-sec[data-i="0"]'); h3.wait_for_url(re.compile(r'#/players$')); h3.wait_for_selector('#pl .li')
     assert h3.inner_text('h1') == 'Standings' and h3.locator('.people-tabs').count() == 0
     h3.click('.tabbar a[data-tab=players]'); h3.wait_for_selector('.cw-overlay .cw-sec'); h3.click('.cw-sec[data-i="2"]')
@@ -60,9 +60,9 @@ with sync_playwright() as p:
     # ── člen: výseč Trénink → standings ──
     m1 = ctx(b, 'hrac1@test.cz')
     m1.click('.tabbar a[data-tab=players]'); m1.wait_for_selector('.cw-overlay .cw-sec')
-    assert wheel_labels(m1) == ['Standings', 'Komunity', 'Ligy', 'Trénink – standings'], wheel_labels(m1)
+    assert wheel_labels(m1) == ['Standings', 'Komunity', 'Ligy', 'Stats ladder', 'Trénink – standings'], wheel_labels(m1)
     m1.screenshot(path=OUT + '310_players_wheel.png')
-    m1.click('.cw-sec[data-i="3"]'); m1.wait_for_url(re.compile(rf'#/c/{cid}/standings$')); m1.wait_for_selector('.cst-row')
+    m1.click('.cw-sec[data-i="4"]'); m1.wait_for_url(re.compile(rf'#/c/{cid}/standings$')); m1.wait_for_selector('.cst-row')
     rows = m1.locator('.cst-row').all_inner_texts()
     assert len(rows) == 2 and 'Hrac1' in rows[0] and '3–0–2' in rows[0] and 'X 1' in rows[0], rows
     assert 'body 6:3' in rows[0] and '2–0–3' in rows[1], rows

@@ -40,7 +40,7 @@ Komunikuj **česky**, celé UI je česky.
   (vnitřní → vnější, počet podle obvodu; Turbo / Operate žlutě), uprostřed hledání (zkratka → název → slovo → alias), nevyhovující zhasnou, Enter /
   tlačítko uprostřed vezme nejlepší shodu, písmeno na poli bitu otevře kolečko s hledáním. Tip na zkratky nahoře.
 - `js/config.js` – **obsahuje Adamovy živé klíče Supabase. Nikdy ho neměň ani nepřepisuj.**
-- `supabase/schema.sql`, `02-parts.sql`, `03-live-score.sql`, `04-security-hardening.sql`, `05-judge-handover.sql`, `06-formats-stats.sql`, `07-parts-update.sql`, `08-judge-per-match.sql`, `09-pause.sql`, `10-fashion.sql`, `11-finishes.sql`, `12-rated.sql`, `13-communities.sql`, `14-training-extras.sql`, `15-training-bots.sql`, `16-training-reset.sql`, `17-chat-bazar.sql`, `18-chat-tournament-state.sql`, `19-account-reports.sql`, `20-push.sql`, `21-checkin-errors-backup.sql`, `22-leagues.sql`, `23-meetings.sql`, `24-judge-count.sql`, `25-reg-check.sql`, `26-judge-scan.sql`, `27-live.sql`, `28-cashier.sql`, `29-polls-feedback.sql`, `30-seen-sync.sql`, `31-community-standings.sql`, `32-parts-shatter-horus.sql`, `33-parts-hasbro-2026-11.sql`, `34-privacy-admin.sql`, `35-favorites.sql` – databáze (spuštěné v produkci, nové soubory
+- `supabase/schema.sql`, `02-parts.sql`, `03-live-score.sql`, `04-security-hardening.sql`, `05-judge-handover.sql`, `06-formats-stats.sql`, `07-parts-update.sql`, `08-judge-per-match.sql`, `09-pause.sql`, `10-fashion.sql`, `11-finishes.sql`, `12-rated.sql`, `13-communities.sql`, `14-training-extras.sql`, `15-training-bots.sql`, `16-training-reset.sql`, `17-chat-bazar.sql`, `18-chat-tournament-state.sql`, `19-account-reports.sql`, `20-push.sql`, `21-checkin-errors-backup.sql`, `22-leagues.sql`, `23-meetings.sql`, `24-judge-count.sql`, `25-reg-check.sql`, `26-judge-scan.sql`, `27-live.sql`, `28-cashier.sql`, `29-polls-feedback.sql`, `30-seen-sync.sql`, `31-community-standings.sql`, `32-parts-shatter-horus.sql`, `33-parts-hasbro-2026-11.sql`, `34-privacy-admin.sql`, `35-favorites.sql`, `36-stats.sql` – databáze (spuštěné v produkci, nové soubory
   spouští Adam). Živé skóre: BBXST v judge módu posílá po každém bodu `live_score` → `matches.live_p1/p2`
   (TV rozpis, vstupenka, seznamy); trigger `bbx_clear_live` ho maže po uložení hry.
   Rozehraná hra: BBXST posílá s `live_score` i `p_state` → `matches.live_state` (souboje v orientaci p1/p2,
@@ -217,6 +217,16 @@ Komunikuj **česky**, celé UI je česky.
   Modaly přes `sheet()` se zavřou při změně adresy. Odkazy `#/me?s=backup|reports|errors|requests|staff|privacy|share|tickets`
   otevřou rovnou daný modal (banner zálohy na hlavní stránce). Pod jménem už tlačítka ani admin karty nejsou; host bez účtu má
   instalaci dál přímo na stránce.
+- **Stats** (36, `js/stats.js` = seznam `STATS` s názvy z Adamovy tabulky Stats.xlsx, `js/views/stats.js` = `#/stats`, výseč
+  „Stats ladder“ v kolečku Hráči): místo achievementů. Počítadla `bbx_stat_values(sezóna, liga)` – breakdancer / game_over /
+  glueless / xtreme (endy dané), tableflip (výhra po −5), no_time (7:0 se souboji), streak (nejdelší řada výher bez volných
+  losů), draws, iron_law (jako `player_judged`), rickety (burst obdržený), no_rod (turnaje bez Wizard Rod, podle `bey1–3`);
+  rekordy `bbx_stat_games` – blitz (nejrychlejší hry, drží vítěz) a tyt (nejdelší, oba), délka = `games.created_at − started_at`,
+  jen hry s ≥ 3 souboji, 15 s – 3 h. Jen skončené turnaje, sezóna = rok `starts_at`, hráči jen účty (`bbx_stat_players`, skrytí
+  ze Standings chybí ostatním). RPC `stats_ladder(sezóna, kraj, liga, limit)` (top podle `row_number`, `me` = moje pořadí),
+  `stat_seasons`, `player_stat_ranks(hráč, sezóna)` (profil: medaile za 1.–3. místo + dlaždice; pozor, `player_stats(uuid)`
+  je jiná funkce), `community_stats_ladder(komunita, sezóna, limit)` (jen tréninky komunity, počítadla s `community: true`,
+  členové / admin 3+). Stránka: Turnaje | Komunita, sezóna / Celkem, kraj, liga, stat, Top 3 | Top 10, filtry v adrese.
 - **Oblíbené buildy a decky** (35, `js/favorites.js`, `js/views/favorites.js`, `#/oblibene`, `?tab=decky`): ★ `.prof-fav` vedle
   ozubeného kolečka → „Choose wheel“ (Oblíbené buildy · Decky · Nový build). `fav_builds` (bey ve tvaru decku, trigger
   `bbx_fav_build_fill` normalizuje díly a skládá `name` přes `bbx_compose_bey`, duplicita názvu = chyba, max 60) a `fav_decks`
@@ -332,6 +342,7 @@ Potřebují lokální PostgreSQL 16, Node a pro UI Python Playwright + Chrome a 
 - `node tests/chat.test.mjs` – chat (místnosti, přístup, hosté) a bazar (fotky, soukromá vlákna) v DB.
 - `node tests/polls.test.mjs` – ankety (zakládání, hlasování, anonymní / veřejné, konec), dotazy a připomínky (29), přečteno na serveru (30).
 - `node tests/favorites.test.mjs` – oblíbené buildy a decky (35).
+- `node tests/stats.test.mjs` – stats: počítadla, rekordy, filtry, soukromí, profil, komunitní ladder (36).
 - `node tests/extras.test.mjs` – kontrola registrací, chyby z telefonů, záloha, vzájemná bilance (21, 25), soukromí a `admin_counts` (34).
 - `node tests/leagues.test.mjs` – ligy: práva správce / organizátorů, ligové turnaje, bodování a bilance (22).
 - `node tests/meetings.test.mjs` – meeting osobně / online, akce jen pro organizátory (23).
@@ -341,7 +352,7 @@ Potřebují lokální PostgreSQL 16, Node a pro UI Python Playwright + Chrome a 
 - `node tests/account.test.mjs` – nahlášení a smazání účtu; `node tests/push.test.mjs` – odběry a push události (outbox).
 - `node tests/community.test.mjs` – komunity a komunitní trénink v DB (schválení, členové, trénink, výzvy, souboje, meta, standings 31).
 - `tests/ui-up.sh && python3 tests/ui_smoke.py && python3 tests/bbxst_judge.py && python3 tests/test_tools.py` – proklik v Chrome
-  (`tests/judge_handover.py`, `tests/formats_stats.py`, `tests/arenas_status.py`, `tests/fashion_ui.py`, `tests/community_ui.py`, `tests/bbxst_training.py`, `tests/training_bot_ui.py`, `tests/chat_ui.py`, `tests/komunikace_ui.py`, `tests/players_wheel_ui.py`, `tests/extras_ui.py`, `tests/checkin_ui.py`, `tests/leagues_ui.py`, `tests/install_ui.py`, `tests/create_wheel_ui.py`, `tests/tv_modes_ui.py`, `tests/points_hist_ui.py`, `tests/ratchet_wheel_ui.py`, `tests/live_ui.py` a `tests/cashier_ui.py`, `tests/profile_gear_ui.py`, `tests/favorites_ui.py` každý zvlášť po čerstvém `ui-up.sh`: převzetí judge;
+  (`tests/judge_handover.py`, `tests/formats_stats.py`, `tests/arenas_status.py`, `tests/fashion_ui.py`, `tests/community_ui.py`, `tests/bbxst_training.py`, `tests/training_bot_ui.py`, `tests/chat_ui.py`, `tests/komunikace_ui.py`, `tests/players_wheel_ui.py`, `tests/extras_ui.py`, `tests/checkin_ui.py`, `tests/leagues_ui.py`, `tests/install_ui.py`, `tests/create_wheel_ui.py`, `tests/tv_modes_ui.py`, `tests/points_hist_ui.py`, `tests/ratchet_wheel_ui.py`, `tests/live_ui.py` a `tests/cashier_ui.py`, `tests/profile_gear_ui.py`, `tests/favorites_ui.py`, `tests/stats_ui.py` každý zvlášť po čerstvém `ui-up.sh`: převzetí judge;
   deathmatch přes testovací nástroje až po finále, vyhodnocení, meta, profil)
   (poslední: zkušební turnaj 16 hráčů přes testovací nástroje až po ukončení).
 Když měníš SQL, přidej nový soubor i do `tests/reset_db.sh`. Po změně logiky nebo DB pusť testy.
@@ -351,10 +362,8 @@ V Řízení turnaje (jen admin): přidání N testovacích hráčů bez účtu (
 dílů) a náhodné dohrání otevřených zápasů včetně soubojů s beyi (kvůli vyhodnocení). Jen přes existující RPC (`add_walkin`, `submit_game`), bez změn DB.
 
 ## Na vyřízení (dohodnuté s Adamem)
-- **Achievementy** – vlastní, originální systém (konkurenční aplikace má odznaky, nesmí to vypadat jako kopie), interaktivní.
-  Nápady z 25. 11. 2026: osobní emblém skládaný z odemčených kousků, stupně podle endů (Spin / Over / Burst / Xtreme),
-  Beyblade momenty (comeback z 0:5, čisté 7:0, „Inženýr“ 20 comb, „Věrnost bitu“), tajné s % hráčů, komunitní cíl
-  (společně 1000 Xtreme), uznání za judgování.
+- **Stats – další várka** (místo achievementů je Stats, první várka hotová v 36): Adam si stats ještě ladí v tabulce;
+  tajné stats („???“, dokud je nikdo nemá), další nápady: Inženýr (výhry s N různými comby), Jednička (sada jedním beyem).
 - **Report z turnaje vyšperkovat** (záložka Vyhodnocení / sdílení výsledků).
 - **Připomínka turnaje + kalendář** (.ics, upozornění den předem) – později.
 - **Méně stahování dat na turnaji**: při bodu (`live_score`) jen upravit skóre v telefonu místo `load()` celého turnaje

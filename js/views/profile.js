@@ -12,6 +12,7 @@ import { communityBadges, adminRequests } from './communities.js'
 import { adminReports } from '../report.js'
 import { pushStatus, enablePush, disablePush } from '../push.js'
 import { ICONS } from '../icons.js'
+import { STATS, fmtSecs, medal, thisSeason } from '../stats.js'
 import { openCreateWheel } from '../create-wheel.js'
 import { THEMES, getTheme, setTheme } from '../theme.js'
 
@@ -158,6 +159,8 @@ export async function render(main, [id], ctx) {
       </div>` : ''}
     </div>
 
+    <section id="prof-stats" class="prof-stats" aria-live="polite"></section>
+
     ${!own && hidden.h2h ? '' : h2hBlock(h2h, p, own)}
     ${own && hidden.h2h && h2h?.opponents?.length ? html`<p class="hint">🔒 Soupeře a vzájemnou bilanci vidíš jen ty.</p>` : ''}
 
@@ -222,6 +225,7 @@ export async function render(main, [id], ctx) {
     ${events.length ? html`<h2>Akce</h2><div class="list">${events.map(t => html`<a class="li" href="#/t/${t.id}"><span class="grow">${t.name}</span><span class="small faint">${kindLabel(t)} · ${fmtDate(t.starts_at)}</span></a>`)}</div>` : ''}
 `)
   const rerender = () => render(main, [id])
+  profStats(main.querySelector('#prof-stats'), id, own)
   if (own && state.level >= 3) adminStrip(main, p, rerender)
   if (own) {   // #/me?s=backup|reports|errors|requests|tickets|privacy|share → rovnou otevřít
     const s = new URLSearchParams(location.hash.split('?')[1] || '').get('s')
@@ -554,4 +558,43 @@ async function staffSheet() {
       }, 250)
     })
   }, { wide: true })
+}
+
+// ── Stats (36): umístění v top 3 (držitel) a hodnoty hráče; sezóna / celkem ──
+async function profStats(box, id, own) {
+  if (!box) return
+  let season = thisSeason()
+  const draw = async () => {
+    let d
+    try { d = await rpc('player_stat_ranks', { p_user: id, p_season: season }) } catch { return mount(box, '') }
+    if (!box.isConnected) return
+    const v = d?.values || {}
+    const counters = STATS.filter(s => s.kind === 'count' && v[s.key]?.value)
+    const recs = STATS.filter(s => s.kind === 'record' && d?.[s.key])
+    const holds = [
+      ...counters.filter(s => v[s.key].rank && v[s.key].rank <= 3).map(s => ({ s, rank: v[s.key].rank })),
+      ...recs.map(s => ({ s, rank: d[s.key].rank })),
+    ].sort((a, b) => a.rank - b.rank)
+    mount(box, html`
+      <div class="row between" style="align-items:center;gap:8px">
+        <h2 class="grow">Stats</h2>
+        <div class="seg sm" role="radiogroup" aria-label="Sezóna">
+          <button type="button" data-season="${thisSeason()}" class="${season ? 'on' : ''}" aria-pressed="${!!season}">${thisSeason()}</button>
+          <button type="button" data-season="all" class="${season ? '' : 'on'}" aria-pressed="${!season}">Celkem</button>
+        </div>
+      </div>
+      ${holds.length ? html`<div class="ps-holds">${holds.map(h => html`<a class="ps-hold r${h.rank}" href="#/stats?s=${h.s.key}&y=${season || 'all'}">
+          <span class="ps-medal">${medal(h.rank)}</span><b>${h.s.name}</b></a>`)}</div>` : ''}
+      ${counters.length || recs.length ? html`<div class="ps-grid">
+          ${counters.map(s => html`<a class="ps-tile" href="#/stats?s=${s.key}&y=${season || 'all'}">
+            <span class="ps-v num">${v[s.key].value}</span><span class="ps-k">${s.name}</span>
+            ${v[s.key].rank ? html`<span class="ps-r">${v[s.key].rank}. místo</span>` : ''}</a>`)}
+          ${recs.map(s => html`<a class="ps-tile" href="#/stats?s=${s.key}&y=${season || 'all'}">
+            <span class="ps-v num">${fmtSecs(d[s.key].secs)}</span><span class="ps-k">${s.name}</span><span class="ps-r">${d[s.key].rank}. místo</span></a>`)}
+        </div>`
+        : html`<p class="hint">${own ? 'Zatím žádné stats – odnes si je z turnajů.' : 'Zatím žádné stats.'}</p>`}
+      <a class="btn sm ghost" href="#/stats" style="margin-top:8px">Stats ladder</a>`)
+  }
+  on(box, 'click', '[data-season]', (e, b) => { season = b.dataset.season === 'all' ? null : Number(b.dataset.season); draw() })
+  await draw()
 }

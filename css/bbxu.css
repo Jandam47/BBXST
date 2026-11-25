@@ -363,6 +363,40 @@ a.li:hover { background: var(--panel-2); }
 .prof-fav { border-color: rgba(var(--bolt-rgb),.5); box-shadow: 0 0 12px rgba(var(--bolt-rgb),.18); }
 .prof-fav .nicon .i1, .prof-fav .nicon .i2 { stroke: var(--bolt); }
 .prof-fav:hover, .prof-fav:focus-visible { transform: scale(1.08); box-shadow: 0 0 18px rgba(var(--bolt-rgb),.45); }
+/* stats (36) */
+.st-filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; margin-top: 12px; }
+.st-filters .f { margin: 0; }
+.st-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; margin-top: 14px; }
+.st-card { padding: 12px 14px; }
+.st-head { display: flex; align-items: center; gap: 12px; }
+.st-head h3 { margin: 0; font-size: 18px; }
+.st-ico { flex: none; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; font: 800 14px var(--display);
+  color: var(--bolt); border: 1px solid rgba(var(--bolt-rgb),.5); background: rgba(var(--bolt-rgb),.06); }
+.st-list { display: grid; gap: 2px; margin-top: 10px; }
+.st-row { display: flex; align-items: center; gap: 10px; padding: 7px 6px; border-radius: 8px; color: var(--text); text-decoration: none; min-width: 0; }
+.st-row:hover { background: rgba(var(--cyan-rgb),.06); }
+.st-row.me { background: rgba(var(--bolt-rgb),.08); }
+.st-row .ellipsis { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.st-row .grow { min-width: 0; }
+.st-row .av { flex: none; }
+.st-row b.num { flex: none; font: 700 17px var(--display); }
+.st-mine { border-top: 1px dashed var(--line); margin-top: 4px; }
+.st-rank { flex: none; width: 30px; text-align: center; font: 700 15px var(--display); color: var(--muted); }
+.st-empty { color: var(--faint); font-size: 14px; margin: 4px 6px; }
+.prof-stats { margin-top: 18px; }
+.ps-holds { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
+.ps-hold { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; text-decoration: none; color: var(--text);
+  border: 1px solid var(--line); background: var(--panel); font-size: 14px; }
+.ps-hold.r1 { border-color: #ffd34d; box-shadow: 0 0 12px rgba(255,211,77,.25); }
+.ps-hold.r2 { border-color: #cfd6e0; }
+.ps-hold.r3 { border-color: #d08a52; }
+.ps-medal { font-size: 18px; }
+.ps-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 8px; margin-top: 8px; }
+.ps-tile { display: grid; gap: 2px; padding: 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); text-decoration: none; color: var(--text); }
+.ps-v { font: 800 22px var(--display); color: var(--cyan); }
+.ps-k { font-size: 13px; color: var(--text); }
+.ps-r { font-size: 12px; color: var(--bolt); }
+
 /* oblíbené buildy a decky */
 .fav-list { display: grid; gap: 10px; margin-top: 14px; }
 .fav-card { display: flex; align-items: flex-start; gap: 12px; padding: 12px 14px; }

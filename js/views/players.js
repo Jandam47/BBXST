@@ -9,7 +9,7 @@ import { openCreateWheel } from '../create-wheel.js'
 
 // moje komunity (kvůli výseči Trénink) – krátká cache
 let myComm = { uid: null, at: 0, list: [] }
-async function myCommunities() {
+export async function myCommunities() {
   const uid = isLoggedIn() && !state.isAnon ? state.user?.id : null
   if (!uid) return []
   if (myComm.uid === uid && Date.now() - myComm.at < 120000) return myComm.list
@@ -25,6 +25,7 @@ export async function openPlayersWheel() {
     { label: 'Standings', icon: 'bars', color: 'var(--cyan)', go: '#/players' },
     { label: 'Komunity', icon: 'users', color: 'var(--magenta)', go: '#/communities' },
     { label: 'Ligy', icon: 'trophy', color: 'var(--bolt)', go: '#/leagues' },
+    { label: 'Stats ladder', short: 'Stats', icon: 'star', color: '#ff8a3d', go: '#/stats' },
   ]
   if (comms.length === 1) items.push({ label: 'Trénink – standings', short: 'Trénink', icon: 'scale', color: '#00ffaa', go: `#/c/${comms[0].id}/standings` })
   else if (comms.length > 1) items.push({ label: 'Trénink – standings', short: 'Trénink', icon: 'scale', color: '#00ffaa',

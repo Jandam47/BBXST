@@ -236,6 +236,19 @@ await fails(null, 'select community_standings($1)', [cid])
 assert.ok((await one(boss, 'community_standings', [cid])).players.length, 'admin vidí')
 step('standings z tréninků: jen členové, jen účty, počty sedí, filtr období')
 
+// ── komunitní stats ladder (36) ──
+const csl = await one(pl[1], 'community_stats_ladder', [cid])
+const xt = (await db.query(`select r.user_id, count(*)::int n from public.bbx_training_battles(null, $1) x join registrations r on r.id = x.reg_id
+  where not r.is_bot and r.user_id is not null and x.result = 1 and x.finish = 'xtreme' group by r.user_id`, [cid])).rows
+for (const t of xt) assert.equal(csl.counters.xtreme.find(x => x.user === t.user_id).value, t.n)
+const dr = (await db.query(`select count(*)::int n from public.bbx_training_battles(null, $1) x join registrations r on r.id = x.reg_id
+  where not r.is_bot and r.user_id is not null and x.result = 0`, [cid])).rows[0].n
+assert.equal((csl.counters.draws || []).reduce((a, x) => a + x.value, 0), dr)
+assert.ok(csl.seasons.includes(new Date().getFullYear()))
+assert.deepEqual((await one(pl[1], 'community_stats_ladder', [cid, 1999])).counters, {})
+await fails(outsider, 'select community_stats_ladder($1)', [cid], /členové/)
+step('komunitní stats ladder: endy a remízy z tréninků, sezóna, jen členové')
+
 // ── zamítnutí ─────────────────────────────────────────────────────
 const cid2 = await one(org, 'community_create', ['Druhá ' + sfx])
 await as(boss, 'select community_review($1, false, $2)', [cid2, 'Duplicitní'])
