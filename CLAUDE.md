@@ -224,7 +224,7 @@ Komunikuj **česky**, celé UI je česky.
   rekordy `bbx_stat_games` – blitz (nejrychlejší hry, drží vítěz) a tyt (nejdelší, oba), délka = `games.created_at − started_at`,
   jen hry s ≥ 3 souboji, 15 s – 3 h. Jen skončené turnaje, sezóna = rok `starts_at`, hráči jen účty (`bbx_stat_players`, skrytí
   ze Standings chybí ostatním). RPC `stats_ladder(sezóna, kraj, liga, limit)` (top podle `row_number`, `me` = moje pořadí),
-  `stat_seasons`, `player_stat_ranks(hráč, sezóna)` (profil: medaile za 1.–3. místo + dlaždice; pozor, `player_stats(uuid)`
+  `stat_seasons`, `player_stat_ranks(hráč, sezóna)` (profil: dlaždice, na bedně zlatá / stříbrná / bronzová s medailí v rohu a jdou první; pozor, `player_stats(uuid)`
   je jiná funkce), `community_stats_ladder(komunita, sezóna, limit)` (jen tréninky komunity, počítadla s `community: true`,
   členové / admin 3+). Stránka: Turnaje | Komunita, sezóna / Celkem, kraj, liga, stat, Top 3 | Top 10, filtry v adrese.
 - **Oblíbené buildy a decky** (35, `js/favorites.js`, `js/views/favorites.js`, `#/oblibene`, `?tab=decky`): ★ `.prof-fav` vedle

@@ -571,10 +571,12 @@ async function profStats(box, id, own) {
     const v = d?.values || {}
     const counters = STATS.filter(s => s.kind === 'count' && v[s.key]?.value)
     const recs = STATS.filter(s => s.kind === 'record' && d?.[s.key])
-    const holds = [
-      ...counters.filter(s => v[s.key].rank && v[s.key].rank <= 3).map(s => ({ s, rank: v[s.key].rank })),
-      ...recs.map(s => ({ s, rank: d[s.key].rank })),
-    ].sort((a, b) => a.rank - b.rank)
+    // dlaždice: na bedně (1.–3.) zlatá / stříbrná / bronzová s medailí v rohu, ty jdou první
+    const tiles = [
+      ...counters.map(s => ({ s, v: v[s.key].value, rank: v[s.key].rank })),
+      ...recs.map(s => ({ s, v: fmtSecs(d[s.key].secs), rank: d[s.key].rank })),
+    ].map((t, i) => ({ ...t, i, podium: t.rank && t.rank <= 3 ? t.rank : 0 }))
+     .sort((a, b) => (a.podium || 9) - (b.podium || 9) || a.i - b.i)
     mount(box, html`
       <div class="row between" style="align-items:center;gap:8px">
         <h2 class="grow">Stats</h2>
@@ -583,14 +585,12 @@ async function profStats(box, id, own) {
           <button type="button" data-season="all" class="${season ? '' : 'on'}" aria-pressed="${!season}">Celkem</button>
         </div>
       </div>
-      ${holds.length ? html`<div class="ps-holds">${holds.map(h => html`<a class="ps-hold r${h.rank}" href="#/stats?s=${h.s.key}&y=${season || 'all'}">
-          <span class="ps-medal">${medal(h.rank)}</span><b>${h.s.name}</b></a>`)}</div>` : ''}
-      ${counters.length || recs.length ? html`<div class="ps-grid">
-          ${counters.map(s => html`<a class="ps-tile" href="#/stats?s=${s.key}&y=${season || 'all'}">
-            <span class="ps-v num">${v[s.key].value}</span><span class="ps-k">${s.name}</span>
-            ${v[s.key].rank ? html`<span class="ps-r">${v[s.key].rank}. místo</span>` : ''}</a>`)}
-          ${recs.map(s => html`<a class="ps-tile" href="#/stats?s=${s.key}&y=${season || 'all'}">
-            <span class="ps-v num">${fmtSecs(d[s.key].secs)}</span><span class="ps-k">${s.name}</span><span class="ps-r">${d[s.key].rank}. místo</span></a>`)}
+      ${tiles.length ? html`<div class="ps-grid">${tiles.map(t => html`
+          <a class="ps-tile ${t.podium ? 'r' + t.podium : ''}" href="#/stats?s=${t.s.key}&y=${season || 'all'}"
+             aria-label="${t.s.name}: ${t.v}${t.rank ? `, ${t.rank}. místo` : ''}">
+            ${t.podium ? html`<span class="ps-medal" aria-hidden="true">${medal(t.podium)}</span>` : ''}
+            <span class="ps-v num">${t.v}</span><span class="ps-k">${t.s.name}</span>
+            ${t.rank ? html`<span class="ps-r">${t.rank}. místo</span>` : ''}</a>`)}
         </div>`
         : html`<p class="hint">${own ? 'Zatím žádné stats – odnes si je z turnajů.' : 'Zatím žádné stats.'}</p>`}
       <a class="btn sm ghost" href="#/stats" style="margin-top:8px">Stats ladder</a>`)

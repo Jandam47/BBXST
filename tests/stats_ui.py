@@ -64,7 +64,7 @@ with sync_playwright() as p:
     h.locator('#prof-stats').scroll_into_view_if_needed()
     h.screenshot(path=OUT + '503_profile_stats.png')
     tiles = h.locator('#prof-stats .ps-tile').count()
-    print('profil tiles:', tiles, 'holds:', h.locator('#prof-stats .ps-hold').count())
+    print('profil tiles:', tiles, 'bedna:', h.locator('#prof-stats .ps-tile.r1, #prof-stats .ps-tile.r2, #prof-stats .ps-tile.r3').count())
     h.click('#prof-stats [data-season=all]'); h.wait_for_selector('#prof-stats [data-season=all].on')
     assert h.locator('#prof-stats .ps-tile').count() >= tiles
     b.close()
