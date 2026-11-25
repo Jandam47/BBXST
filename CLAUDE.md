@@ -222,7 +222,7 @@ Komunikuj **česky**, celé UI je česky.
   `text-shadow` / filtrů uvnitř, plus `filter: grayscale(1)` na `<html>` (dobarví i natvrdo psané barvy a SVG; na kořeni
   nerozbije `position: fixed`). Volba v `localStorage bbxu_theme` (jen zařízení), inline skript v hlavičce index.html ji
   nastaví před vykreslením, mění se v ⚙ → Aplikace → Vzhled (host: tlačítko v profilu). BBXST se nemění.
-  Nové barvy v CSS piš přes proměnné, ať schémata fungují bez úprav (zelená OK / červená chyba a trofeje zůstávají pevné).
+  Nové barvy v CSS piš přes proměnné, ať schémata fungují bez úprav (zelená OK a výhry v pruzích `.meta-bar .w`, červená chyba a trofeje zůstávají pevné).
 - **Soukromí** (34): `profiles.privacy` jsonb {beys, h2h, standings} (mění hráč sám přes update profilu). `bbx_private()` →
   `player_bey_stats` a `player_h2h` vrací ostatním prázdno, `players_list` skrytého vynechá (kromě něj samého). Výsledky
   turnajů, pavouk, meta a community standings zůstávají veřejné.

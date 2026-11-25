@@ -723,7 +723,7 @@ h2::before { content: ''; display: inline-block; width: 4px; height: .9em; margi
 .pass-arena .big, .arena-card .arena-no, .rep-top, .meta-wr b, .pass-stand b, .pb-time { text-shadow: var(--glow-y); }
 .arena-card .arena-sc, .tv-now .sc b { text-shadow: 0 0 14px rgba(var(--cyan-rgb),.45); }
 .standings tr.me td { background: rgba(var(--bolt-rgb),.07); }
-.meta-bar .w { background: var(--cyan); box-shadow: var(--glow-c); }
+.meta-bar .w { background: #2ef0a8; box-shadow: 0 0 10px rgba(46,240,168,.45); }   /* výhry vždy zeleně, ve všech schématech */
 .meta-bar { background: rgba(var(--magenta-rgb),.55); }
 
 /* TV */
