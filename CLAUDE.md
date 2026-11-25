@@ -10,7 +10,7 @@ Komunikuj **česky**, celé UI je česky.
   turnaje, judge arény, hráči, profily, chat, TV rozpis (`#/t/<id>/tv`). Vanilla JS, ES moduly, **žádný build**.
 - `bbxst.html` – **BBXST** scoreboard (jeden soubor, klasické `<script>`, globální proměnné). Casual mód =
   počítadlo; judge mód = načtení zápasu (QR / aréna / `?match=<id>&t=<turnaj>` z BBXU), výběr beyů po každém
-  bodu (v judge i training módu jsou místo jedné +2 dvě tahací – `.dragPair` „+2 BURST“ / „+2 OVER“ s `data-finish`, end se už
+  bodu (v judge i training módu jsou místo jedné +2 dvě tahací – `.dragPair` „+2 BURST“ / „+2 OVER“ pod sebou, užší než +3 / +1 (aby bylo vidět skóre), s `data-finish`, end se už
   nevybírá; casual má dál jednu +2 se šipkami), remíza, prohození stran při 0:0 (⇄), hláška „OTOČ ARÉNU“ po každé sadě 3 soubojů, odeslání přes RPC
   `submit_game` s offline frontou (`client_id` zajišťuje, že se hra nezapočítá dvakrát).
   **Training mód** (komunitní trénink): zelené tahací tlačítko TRAINING nad judge (jen když je hráč na otevřeném

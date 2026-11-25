@@ -247,11 +247,11 @@ body {
 }
 
 /* judge / training: dvě +2 (BURST / OVER) místo jedné */
-.dragPair { display: none; gap: 14px; justify-content: center; }
-.dragPair .dragBtn { padding: 22px 18px; font-size: 18px; letter-spacing: 1.5px; white-space: nowrap; }
-body.judge .dragPair, body.training .dragPair { display: flex; }
+.dragPair { display: none; justify-content: center; gap: 12px; }   /* grid = obě stejně široké */
+.dragPair .dragBtn { padding: 13px 20px; font-size: 16px; letter-spacing: 1.5px; white-space: nowrap; }   /* užší než +3 / +1, ať je vidět skóre */
+body.judge .dragPair, body.training .dragPair { display: grid; }
 body.judge .center .dragWrapper, body.training .center .dragWrapper { display: none; }
-body.judge .center, body.training .center { gap: 24px; }
+body.judge .center, body.training .center { gap: 16px; }
 
 /* ===== DRAG ARROWS ===== */
 .dragWrapper {
