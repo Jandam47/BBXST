@@ -249,6 +249,26 @@ assert.deepEqual((await one(pl[1], 'community_stats_ladder', [cid, 1999])).count
 await fails(outsider, 'select community_stats_ladder($1)', [cid], /členové/)
 step('komunitní stats ladder: endy a remízy z tréninků, sezóna, jen členové')
 
+// ── smazání archivovaného tréninku (39) ──
+await fails(pl[0], 'select training_delete($1)', [tid2], /skončený nebo zrušený/)        // otevřený nejde
+await fails(pl[1], 'select training_delete($1)', [tid], /leader nebo zástupce/)          // obyčejný člen ne
+await fails(outsider, 'select training_delete($1)', [tid], /leader nebo zástupce/)
+const before = (await db.query('select count(*)::int n from public.bbx_training_battles(null, $1)', [cid])).rows[0].n
+const own = (await db.query('select count(*)::int n from training_battles where tournament_id = $1', [tid])).rows[0].n
+assert.ok(own > 0)
+assert.equal(await one(pl[0], 'training_delete', [tid]), cid)
+assert.equal((await db.query('select count(*)::int n from tournaments where id = $1', [tid])).rows[0].n, 0)
+for (const tb of ['registrations', 'training_matches', 'training_battles', 'training_invites'])
+  assert.equal((await db.query(`select count(*)::int n from ${tb} where tournament_id = $1`, [tid])).rows[0].n, 0, tb)
+assert.equal((await db.query('select count(*)::int n from public.bbx_training_battles(null, $1)', [cid])).rows[0].n, before - 2 * own)   // 2 řádky na souboj
+const st2 = await one(pl[1], 'community_standings', [cid])
+assert.equal(st2.players.length, 0, 'standings bez smazaného tréninku')
+assert.deepEqual((await one(pl[1], 'community_stats_ladder', [cid])).counters, {})
+assert.equal((await one(null, 'community_meta', [cid, 'build', 1])).length, 0)
+await as(pl[0], 'select cancel_tournament($1)', [tid2])
+assert.equal(await one(boss, 'training_delete', [tid2]), cid)                          // admin smí, i zrušený
+step('archivovaný trénink smaže leader/zástupce nebo admin; zmizí z historie, mety, standings i stats')
+
 // ── zamítnutí ─────────────────────────────────────────────────────
 const cid2 = await one(org, 'community_create', ['Druhá ' + sfx])
 await as(boss, 'select community_review($1, false, $2)', [cid2, 'Duplicitní'])

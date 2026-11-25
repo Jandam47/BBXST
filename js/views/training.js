@@ -66,10 +66,21 @@ export async function render(main, [id, tabArg]) {
         </div>
         ${t.description ? html`<p class="desc">${t.description}</p>` : ''}
         ${arch ? html`<p class="tr-archive-note">${t.status === 'canceled' ? 'Trénink byl zrušen.' : 'Trénink skončil.'}
-          Tohle je jeho historie – jen ke čtení, nic se tu už nemění.</p>` : ''}
+          Tohle je jeho historie – jen ke čtení, nic se tu už nemění.</p>
+          ${b.is_lead || state.level >= 3 ? html`<div class="row" style="margin-top:10px"><button class="btn sm danger" data-act="tr-delete">🗑 Smazat trénink</button></div>` : ''}` : ''}
       </header>
       <nav class="tabs t-nav" role="tablist" aria-label="Trénink">${tabs.map(([k, l, ico]) => html`<a href="#/t/${t.id}/${k}" class="${k === tab ? 'on' : ''}" role="tab" aria-selected="${k === tab}"><span class="ico" aria-hidden="true">${raw(icon(ico))}</span><span class="lb">${l}</span></a>`)}</nav>
       <section id="tab"></section>`)
+    on(main.querySelector('.t-head'), 'click', '[data-act=tr-delete]', async (e, btn) => {
+      if (!await confirmBox(`Smazat trénink „${t.name}“ natrvalo? Zmizí i všechny jeho souboje – z historie, comb, mety komunity, Standings i stats. Nejde to vrátit.`, { ok: 'Smazat', danger: true })) return
+      await busy(btn, async () => {
+        try {
+          await rpc('training_delete', { p_tournament: t.id })
+          toast('Trénink je smazaný.', 'ok')
+          location.hash = b.community ? `#/c/${b.community.id}` : '#/'
+        } catch (err) { toast(errMsg(err), 'err') }
+      })
+    })
     const box = main.querySelector('#tab')
     ;({ me: tabMe, players: tabPlayers, history: tabHistory, combos: tabCombos, manage: tabManage }[tab] || tabMe)(box)
   }

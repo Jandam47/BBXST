@@ -118,6 +118,7 @@ const S = [
       <li><b>SETUP</b>: mód 3v3 / 1v1, body na hru, tournament mode (bey se v sadě neopakuje) a sestavy. Podržením beye upravíš jeho díly – ratchet i bit se vybírají na kolečku jako v registraci.</li>
       <li>Tahací <b>RESET</b> začne novou hru, odehrané souboje zůstanou v historii. Trénovat jde i proti botovi.</li>
       <li>Trénink se nepočítá do ratingu. Comba a historie najdeš v tréninku i na stránce komunity.</li>
+      <li>Skončený nebo zrušený trénink může leader nebo zástupce <b>smazat</b> (tlačítko v archivu tréninku). Smažou se i všechny jeho souboje – zmizí z historie, comb, mety komunity, Standings i stats. Nejde to vrátit.</li>
       <li><b>Standings z tréninků</b> (Hráči → Trénink, nebo odkaz na stránce komunity) vidí jen členové komunity: pořadí jen ze soubojů na jejích trénincích – výhry, úspěšnost nebo body, za celé období, 90 nebo 30 dní.</li>
     </ul>`],
   ['chat', 'Komunikace: chat, ankety, dotazy', html`

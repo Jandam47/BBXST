@@ -99,6 +99,16 @@ with sync_playwright() as p:
     tv.screenshot(path=OUT + '174_training_tv.png')
     go(pl, f'/t/{tid}'); pl.wait_for_selector('.tr-stamp')
     assert pl.locator('.t-head a[href$="/tv"]').count() == 0, 'v archivu TV tlačítko není'
+    # ── smazání archivovaného tréninku: hráč tlačítko nemá, leader ano ──
+    assert pl.locator('[data-act=tr-delete]').count() == 0
+    go(lead, f'/t/{tid}'); lead.wait_for_selector('[data-act=tr-delete]')
+    lead.screenshot(path=OUT + '175_training_delete.png')
+    lead.click('[data-act=tr-delete]'); lead.click('[data-yes]')
+    lead.wait_for_function(f"() => location.hash === '#/c/{cid}'")
+    assert sql(f"select count(*) from tournaments where id = '{tid}'") == '0'
+    assert sql(f"select count(*) from training_battles where tournament_id = '{tid}'") == '0'
+    lead.wait_for_selector('.comm-head, h1')
+    assert lead.locator(f'a[href="#/t/{tid}"]').count() == 0, 'v historii tréninků už není'
     print('CONSOLE ERRORS:', len(errors), errors[:5])
     assert not errors
     print('TRAINING BOT + ARCHIV OK')
