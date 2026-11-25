@@ -56,6 +56,10 @@ D1 = json.dumps([{"type": "bx", "blade": "Dran Sword", "ratchet": "3-60", "bit":
 D2 = json.dumps([{"type": "bx", "blade": "Shark Edge", "ratchet": "3-60", "bit": "Low Flat"},
                  {"type": "bx", "blade": "Leon Claw", "ratchet": "5-60", "bit": "Point"},
                  {"type": "bx", "blade": "Knight Shield", "ratchet": "3-80", "bit": "Needle"}])
+u3 = sql("select id from profiles where nick = 'Hrac3'")
+sql(f"""insert into community_members (community_id, user_id, role, status) values ('{cid}', '{u3}', 'member', 'active')""")
+sql(f"""select set_config('request.jwt.claims', '{{"sub":"{u3}","role":"authenticated"}}', true);
+        insert into registrations (tournament_id, user_id, nick) values ('{tid}', '{u3}', 'Hrac3')""")
 for u, d in ((u1, D1), (u2, D2)):
     sql(f"""select set_config('request.jwt.claims', '{{"sub":"{u}","role":"authenticated"}}', true);
             insert into registrations (tournament_id, user_id, nick, deck) values ('{tid}', '{u}', (select nick from profiles where id = '{u}'), '{d}')""")
@@ -236,6 +240,35 @@ with sync_playwright() as p:
     score(a, 1, 1)
     assert int(sql(f"select max(game_no) from training_battles where match_id = '{mid}'")) == g0 + 1
     assert int(sql(f"select count(*) from training_battles where match_id = '{mid}'")) == n0 + 2, 'historie zůstane'
+
+    # ── judge: Hrac3 se připojí k dvojici Hrac1 vs Hrac2 a zapisuje za ně ──
+    j = phone(b, 'hrac3@test.cz')
+    j.goto(BASE + 'bbxst.html'); j.wait_for_selector('body.has-training')
+    drag(j, '#trainBtn', 140, -40); j.wait_for_selector('#trCircle:not(.hidden) #trCircleJudge')
+    assert 'JUDGE · 1' in j.inner_text('#trCircleJudge')
+    j.click('#trCircleJudge'); j.wait_for_selector('.trLiveRow')
+    assert 'Hrac1' in j.inner_text('.trLiveRow') and 'Hrac2' in j.inner_text('.trLiveRow') and 'bez judge' in j.inner_text('.trLiveRow')
+    j.screenshot(path=OUT + '164_bbxst_judge_list.png')
+    j.click('.trLiveRow'); j.wait_for_selector('#jYes'); j.click('#jYes')
+    j.wait_for_selector('body.training.has-tmatch')
+    assert j.inner_text('#player1Info .nick') == 'Hrac1' and j.inner_text('#player2Info .nick') == 'Hrac2', 'judge: vyzyvatel vlevo'
+    assert j.inner_text('#trainInfo').startswith('JUDGE')
+    assert sql(f"select p.nick from training_matches m join profiles p on p.id = m.judge_id where m.id = '{mid}'") == 'Hrac3'
+    n1 = int(sql(f"select count(*) from training_battles where match_id = '{mid}'"))
+    s_before = a.inner_text('#score1')
+    score(j, 1, 2, finish='over')                    # judge zapíše bod Hrac1
+    j.screenshot(path=OUT + '165_bbxst_judge_score.png')
+    assert int(sql(f"select count(*) from training_battles where match_id = '{mid}'")) == n1 + 1
+    assert sql(f"select scorer_slot || ':' || (created_by = '{u3}') from training_battles where match_id = '{mid}' order by seq desc limit 1") == '1:true'
+    a.wait_for_function(f"document.getElementById('trainInfo').textContent.includes('judge Hrac3')", timeout=8000)
+    # judge v setupu odejde
+    drag(j, '#trainBtn', 140, -40); j.wait_for_selector('#trSetup:not(.hidden) #trLeave')
+    assert 'Judguješ' in j.inner_text('#trSetup .trSub')
+    j.click('#trLeave'); j.wait_for_selector('#trCircle:not(.hidden) .trLiveRow')
+    j.wait_for_timeout(600)
+    assert sql(f"select coalesce(judge_id::text, '-') from training_matches where id = '{mid}'") == '-'
+    assert 'bez judge' in j.inner_text('.trLiveRow')
+    j.click('#trJudgeClose')
 
     # ── ukončení souboje ──
     drag(a, '#trainBtn', 140, -40); a.wait_for_selector('#trSetup:not(.hidden)')

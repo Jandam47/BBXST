@@ -155,6 +155,31 @@ assert.equal(bat.p1_bey, 'Hells Scythe 4-60T'); assert.equal(bat.p2_bey, 'Dran S
 assert.equal(bat.p1_parts.blade, 'Hells Scythe')
 step('výzva → potvrzení → oba zapisují souboje, body na hru (5) i neomezeně, undo, změna sestavy')
 
+// ── judge cizí dvojice (40) ──
+await fails(pl[3], 'select training_judge($1)', [mid], /přihlášený/)
+await fails(pl[1], 'select training_judge($1)', [mid], /vlastní/)
+{ const mt = await one(pl[2], 'my_training')
+  const lv = mt.live.find(x => x.id === mid)
+  assert.ok(lv && lv.p1 === 'CPl2' + sfx && lv.p2 === 'CPl1' + sfx && lv.judge === null && lv.mine === false, JSON.stringify(mt.live))
+  assert.ok(!(await one(pl[1], 'my_training')).live.some(x => x.id === mid), 'vlastní dvojice v live není') }
+let js = await one(pl[2], 'training_judge', [mid])
+assert.equal(js.me, 0); assert.equal(js.judge.nick, 'CPl3' + sfx)
+assert.equal((await one(pl[0], 'training_state', [mid])).judge.nick, 'CPl3' + sfx, 'hráči vidí judge')
+assert.equal((await one(pl[2], 'my_training')).live.find(x => x.id === mid).mine, true)
+const seq0 = js.last_seq
+js = await as(pl[2], `select training_battle($1, gen_random_uuid(), 2, 1, 'spin', 0, 0) as r`, [mid]).then(r => r[0].r)
+assert.equal(js.last_seq, seq0 + 1)
+assert.equal((await db.query('select created_by from training_battles where match_id = $1 and seq = $2', [mid, seq0 + 1])).rows[0].created_by, pl[2].id)
+js = await one(pl[2], 'training_undo', [mid]); assert.equal(js.last_seq, seq0)
+await as(outsider, 'select training_judge($1)', [mid])                                   // převzetí
+await fails(pl[2], 'select training_state($1)', [mid], /tvoje/)
+await fails(pl[2], `select training_battle($1, gen_random_uuid(), 1, 1, null, 0, 0)`, [mid], /tvoje/)
+assert.equal((await one(pl[0], 'my_training')).matches.length >= 1, true)
+await as(outsider, 'select training_judge($1, false)', [mid])                            // odejít
+await fails(outsider, 'select training_state($1)', [mid], /tvoje/)
+assert.equal((await one(pl[1], 'training_state', [mid])).judge, null)
+step('judge: hráč z tréninku se připojí k cizí dvojici, zapisuje, převzetí, odchod; vlastní ani cizí trénink ne')
+
 // ── historie, comba, meta komunity ────────────────────────────────
 const h = await one(pl[0], 'training_history', [tid])
 assert.equal(h.matches.length, 1); assert.equal(h.matches[0].opponent, 'CPl2' + sfx)

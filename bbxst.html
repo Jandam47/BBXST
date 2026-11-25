@@ -676,6 +676,16 @@ body.training.has-tmatch .trainBar .drawBtn { display: block; }
 .trP.outgoing { opacity: .7; border-style: dashed; }
 @keyframes trPulse { 50% { box-shadow: 0 0 36px rgba(255,215,0,0.6); } }
 .trBtns { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+/* judge: kdo s kým hraje */
+.trLive { width: min(560px, 100%); display: flex; flex-direction: column; gap: 8px; }
+.trLiveRow { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 14px; cursor: pointer; text-align: left;
+  background: #0a1520; border: 1px solid #1a3a4a; color: white; font-family: 'Rajdhani', sans-serif; box-shadow: 0 0 16px rgba(0,255,255,0.08); }
+.trLiveRow .vs { flex: 1; min-width: 0; font-weight: 700; font-size: clamp(16px, 2.4vw, 20px); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.trLiveRow .vs i { font-style: normal; color: rgba(200,240,255,0.5); font-size: .8em; margin: 0 6px; }
+.trLiveRow .sc { font-family: 'Orbitron', monospace; font-size: clamp(16px, 2.4vw, 20px); color: var(--green); }
+.trLiveRow small { display: block; font-family: 'Orbitron', monospace; font-size: 9px; letter-spacing: 1.5px; color: rgba(200,240,255,0.55); margin-top: 3px; }
+.trLiveRow.judged small { color: var(--gold); }
+.trLiveRow.mine { border-color: var(--green); box-shadow: 0 0 22px rgba(0,255,157,0.3); }
 /* setup */
 .trSetup { width: min(920px, 100%); display: flex; flex-direction: column; gap: 10px; }
 .trRow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: center; }
@@ -2479,8 +2489,8 @@ async function trLoadInfo() {
   if (!sb) return null
   try {
     const { data: { session } } = await sb.auth.getSession()
-    if (!session || session.user.is_anonymous) { tr.info = null }
-    else tr.info = await rpc("my_training")
+    if (!session || session.user.is_anonymous) { tr.info = null; tr.uid = null }
+    else { tr.uid = session.user.id; tr.info = await rpc("my_training") }
   } catch (e) { /* bez sítě nech poslední */ }
   document.body.classList.toggle("has-training", !!tr.info || trainingMode)
   return tr.info
@@ -2510,6 +2520,7 @@ async function enterTraining(silent) {
 }
 
 function exitTraining(silent) {
+  trLeaveJudge()
   trUnload()
   trainingMode = false
   try { localStorage.removeItem(TR_KEY) } catch (e) {}
@@ -2530,9 +2541,19 @@ function trUnload() {
   player1Name = ""; player2Name = ""
 }
 
+// judge cizí dvojice: odejít (uvolní judge_id na serveru, jen když jsem to pořád já)
+const trIsJudge = () => tr.match?.me === 0
+function trLeaveJudge() {
+  if (!trIsJudge()) return Promise.resolve()
+  return rpc("training_judge", { p_match: tr.match.id, p_on: false }).catch(() => {})
+}
+
 async function trLoadMatch(id, quiet) {
   let st
-  try { st = await rpc("training_state", { p_match: id }) } catch (e) { return jAlert(esc(e.message)) }
+  try { st = await rpc("training_state", { p_match: id }) } catch (e) {
+    if (quiet && !isNetErr(e)) { try { localStorage.removeItem(TR_KEY) } catch (x) {} ; return }   // obnova po startu: už nejsem judge
+    return jAlert(esc(e.message))
+  }
   if (st.status === "pending") {
     if (st.me === 2) {
       if (!await jConfirm(`<b>${esc(st.p1.nick)}</b> tě vyzývá na trénink. Přijmout?`, "PŘIJMOUT")) return
@@ -2542,9 +2563,10 @@ async function trLoadMatch(id, quiet) {
   }
   if (st.status !== "active") { try { localStorage.removeItem(TR_KEY) } catch (e) {} ; return jAlert(st.status === "declined" ? `${esc(st.p2.nick)} výzvu odmítl.` : "Tenhle souboj už je ukončený.") }
   if (!trainingMode && !(await enterTraining(true))) return
+  if (tr.match?.id !== id) trLeaveJudge()
   trUnload()
   tr.match = st
-  tr.leftSlot = trSavedLeft(id) || st.me     // já vlevo, pokud strany neprohodil
+  tr.leftSlot = trSavedLeft(id) || st.me || 1     // já vlevo, pokud strany neprohodil (judge: vyzyvatel vlevo)
   try { localStorage.setItem(TR_KEY, id) } catch (e) {}
   if (sb) tr.ch = sb.channel("trm-" + id)
     .on("postgres_changes", { event: "UPDATE", schema: "public", table: "training_matches", filter: `id=eq.${id}` }, () => trRefresh())
@@ -2552,7 +2574,7 @@ async function trLoadMatch(id, quiet) {
   tr.poll = setInterval(trRefresh, 4000)
   document.getElementById("trCircle").classList.add("hidden")
   trSetModeUI(); trRender()
-  if (!quiet) showOverlay(`${player1Name} VS ${player2Name}`, "win")
+  if (!quiet) showOverlay(`${trIsJudge() ? "JUDGE · " : ""}${player1Name} VS ${player2Name}`, "win")
 }
 
 // čeká, až vyzvaný potvrdí
@@ -2589,9 +2611,19 @@ async function trRefresh() {
       try { localStorage.removeItem(TR_KEY) } catch (e) {}
       return showOverlay("SOUBOJ UKONČEN", "win")
     }
+    if (st.me === 0 && tr.uid && st.judge?.user_id !== tr.uid) {     // judge převzal někdo jiný
+      trUnload(); trSetModeUI(); trRender()
+      try { localStorage.removeItem(TR_KEY) } catch (e) {}
+      return showOverlay(st.judge ? `JUDGE PŘEVZAL ${st.judge.nick}` : "UŽ NEJSI JUDGE", "xtreme")
+    }
     if (st.last_seq !== before) trRender(true)
     else trRender()
-  } catch (e) { /* bez sítě – další pokus za chvíli */ }
+  } catch (e) {
+    if (isNetErr(e) || tr.match?.id !== id || !trIsJudge()) return     // bez sítě – další pokus za chvíli
+    trUnload(); trSetModeUI(); trRender()                               // judge už k dvojici nesmí
+    try { localStorage.removeItem(TR_KEY) } catch (x) {}
+    showOverlay("UŽ NEJSI JUDGE", "xtreme")
+  }
 }
 
 // aktuální hra = stav ze serveru + čekající (neodeslané) souboje
@@ -2628,7 +2660,7 @@ function trRender(fromServer) {
   judge.battles = c.battles.map(x => ({ slot: sideOf(x.slot), pts: x.pts, beys: { 1: tr.leftSlot === 1 ? x.p1_bey : x.p2_bey, 2: tr.leftSlot === 1 ? x.p2_bey : x.p1_bey } }))
   if (!firstScoreUsed && (score1 || score2)) { firstScoreUsed = true; document.querySelectorAll(".arrowGroup").forEach(a => a.classList.add("hidden")) }
   renderJudgePlayers()
-  info.textContent = [st.tournament?.name, (st.settings?.mode || "3v3").replace("v", " v "), `hra ${c.no}`,
+  info.textContent = [st.me === 0 ? "JUDGE" : st.judge ? `judge ${st.judge.nick}` : "", st.tournament?.name, (st.settings?.mode || "3v3").replace("v", " v "), `hra ${c.no}`,
     c.win == null ? "bez limitu" : `do ${c.win}`, st.settings?.tourney ? "tournament" : "", c.over ? "dohráno" : ""].filter(Boolean).join(" · ")
   info.title = info.textContent
   // výhra soupeře zapsaná z druhého telefonu
@@ -2736,9 +2768,12 @@ async function trOpenCircle() {
       }).join("")}
     </div>
     ${ps.length ? "" : `<div class="trSub">Na tréninku zatím nikdo další není.</div>`}
-    <div class="trBtns"><button class="qr-btn cancel" id="trCircleCasual">CASUAL</button><button class="qr-btn confirm" id="trCircleClose">ZPĚT</button></div>`
+    <div class="trBtns"><button class="qr-btn cancel" id="trCircleCasual">CASUAL</button>
+      <button class="qr-btn cancel" id="trCircleJudge">JUDGE${(tr.info.live || []).length ? ` · ${tr.info.live.length}` : ""}</button>
+      <button class="qr-btn confirm" id="trCircleClose">ZPĚT</button></div>`
   box.classList.remove("hidden")
   document.getElementById("trCircleClose").onclick = () => box.classList.add("hidden")
+  document.getElementById("trCircleJudge").onclick = () => trOpenJudge()
   document.getElementById("trCircleCasual").onclick = () => exitTraining()
   box.querySelectorAll(".trP").forEach(b => b.onclick = async () => {
     const reg = b.dataset.reg, m = ms.find(z => z.opp_reg === reg)
@@ -2748,6 +2783,37 @@ async function trOpenCircle() {
       box.classList.add("hidden")
       trLoadMatch(id)
     } catch (e) { jAlert(esc(e.message)) }
+  })
+}
+
+/* ── judge: kdo s kým hraje → připojit se a zapisovat za ně ── */
+async function trOpenJudge() {
+  await trLoadInfo()
+  const box = document.getElementById("trCircle")
+  if (!tr.info) { box.classList.add("hidden"); return jAlert("Nejsi přihlášený na žádný otevřený komunitní trénink.") }
+  const live = tr.info.live || []
+  box.innerHTML = `<div class="trTitle">JUDGE · KDO S KÝM HRAJE</div>
+    <div class="trSub">${esc(tr.info.tournament.name)}</div>
+    <div class="trLive">${live.length ? live.map(m => `<button class="trLiveRow ${m.judge ? "judged" : ""} ${m.mine ? "mine" : ""}" data-id="${m.id}">
+        <span class="vs">${esc(m.p1)}<i>vs</i>${esc(m.p2)}<small>${esc(m.mode.replace("v", " v "))} · hra ${m.game} · ${m.win == null ? "bez limitu" : "do " + m.win}${m.mine ? " · TY JUDGUJEŠ" : m.judge ? " · judge " + esc(m.judge) : " · bez judge"}</small></span>
+        <span class="sc">${m.s1}:${m.s2}</span></button>`).join("")
+      : `<div class="trSub">Teď nikdo jiný nehraje. Až se dva vyzvou, objeví se tady.</div>`}</div>
+    <div class="trBtns"><button class="qr-btn cancel" id="trJudgeBack">◂ HRÁČI</button><button class="qr-btn cancel" id="trJudgeReload">OBNOVIT</button>
+      <button class="qr-btn confirm" id="trJudgeClose">ZPĚT</button></div>`
+  box.classList.remove("hidden")
+  document.getElementById("trJudgeBack").onclick = () => trOpenCircle()
+  document.getElementById("trJudgeReload").onclick = () => trOpenJudge()
+  document.getElementById("trJudgeClose").onclick = () => box.classList.add("hidden")
+  box.querySelectorAll(".trLiveRow").forEach(b => b.onclick = async () => {
+    const m = live.find(x => x.id === b.dataset.id)
+    if (!m.mine) {
+      const q = m.judge ? `Dvojici <b>${esc(m.p1)} vs ${esc(m.p2)}</b> teď judguje <b>${esc(m.judge)}</b>. Převzít?`
+                        : `Judgovat <b>${esc(m.p1)} vs ${esc(m.p2)}</b>? Souboje budeš zapisovat za ně.`
+      if (!await jConfirm(q, m.judge ? "PŘEVZÍT" : "JUDGOVAT")) return
+      try { await rpc("training_judge", { p_match: m.id, p_on: true }) } catch (e) { return jAlert(esc(e.message)) }
+    }
+    box.classList.add("hidden")
+    trLoadMatch(m.id)
   })
 }
 
@@ -2780,10 +2846,11 @@ function trDrawSetup() {
     <div class="trCols">${col(Ls, "left")}${col(Rs, "right")}</div>
     <div class="trBtns">
       <button class="qr-btn cancel" id="trEnd">UKONČIT SOUBOJ</button>
+      ${st.me === 0 ? `<button class="qr-btn cancel" id="trLeave">ODEJÍT (JUDGE)</button>` : ""}
       <button class="qr-btn cancel" id="trBack">ZPĚT</button>
       <button class="qr-btn confirm" id="trSave">ULOŽIT</button>
     </div>
-    <div class="trSub">Změna módu nebo bodů začne novou hru. Sestavu měníš pro sebe i soupeře. Podrž bey = upravit jeho díly.</div>
+    <div class="trSub">${st.me === 0 ? `Judguješ – zapisuješ za oba hráče. ` : st.judge ? `Judguje ${esc(st.judge.nick)}. ` : ""}Změna módu nebo bodů začne novou hru. Sestavu měníš ${st.me === 0 ? "oběma hráčům" : "pro sebe i soupeře"}. Podrž bey = upravit jeho díly.</div>
   </div>`
   box.querySelectorAll("[data-mode]").forEach(b => b.onclick = () => {
     const [l, r] = b.dataset.mode.split("v")
@@ -2811,6 +2878,12 @@ function trDrawSetup() {
     b.onclick = () => { if (held) { held = false; return } trChooseBey(slot, i) }
   })
   document.getElementById("trBack").onclick = () => box.classList.add("hidden")
+  const leave = document.getElementById("trLeave")
+  if (leave) leave.onclick = async () => {
+    await trLeaveJudge(); box.classList.add("hidden"); trUnload()
+    try { localStorage.removeItem(TR_KEY) } catch (x) {}
+    clearBoard(); trRender(); showOverlay("JUDGE ODEŠEL", "win"); trOpenJudge()
+  }
   document.getElementById("trEnd").onclick = async () => {
     if (!await jConfirm("Ukončit souboj? Zapsané souboje zůstanou v historii tréninku.", "UKONČIT")) return
     try { await rpc("training_end", { p_match: st.id }) } catch (err) { return jAlert(esc(err.message)) }
