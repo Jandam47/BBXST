@@ -57,7 +57,7 @@ const S = [
       <li>Záložka <b>Hráči</b> dole otevře kolečko: <b>Standings</b> (všichni hráči podle ratingu), Komunity, Ligy, <b>Stats ladder</b> a – když jsi v komunitě – <b>Trénink</b> (standings jen z komunitních tréninků).</li>
     </ul>
     <h3>Stats</h3>
-    <p>Z každého turnaje si odneseš stats. Na <b>Stats ladderu</b> vidíš, kdo kterému statu vládne – top 3 nebo top 10, podle sezóny (od 1. ledna) nebo celkem, podle kraje a ligy. V komunitě je i <b>komunitní ladder</b> z tréninků. V profilu uvidíš svoje stats a medaile za 1.–3. místo.</p>
+    <p>Z každého turnaje si odneseš stats. Na <b>Stats ladderu</b> vidíš, kdo kterému statu vládne – top 3 nebo top 10, podle sezóny (od 1. ledna) nebo celkem, podle kraje a ligy. V komunitě je i <b>komunitní ladder</b> z tréninků. V profilu uvidíš svoje stats a medaile za 1.–3. místo. Po skončení turnaje najdeš v záložce <b>Vyhodnocení</b> i <b>Stats turnaje</b> – kdo v které kategorii vyhrál právě ten turnaj.</p>
     <ul>
       <li><b>Breakdancer / Game over / Glueless / Xtreme hunter</b> – Spin / Over / Burst / Xtreme finish dané soupeřům.</li>
       <li><b>Tableflip</b> – vyhraná hra, ve které jsi prohrával o 5 a víc bodů. <b>No time to lose</b> – výhra 7:0.</li>

@@ -82,7 +82,8 @@ assert.equal(val(l, 'draws', A), 1); assert.equal(val(l, 'draws', C), 1)
 assert.equal(val(l, 'streak', A), 2); assert.equal(val(l, 'streak', C), 1)
 assert.equal(val(l, 'iron_law', J), 2)
 assert.equal(val(l, 'no_rod', A), 1); assert.equal(val(l, 'no_rod', B), 0, 'B má Wizard Rod')
-assert.equal(l.counters.xtreme[0].user, A.id); assert.equal(l.counters.xtreme[0].rank, 1)
+const pos = (u) => l.counters.xtreme.findIndex(x => x.user === u.id)
+assert.ok(pos(A) < pos(B) && pos(B) < pos(C), 'pořadí podle hodnoty')
 assert.equal(l.me.xtreme.value, 1)
 assert.equal(l.blitz.filter(g => g.tournament_id === t.id)[0].w_nick, A.nick)
 const myTyt = l.tyt.filter(g => g.tournament_id === t.id)
@@ -104,12 +105,27 @@ await as(B, `update profiles set privacy = '{}' where id = auth.uid()`)
 assert.equal(val(await L(null), 'xtreme', B), 2, 'anon vidí ladder')
 step('soukromí: Nebýt ve Standings')
 
-const ps = (await one(null, 'select player_stat_ranks($1) as r', [A.id])).r
+const ps = (await one(null, 'select player_stat_ranks($1, 2025) as r', [A.id])).r
 assert.equal(ps.values.xtreme.value, 3); assert.equal(ps.values.xtreme.rank, 1)
 assert.equal(ps.blitz?.rank, 1)
-const pc = (await one(null, 'select player_stat_ranks($1) as r', [C.id])).r
-assert.equal(pc.tyt?.rank, 1); assert.equal((await one(null, 'select player_stat_ranks($1) as r', [B.id])).r.tyt?.rank, 1, 'T.Y.T. drží oba')
+const pc = (await one(null, 'select player_stat_ranks($1, 2025) as r', [C.id])).r
+assert.equal(pc.tyt?.rank, 1); assert.equal((await one(null, 'select player_stat_ranks($1, 2025) as r', [B.id])).r.tyt?.rank, 1, 'T.Y.T. drží oba')
 step('profil: hodnoty, pořadí a rekordy')
+
+const ts = (await one(null, 'select tournament_stats($1) as r', [t.id])).r
+const win = (k) => ts.stats[k]?.winners.map(w => w.nick).sort().join(',')
+assert.equal(ts.stats.xtreme.value, 3); assert.equal(win('xtreme'), A.nick)
+assert.equal(ts.stats.rickety.value, 2); assert.equal(win('rickety'), B.nick)
+assert.equal(win('tableflip'), A.nick); assert.equal(win('no_time'), A.nick); assert.equal(ts.stats.streak.value, 2)
+assert.equal(win('draws'), [A.nick, C.nick].sort().join(','), 'shoda = oba')
+assert.equal(win('iron_law'), J.nick); assert.equal(ts.stats.iron_law.value, 2)
+assert.ok(!('no_rod' in ts.stats))
+assert.equal(ts.blitz.secs, 40); assert.equal(ts.blitz.w_nick, A.nick)
+assert.equal(ts.tyt.secs, 600); assert.equal(ts.tyt.w_nick, C.nick)
+const [t2] = await as(org, `insert into tournaments (name, swiss_rounds, top_cut, arena_count) values ('Neskončený ${sfx}', 3, 0, 1) returning id`)
+assert.equal((await one(null, 'select tournament_stats($1) as r', [t2.id])).r, null, 'před koncem nic')
+assert.ok((await one(org, 'select tournament_stats($1) as r', [t2.id])).r, 'organizátor vidí náhled')
+step('stats jednoho turnaje (37): vítězové kategorií, shody, rekordy, až po konci')
 
 const [cm] = (await db.query("insert into communities (name, status, created_by) values ($1, 'approved', $2) returning id", ['Stats komunita ' + sfx, org.id])).rows
 await fails(A, 'select community_stats_ladder($1)', [cm.id], /jen členové/)

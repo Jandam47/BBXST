@@ -40,7 +40,7 @@ Komunikuj **česky**, celé UI je česky.
   (vnitřní → vnější, počet podle obvodu; Turbo / Operate žlutě), uprostřed hledání (zkratka → název → slovo → alias), nevyhovující zhasnou, Enter /
   tlačítko uprostřed vezme nejlepší shodu, písmeno na poli bitu otevře kolečko s hledáním. Tip na zkratky nahoře.
 - `js/config.js` – **obsahuje Adamovy živé klíče Supabase. Nikdy ho neměň ani nepřepisuj.**
-- `supabase/schema.sql`, `02-parts.sql`, `03-live-score.sql`, `04-security-hardening.sql`, `05-judge-handover.sql`, `06-formats-stats.sql`, `07-parts-update.sql`, `08-judge-per-match.sql`, `09-pause.sql`, `10-fashion.sql`, `11-finishes.sql`, `12-rated.sql`, `13-communities.sql`, `14-training-extras.sql`, `15-training-bots.sql`, `16-training-reset.sql`, `17-chat-bazar.sql`, `18-chat-tournament-state.sql`, `19-account-reports.sql`, `20-push.sql`, `21-checkin-errors-backup.sql`, `22-leagues.sql`, `23-meetings.sql`, `24-judge-count.sql`, `25-reg-check.sql`, `26-judge-scan.sql`, `27-live.sql`, `28-cashier.sql`, `29-polls-feedback.sql`, `30-seen-sync.sql`, `31-community-standings.sql`, `32-parts-shatter-horus.sql`, `33-parts-hasbro-2026-11.sql`, `34-privacy-admin.sql`, `35-favorites.sql`, `36-stats.sql` – databáze (spuštěné v produkci, nové soubory
+- `supabase/schema.sql`, `02-parts.sql`, `03-live-score.sql`, `04-security-hardening.sql`, `05-judge-handover.sql`, `06-formats-stats.sql`, `07-parts-update.sql`, `08-judge-per-match.sql`, `09-pause.sql`, `10-fashion.sql`, `11-finishes.sql`, `12-rated.sql`, `13-communities.sql`, `14-training-extras.sql`, `15-training-bots.sql`, `16-training-reset.sql`, `17-chat-bazar.sql`, `18-chat-tournament-state.sql`, `19-account-reports.sql`, `20-push.sql`, `21-checkin-errors-backup.sql`, `22-leagues.sql`, `23-meetings.sql`, `24-judge-count.sql`, `25-reg-check.sql`, `26-judge-scan.sql`, `27-live.sql`, `28-cashier.sql`, `29-polls-feedback.sql`, `30-seen-sync.sql`, `31-community-standings.sql`, `32-parts-shatter-horus.sql`, `33-parts-hasbro-2026-11.sql`, `34-privacy-admin.sql`, `35-favorites.sql`, `36-stats.sql`, `37-tournament-stats.sql` – databáze (spuštěné v produkci, nové soubory
   spouští Adam). Živé skóre: BBXST v judge módu posílá po každém bodu `live_score` → `matches.live_p1/p2`
   (TV rozpis, vstupenka, seznamy); trigger `bbx_clear_live` ho maže po uložení hry.
   Rozehraná hra: BBXST posílá s `live_score` i `p_state` → `matches.live_state` (souboje v orientaci p1/p2,
@@ -227,6 +227,10 @@ Komunikuj **česky**, celé UI je česky.
   `stat_seasons`, `player_stat_ranks(hráč, sezóna)` (profil: dlaždice, na bedně zlatá / stříbrná / bronzová s medailí v rohu a jdou první; pozor, `player_stats(uuid)`
   je jiná funkce), `community_stats_ladder(komunita, sezóna, limit)` (jen tréninky komunity, počítadla s `community: true`,
   členové / admin 3+). Stránka: Turnaje | Komunita, sezóna / Celkem, kraj, liga, stat, Top 3 | Top 10, filtry v adrese.
+  **Stats turnaje** (37): `tournament_stats(turnaj)` = vítězové kategorií jen z jednoho turnaje (bez No rod; na úrovni
+  registrace, i hráči bez účtu, bez botů a testovacích „T-…“; shoda = víc vítězů; Iron law = judge; Blitzkrieg / T.Y.T. = jedna
+  hra). Po skončení vidí každý, během jen organizátor. Nahoře v záložce Vyhodnocení (`tournamentStatsHtml` v tournament.js).
+  Logiku statů drží 36 i 37 – měníš-li výpočet, uprav obě.
 - **Oblíbené buildy a decky** (35, `js/favorites.js`, `js/views/favorites.js`, `#/oblibene`, `?tab=decky`): ★ `.prof-fav` vedle
   ozubeného kolečka → „Choose wheel“ (Oblíbené buildy · Decky · Nový build). `fav_builds` (bey ve tvaru decku, trigger
   `bbx_fav_build_fill` normalizuje díly a skládá `name` přes `bbx_compose_bey`, duplicita názvu = chyba, max 60) a `fav_decks`
@@ -342,7 +346,7 @@ Potřebují lokální PostgreSQL 16, Node a pro UI Python Playwright + Chrome a 
 - `node tests/chat.test.mjs` – chat (místnosti, přístup, hosté) a bazar (fotky, soukromá vlákna) v DB.
 - `node tests/polls.test.mjs` – ankety (zakládání, hlasování, anonymní / veřejné, konec), dotazy a připomínky (29), přečteno na serveru (30).
 - `node tests/favorites.test.mjs` – oblíbené buildy a decky (35).
-- `node tests/stats.test.mjs` – stats: počítadla, rekordy, filtry, soukromí, profil, komunitní ladder (36).
+- `node tests/stats.test.mjs` – stats: počítadla, rekordy, filtry, soukromí, profil, komunitní ladder (36), stats turnaje (37).
 - `node tests/extras.test.mjs` – kontrola registrací, chyby z telefonů, záloha, vzájemná bilance (21, 25), soukromí a `admin_counts` (34).
 - `node tests/leagues.test.mjs` – ligy: práva správce / organizátorů, ligové turnaje, bodování a bilance (22).
 - `node tests/meetings.test.mjs` – meeting osobně / online, akce jen pro organizátory (23).

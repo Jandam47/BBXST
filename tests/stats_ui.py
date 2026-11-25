@@ -59,6 +59,14 @@ with sync_playwright() as p:
     h.screenshot(path=OUT + '502_stats_community.png')
     h.click('[data-mode=turnaje]'); h.wait_for_function("() => document.querySelectorAll('.st-card').length === 13")
 
+    # stats jednoho turnaje ve Vyhodnocení (37)
+    tid = sql("select id from tournaments where status = 'finished' and kind = 'tournament' order by created_at limit 1")
+    h.goto(BASE + f'#/t/{tid}/report'); h.wait_for_selector('.ts-item')
+    names_t = h.eval_on_selector_all('.ts-name', 'els => els.map(e => e.textContent)')
+    print('stats turnaje:', names_t)
+    assert 'No rod???' not in names_t and 'Xtreme hunter' in names_t
+    h.screenshot(path=OUT + '504_tournament_stats.png')
+
     # profil: stats
     h.goto(BASE + '#/me'); h.wait_for_selector('#prof-stats h2')
     h.locator('#prof-stats').scroll_into_view_if_needed()

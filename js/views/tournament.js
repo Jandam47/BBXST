@@ -10,6 +10,7 @@ import { icon } from '../icons.js'
 import * as Fashion from './fashion.js'
 import * as Training from './training.js'
 import { loadParts, deckEditor, bindDeckEditor } from '../parts.js'
+import { STATS, fmtSecs } from '../stats.js'
 
 const cfg = window.BBX_CONFIG
 
@@ -524,17 +525,19 @@ function tabSwiss(box, { d }) {
 async function tabReport(box, { d }) {
   const { t } = d
   mount(box, html`<div class="spinner" aria-label="Počítám vyhodnocení"></div>`)
-  let r
-  try { r = await rpc('tournament_report', { p_tournament: t.id }) }
+  let r, ts
+  try { [r, ts] = await Promise.all([rpc('tournament_report', { p_tournament: t.id }), rpc('tournament_stats', { p_tournament: t.id }).catch(() => null)]) }
   catch (e) { mount(box, html`<div class="notice err">${errMsg(e)}</div>`); return }
+  const statsBlock = tournamentStatsHtml(ts)
   if (!r.battles) {
-    mount(box, html`<div class="notice">Turnaj nemá zapsané souboje s beyi (výsledky se zadávaly ručně), takže není z čeho dělat vyhodnocení.</div>`)
+    mount(box, html`${statsBlock}<div class="notice">Turnaj nemá zapsané souboje s beyi (výsledky se zadávaly ručně), takže není z čeho dělat vyhodnocení dílů.</div>`)
     return
   }
   const kinds = [['blade', 'Blade'], ['ratchet', 'Ratchet'], ['bit', 'Bit']]
   const who = (p) => p.user_id ? html`<a href="#/p/${p.user_id}">${p.nick}</a>` : p.nick
   mount(box, html`
     ${t.status !== 'finished' ? html`<div class="notice small">Průběžný náhled pro organizátora – hráči vyhodnocení uvidí po ukončení turnaje.</div>` : ''}
+    ${statsBlock}
     <p class="muted" style="margin-top:4px">${r.battles} soubojů · ${r.points} bodů</p>
     <h2>Nejhranější díly</h2>
     <div class="rep-parts">${kinds.map(([k, label]) => {
@@ -560,6 +563,29 @@ async function tabReport(box, { d }) {
         <div class="rep-pts"><b>${b.points}</b><small>bodů</small></div>
       </div>`)}</div>
     <p class="hint">Body = co build nasbíral v soubojích (Spin 1, Over/Burst 2, X-treme 3). Počítají se jen souboje zapsané judgem v BBXST.</p>`)
+}
+
+// stats turnaje (37): kdo v které kategorii vyhrál (bez No rod???)
+function tournamentStatsHtml(ts) {
+  if (!ts) return ''
+  const who = (u, nick) => u ? html`<a href="#/p/${u}">${nick}</a>` : nick
+  const items = STATS.filter(s => s.key !== 'no_rod').map(s => {
+    if (s.kind === 'record') {
+      const g = ts[s.key]
+      return g ? { s, val: fmtSecs(g.secs), who: html`${who(g.w_user, g.w_nick)}${s.key === 'tyt' ? html` <span class="faint">vs</span> ${who(g.l_user, g.l_nick)}` : ''}`,
+        sub: `${g.w_score}:${g.l_score}` } : null
+    }
+    const x = ts.stats?.[s.key]
+    return x ? { s, val: x.value, who: x.winners.map((w, i) => html`${i ? ', ' : ''}${who(w.user, w.nick)}`) } : null
+  }).filter(Boolean)
+  if (!items.length) return ''
+  return html`<h2>Stats turnaje</h2>
+    <div class="ts-grid">${items.map(it => html`<div class="ts-item">
+      <span class="st-ico" aria-hidden="true">${it.s.icon}</span>
+      <div class="grow" style="min-width:0"><div class="ts-name">${it.s.name}</div>
+        <div class="ts-who">${it.who}${it.sub ? html` <span class="faint">${it.sub}</span>` : ''}</div></div>
+      <b class="ts-val num">${it.val}</b></div>`)}</div>
+    <p class="hint">Vítězové kategorií jen z tohoto turnaje. Celkové pořadí najdeš na <a href="#/stats">Stats ladderu</a>.</p>`
 }
 
 // ────────────────────────────────────────────────────────────────

@@ -377,13 +377,20 @@ a.li:hover { background: var(--panel-2); }
 .st-row:hover { background: rgba(var(--cyan-rgb),.06); }
 .st-row.me { background: rgba(var(--bolt-rgb),.08); }
 .st-row .ellipsis { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.st-row .grow { min-width: 0; }
+.st-row .grow { flex: 1 1 auto; min-width: 0; }
 .st-row .av { flex: none; }
 .st-row b.num { flex: none; font: 700 17px var(--display); }
 .st-mine { border-top: 1px dashed var(--line); margin-top: 4px; }
 .st-rank { flex: none; width: 30px; text-align: center; font: 700 15px var(--display); color: var(--muted); }
 .st-empty { color: var(--faint); font-size: 14px; margin: 4px 6px; }
 .prof-stats { margin-top: 18px; }
+.ts-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 8px; margin-top: 10px; }
+.ts-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); }
+.ts-item > .grow { flex: 1 1 auto; }
+.ts-name { font: 700 15px var(--display); }
+.ts-who { font-size: 14px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ts-who a { color: var(--text); }
+.ts-val { flex: none; font: 800 20px var(--display); color: var(--bolt); }
 .ps-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 8px; margin-top: 8px; }
 .ps-tile { position: relative; display: grid; gap: 2px; padding: 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); text-decoration: none; color: var(--text); }
 .ps-tile .ps-medal { position: absolute; top: 6px; right: 6px; font-size: 22px; line-height: 1; }
@@ -399,6 +406,7 @@ a.li:hover { background: var(--panel-2); }
 /* oblíbené buildy a decky */
 .fav-list { display: grid; gap: 10px; margin-top: 14px; }
 .fav-card { display: flex; align-items: flex-start; gap: 12px; padding: 12px 14px; }
+.fav-card > .grow, .fav-pick-it > .grow { flex: 1 1 auto; min-width: 0; }
 .fav-name { font: 700 17px var(--display); color: var(--text); }
 .fav-note { color: var(--bolt); margin-top: 2px; }
 .fav-acts { display: flex; gap: 6px; flex: none; }
