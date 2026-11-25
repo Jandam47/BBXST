@@ -766,6 +766,10 @@ body.training.has-tmatch .trainBar .drawBtn { display: block; }
 .trSlot small { font-family: 'Orbitron', monospace; font-size: 8px; letter-spacing: 1.5px; color: rgba(200,240,255,0.45); display: block; }
 .trSlot.empty { color: rgba(200,240,255,0.4); border-style: dashed; }
 .trList { display: flex; flex-direction: column; gap: 8px; width: min(560px, 100%); max-height: 56vh; overflow: auto; }
+.trListHead { font-family: 'Orbitron', monospace; font-size: 10px; letter-spacing: 2px; color: var(--gold); margin: 4px 0 0; text-align: center; grid-column: 1 / -1; }
+.trListHead.deck { color: rgba(200,240,255,0.55); }
+@media (min-width: 700px) { .trList.two { display: grid; grid-template-columns: 1fr 1fr; width: min(860px, 100%); align-content: start; } }
+.trList .beyPick.fav { border-color: rgba(255,215,0,0.45); }
 .trNew { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; width: min(620px, 100%); }
 .trNew label, .trNew .nbF { display: flex; flex-direction: column; gap: 4px; font-family: 'Orbitron', monospace; font-size: 9px; letter-spacing: 1.5px; color: rgba(200,240,255,0.6); }
 .trNew input { font-family: 'Rajdhani', sans-serif; font-size: 18px; font-weight: 600; padding: 10px 44px 10px 10px; border-radius: 10px; background: #0a1520; color: white; border: 1px solid #1a3a4a; width: 100%; box-sizing: border-box; }
@@ -2903,17 +2907,35 @@ function trDrawSetup() {
   }
 }
 
-// výběr beye do slotu: z decků obou hráčů, nebo nový z dílů
-function trChooseBey(slot, i) {
+// výběr beye do slotu: z decků obou hráčů, z mých oblíbených buildů (BBXU ★), nebo nový z dílů
+let trFavCache = null
+async function trLoadFavs() {
+  if (!tr.uid) return []
+  if (trFavCache && trFavCache.uid === tr.uid && Date.now() - trFavCache.at < 60000) return trFavCache.list
+  try {
+    const { data, error } = await sb.from("fav_builds").select("id,bey,name").order("created_at")
+    if (error) throw error
+    trFavCache = { uid: tr.uid, at: Date.now(), list: (data || []).map(f => ({ ...f.bey, name: f.name })) }
+    return trFavCache.list
+  } catch (e) { return trFavCache?.list || [] }
+}
+async function trChooseBey(slot, i) {
   const st = tr.match, e = tr.edit, box = document.getElementById("trSetup")
   const seen = new Set(), opts = []
   for (const b of [...(st.decks?.p1 || []), ...(st.decks?.p2 || []), ...e.lineup[1], ...e.lineup[2]]) {
     if (b?.name && !seen.has(b.name)) { seen.add(b.name); opts.push(b) }
   }
+  const favs = (await trLoadFavs()).filter(b => b?.name)
+  const pick = (b, k, cls = "") => `<button class="beyPick ${cls}" data-k="${k}">${esc(b.name)}</button>`
+  const all = [...opts, ...favs]
   box.innerHTML = `<div class="trTitle">BEY ${i + 1} · ${esc((slot === 1 ? st.p1 : st.p2).nick)}</div>
-    <div class="trList">${opts.map((b, k) => `<button class="beyPick" data-k="${k}">${esc(b.name)}</button>`).join("")}</div>
+    <div class="trList ${favs.length ? "two" : ""}">${favs.length ? `<div class="trListHead">★ MOJE OBLÍBENÉ</div>${favs.map((b, k) => pick(b, opts.length + k, "fav")).join("")}
+      <div class="trListHead deck">DECKY HRÁČŮ</div>` : ""}${opts.map((b, k) => pick(b, k)).join("")}</div>
     <div class="trBtns"><button class="qr-btn cancel" id="trChBack">ZPĚT</button><button class="qr-btn confirm" id="trChNew">+ NOVÝ BEY Z DÍLŮ</button></div>`
-  box.querySelectorAll("[data-k]").forEach(b => b.onclick = () => { e.lineup[slot][i] = opts[Number(b.dataset.k)]; trDrawSetup() })
+  box.querySelectorAll("[data-k]").forEach(b => b.onclick = () => {
+    const { id, ...bey } = all[Number(b.dataset.k)]
+    e.lineup[slot][i] = bey; trDrawSetup()
+  })
   document.getElementById("trChBack").onclick = trDrawSetup
   document.getElementById("trChNew").onclick = () => trNewBey(slot, i)
 }

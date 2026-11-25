@@ -24,6 +24,8 @@ Komunikuj **česky**, celé UI je česky.
   `visualViewport`, aby ho klávesnice nezakryla).
   Změněná sestava v SETUPu (41, `training_setup`) se uloží hráči do decku na tréninku (`registrations.deck`) – jen když se
   jména beyů liší od předchozí sestavy výzvy; platí pro oba hráče (i bota), mění hráč i judge. Další výzvy ji převezmou.
+  Výběr beye do slotu (`trChooseBey`): nahoře „★ MOJE OBLÍBENÉ“ = vlastní `fav_builds` (35, `trLoadFavs`, cache 60 s, jen účet),
+  pod tím „DECKY HRÁČŮ“; na šířce dva sloupce.
   **Judge na tréninku** (40): v kolečku hráčů tlačítko JUDGE → `trOpenJudge` = seznam rozehraných dvojic ostatních
   (`my_training.live`: hráči, skóre aktuální hry, mód, kdo judguje) → `training_judge(výzva)` nastaví `training_matches.judge_id`
   (převzetí = poslední vyhrává, `training_judge(…, false)` = ODEJÍT v setupu). `bbx_tmatch` pustí hráče dvojice i jejího

@@ -56,6 +56,7 @@ D1 = json.dumps([{"type": "bx", "blade": "Dran Sword", "ratchet": "3-60", "bit":
 D2 = json.dumps([{"type": "bx", "blade": "Shark Edge", "ratchet": "3-60", "bit": "Low Flat"},
                  {"type": "bx", "blade": "Leon Claw", "ratchet": "5-60", "bit": "Point"},
                  {"type": "bx", "blade": "Knight Shield", "ratchet": "3-80", "bit": "Needle"}])
+sql(f"""insert into fav_builds (user_id, bey) values ('{u1}', '{{"type":"bx","blade":"Knight Shield","ratchet":"9-60","bit":"Ball"}}')""")   # oblíbený build Hrac1
 u3 = sql("select id from profiles where nick = 'Hrac3'")
 sql(f"""insert into community_members (community_id, user_id, role, status) values ('{cid}', '{u3}', 'member', 'active')""")
 sql(f"""select set_config('request.jwt.claims', '{{"sub":"{u3}","role":"authenticated"}}', true);
@@ -114,6 +115,12 @@ with sync_playwright() as p:
     a.click('[data-mode="1v1"]')
     for _ in range(4): a.click('[data-win="-1"]')
     assert a.inner_text('.trWin') == '3'
+    a.click('.trCol.left .trSlot'); a.wait_for_selector('.trList .beyPick.fav')   # oblíbené buildy v nabídce
+    assert '★ MOJE OBLÍBENÉ' in a.inner_text('.trList')
+    a.screenshot(path=OUT + '154b_bbxst_setup_favs.png')
+    a.click('.trList .beyPick.fav:has-text("Knight Shield 9-60B")'); a.wait_for_selector('.trCol.left .trSlot >> text=Knight Shield 9-60B')
+    a.click('.trCol.left .trSlot >> nth=0'); a.wait_for_selector('.trList .beyPick')          # a zase zpátky Dran Sword
+    a.click('.trList .beyPick:not(.fav):has-text("Dran Sword 3-60F")')
     a.click('.trCol.right .trSlot'); a.wait_for_selector('.trList .beyPick')
     a.click('.trList .beyPick:has-text("Leon Claw")')
     a.click('#trSave'); a.wait_for_selector('#trSetup', state='hidden')
