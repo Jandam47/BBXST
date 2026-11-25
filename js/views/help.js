@@ -116,7 +116,7 @@ const S = [
       <li>Trénink zakládá leader nebo zástupce komunity. Přidat se může člen nebo pozvaný hráč.</li>
       <li>V BBXST zelené tlačítko <b>TRAINING</b> → vyber soupeře → on výzvu potvrdí. Zapisovat můžete oba.</li>
       <li><b>Judge na tréninku</b>: v kolečku hráčů klepni na <b>JUDGE</b> – uvidíš, kdo s kým právě hraje a jaké je skóre. Vyber dvojici a zapisuješ souboje za ně (body, beye, setup). Odejdeš v SETUPu tlačítkem <b>ODEJÍT (JUDGE)</b>; hráči vidí, kdo je judguje.</li>
-      <li><b>SETUP</b>: mód 3v3 / 1v1, body na hru, tournament mode (bey se v sadě neopakuje) a sestavy. Podržením beye upravíš jeho díly – ratchet i bit se vybírají na kolečku jako v registraci.</li>
+      <li><b>SETUP</b>: mód 3v3 / 1v1, body na hru, tournament mode (bey se v sadě neopakuje) a sestavy. Podržením beye upravíš jeho díly – ratchet i bit se vybírají na kolečku jako v registraci. Změněná sestava se uloží do decku hráče na tomhle tréninku, takže ji má i v dalších výzvách.</li>
       <li>Tahací <b>RESET</b> začne novou hru, odehrané souboje zůstanou v historii. Trénovat jde i proti botovi.</li>
       <li>Trénink se nepočítá do ratingu. Comba a historie najdeš v tréninku i na stránce komunity.</li>
       <li>Skončený nebo zrušený trénink může leader nebo zástupce <b>smazat</b> (tlačítko v archivu tréninku). Smažou se i všechny jeho souboje – zmizí z historie, comb, mety komunity, Standings i stats. Nejde to vrátit.</li>

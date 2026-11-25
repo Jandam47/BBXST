@@ -2850,7 +2850,7 @@ function trDrawSetup() {
       <button class="qr-btn cancel" id="trBack">ZPĚT</button>
       <button class="qr-btn confirm" id="trSave">ULOŽIT</button>
     </div>
-    <div class="trSub">${st.me === 0 ? `Judguješ – zapisuješ za oba hráče. ` : st.judge ? `Judguje ${esc(st.judge.nick)}. ` : ""}Změna módu nebo bodů začne novou hru. Sestavu měníš ${st.me === 0 ? "oběma hráčům" : "pro sebe i soupeře"}. Podrž bey = upravit jeho díly.</div>
+    <div class="trSub">${st.me === 0 ? `Judguješ – zapisuješ za oba hráče. ` : st.judge ? `Judguje ${esc(st.judge.nick)}. ` : ""}Změna módu nebo bodů začne novou hru. Sestavu měníš ${st.me === 0 ? "oběma hráčům" : "pro sebe i soupeře"} – změněná se uloží do decku na tomhle tréninku. Podrž bey = upravit jeho díly.</div>
   </div>`
   box.querySelectorAll("[data-mode]").forEach(b => b.onclick = () => {
     const [l, r] = b.dataset.mode.split("v")

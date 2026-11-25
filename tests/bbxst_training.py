@@ -117,6 +117,8 @@ with sync_playwright() as p:
     a.click('#trSave'); a.wait_for_selector('#trSetup', state='hidden')
     st = json.loads(sql(f"select settings from training_matches where id = '{mid}'"))
     assert st['mode'] == '1v1' and st['win'] == 3 and st['lineup']['p2'][0]['name'] == 'Leon Claw 5-60P', st
+    assert sql(f"select bey1 from registrations where tournament_id = '{tid}' and user_id = '{u2}'") == 'Leon Claw 5-60P', 'sestava se uloží do decku'
+    assert sql(f"select bey1 from registrations where tournament_id = '{tid}' and user_id = '{u1}'") == 'Dran Sword 3-60F', 'nezměněný deck zůstane'
     assert board(a) == '0:0', 'nový mód = nová hra ' + board(a)
     # 1v1: beye se doplní samy
     score(a, 1, 3)
@@ -131,7 +133,7 @@ with sync_playwright() as p:
     drag(a, '#trainBtn', 140, -40); a.wait_for_selector('#trSetup:not(.hidden)')
     a.click('[data-mode="3v3"]'); a.click('[data-inf]'); a.click('[data-tourney="1"]')
     a.click('.trCol.right .trSlot >> nth=0'); a.wait_for_selector('.trList .beyPick')
-    a.click('.trList .beyPick:has-text("Shark Edge")')
+    a.click('.trList >> .beyPick:has-text("Wizard Arrow")')      # Shark Edge už v decku není (uložená sestava)
     a.screenshot(path=OUT + '156_bbxst_setup_tourney.png')
     a.click('#trSave'); a.wait_for_selector('#trSetup', state='hidden')
     st = json.loads(sql(f"select settings from training_matches where id = '{mid}'"))

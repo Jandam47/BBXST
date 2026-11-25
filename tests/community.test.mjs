@@ -153,6 +153,14 @@ await as(pl[0], `select training_battle($1, gen_random_uuid(), 2, 2, 'burst', 0,
 const bat = (await db.query('select p1_bey, p2_bey, finish, p1_parts from training_battles where match_id = $1 order by seq desc limit 1', [mid])).rows[0]
 assert.equal(bat.p1_bey, 'Hells Scythe 4-60T'); assert.equal(bat.p2_bey, 'Dran Sword 3-60F'); assert.equal(bat.finish, 'burst')
 assert.equal(bat.p1_parts.blade, 'Hells Scythe')
+// změněná sestava se uloží do decku hráče na tréninku (41); nezměněná deck nepřepíše
+assert.equal((await db.query('select bey1 from registrations where id = $1', [r1])).rows[0].bey1 === 'Hells Scythe 4-60T', true, 'p1 deck = nová sestava')
+assert.equal((await db.query('select jsonb_array_length(deck) n from registrations where id = $1', [r1])).rows[0].n, 1)
+const d0 = (await db.query('select deck from registrations where id = $1', [r0])).rows[0].deck
+{ const cur = (await one(pl[1], 'training_state', [mid])).settings.lineup.p2
+  await as(pl[1], 'select training_setup($1,$2)', [mid, JSON.stringify({ lineup: { p2: cur.map(({ name, ...x }) => x) } })])
+  await db.query("update registrations set updated_at = updated_at where id = $1", [r0]) }
+assert.deepEqual((await db.query('select deck from registrations where id = $1', [r0])).rows[0].deck, d0, 'beze změny se deck nepřepíše')
 step('výzva → potvrzení → oba zapisují souboje, body na hru (5) i neomezeně, undo, změna sestavy')
 
 // ── judge cizí dvojice (40) ──
