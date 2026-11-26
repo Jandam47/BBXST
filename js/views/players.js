@@ -18,9 +18,9 @@ export async function myCommunities() {
 }
 
 export async function openPlayersWheel() {
-  if (document.querySelector('.cw-overlay')) return
+  if (document.querySelector('.cw-overlay:not(.closing)')) return
   const comms = await myCommunities()
-  if (document.querySelector('.cw-overlay')) return
+  if (document.querySelector('.cw-overlay:not(.closing)')) return
   const items = [
     { label: 'Standings', icon: 'bars', color: 'var(--cyan)', go: '#/players' },
     { label: 'Komunity', icon: 'users', color: 'var(--magenta)', go: '#/communities' },

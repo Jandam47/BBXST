@@ -196,24 +196,28 @@ with sync_playwright() as p:
     a.click('.twK.h[data-h="60"]')                     # obě řady → zavře se
     a.wait_for_selector('#trWheel', state='hidden')
     assert a.input_value('#nbRatchet') == '3-60'
+    # hned po zavření kolečka se klepnutí spolkne (ghost click na telefonu) – ověř a počkej
+    a.click('#nbRatchet', no_wait_after=True); a.wait_for_timeout(150)
+    assert a.locator('#trWheel:not(.hidden)').count() == 0, 'klik hned po výběru propadl'
+    a.wait_for_timeout(450)
     a.click('#nbRatchet'); a.wait_for_selector('#trWheel:not(.hidden)')
     a.click('.twK.h[data-h="85"]'); a.wait_for_timeout(200)
     assert a.locator('#trWheel:not(.hidden)').count() == 1
     a.click('.twK.t[data-t="3"]')
-    a.wait_for_selector('#trWheel', state='hidden'); assert a.input_value('#nbRatchet') == '3-85'
+    a.wait_for_selector('#trWheel', state='hidden'); a.wait_for_timeout(450); assert a.input_value('#nbRatchet') == '3-85'
     a.click('#nbRatchet'); a.wait_for_selector('#trWheel:not(.hidden)')
     a.click('.twK.t[data-t="M"]'); a.wait_for_timeout(200)
     assert a.locator('#trWheel:not(.hidden)').count() == 1
     a.click('.twK.h[data-h="85"]')
-    a.wait_for_selector('#trWheel', state='hidden'); assert a.input_value('#nbRatchet') == 'M-85'
+    a.wait_for_selector('#trWheel', state='hidden'); a.wait_for_timeout(450); assert a.input_value('#nbRatchet') == 'M-85'
     a.click('#nbRatchet'); a.wait_for_selector('#trWheel:not(.hidden)')
     a.click('.twK.t[data-t="8"]'); a.wait_for_timeout(150)  # 8-85 není → výška se zruší, nabídne 70 / 80
     assert a.locator('.twK.h:not([disabled])').all_inner_texts() == ['70', '80']
     a.screenshot(path=OUT + '163_bbxst_ratchet_wheel.png')
-    a.click('.twSpecial[data-sp="Turbo"]'); a.wait_for_selector('#trWheel', state='hidden')
+    a.click('.twSpecial[data-sp="Turbo"]'); a.wait_for_selector('#trWheel', state='hidden'); a.wait_for_timeout(450)
     assert a.input_value('#nbRatchet') == '' and a.input_value('#nbBit') == 'Turbo'
     a.click('#nbRatchet'); a.wait_for_selector('#trWheel:not(.hidden)')
-    a.click('.twK.t[data-t="4"]'); a.click('.twK.h[data-h="60"]'); a.wait_for_selector('#trWheel', state='hidden')
+    a.click('.twK.t[data-t="4"]'); a.click('.twK.h[data-h="60"]'); a.wait_for_selector('#trWheel', state='hidden'); a.wait_for_timeout(450)
     assert a.input_value('#nbRatchet') == '4-60' and a.input_value('#nbBit') == '', 'normální ratchet zruší Turbo'
     # bit na kolečku s výsečemi a hledáním uprostřed
     a.click('#nbBit'); a.wait_for_selector('#trWheel:not(.hidden) .tbDial')
@@ -221,19 +225,19 @@ with sync_playwright() as p:
     assert a.locator('.tbK').count() == nbits and a.locator('.tbK.off').count() == 0
     assert 'zkratk' in a.inner_text('.tbTip')
     a.fill('.tbQ', 'tr'); assert a.inner_text('#tbBest b') == 'Turbo'
-    a.keyboard.press('Enter'); a.wait_for_selector('#trWheel', state='hidden')
+    a.keyboard.press('Enter'); a.wait_for_selector('#trWheel', state='hidden'); a.wait_for_timeout(450)
     assert a.input_value('#nbBit') == 'Turbo' and a.input_value('#nbRatchet') == '', 'Turbo zruší ratchet'
     assert 'Turbo' in a.get_attribute('#nbRatchet', 'placeholder')
     a.click('#nbBit'); a.wait_for_selector('#trWheel:not(.hidden) .tbK.on[data-bit="Turbo"]')
     a.fill('.tbQ', 'bal'); a.wait_for_timeout(250)
     assert a.inner_text('#tbBest b') == 'Ball' and a.locator('.tbK.off').count() > 30
     a.screenshot(path=OUT + '159_bbxst_part_suggest.png')
-    a.click('#tbBest'); a.wait_for_selector('#trWheel', state='hidden')
+    a.click('#tbBest'); a.wait_for_selector('#trWheel', state='hidden'); a.wait_for_timeout(450)
     assert a.input_value('#nbBit') == 'Ball'
-    a.click('#nbBit'); a.wait_for_selector('#trWheel:not(.hidden)'); a.keyboard.press('Escape'); a.wait_for_selector('#trWheel', state='hidden')
+    a.click('#nbBit'); a.wait_for_selector('#trWheel:not(.hidden)'); a.keyboard.press('Escape'); a.wait_for_selector('#trWheel', state='hidden'); a.wait_for_timeout(450)
     assert a.input_value('#nbBit') == 'Ball' and a.locator('#trSetup:not(.hidden)').count() == 1, 'Esc zavře jen kolečko'
     a.click('#nbRatchet'); a.wait_for_selector('#trWheel:not(.hidden)')
-    a.click('.twK.t[data-t="4"]'); a.click('.twK.h[data-h="60"]'); a.wait_for_selector('#trWheel', state='hidden')
+    a.click('.twK.t[data-t="4"]'); a.click('.twK.h[data-h="60"]'); a.wait_for_selector('#trWheel', state='hidden'); a.wait_for_timeout(450)
     assert a.input_value('#nbBit') == 'Ball'
     a.screenshot(path=OUT + '158_bbxst_edit_bey.png')
     a.click('#nbOk'); a.wait_for_selector('.trSlot:has-text("upraveno")')

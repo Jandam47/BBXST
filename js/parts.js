@@ -2,7 +2,7 @@
 //  Katalog dílů (tabulka bey_parts) + našeptávač + editor decku
 // ════════════════════════════════════════════════════════════════
 import { sb, q } from './supa.js'
-import { html, esc } from './ui.js'
+import { html, esc, removeAfterTap } from './ui.js'
 
 const CACHE_KEY = 'bbxu_parts_v1'
 let catalog = null
@@ -269,7 +269,7 @@ export function bindDeckEditor(root, cat, { distinct = true, favorites = true } 
     })
   }
   const openBit = (input, q = '') => {
-    if (document.querySelector('.bw-bg')) return
+    if (document.querySelector('.bw-bg:not(.closing)')) return
     const card = input.closest('[data-bey]')
     bitWheel(cat, input.value.trim(), (name) => {
       input.value = name
@@ -357,10 +357,10 @@ export function ratchetWheel(cat, cur, curBit, onPick) {
   bg.innerHTML = '<div class="modal rw" role="dialog" aria-modal="true" aria-label="Výběr ratchetu"></div>'
   const box = bg.firstElementChild
   const prevFocus = document.activeElement
-  const close = () => { bg.remove(); document.removeEventListener('keydown', onKey, true); prevFocus?.focus?.({ preventScroll: true }) }
+  const close = (now) => { now === true ? bg.remove() : removeAfterTap(bg); document.removeEventListener('keydown', onKey, true); prevFocus?.focus?.({ preventScroll: true }) }   // klepnutí: ghost click, Esc: hned
   const done = (v) => { close(); onPick(v) }
   // Esc zavře jen kolečko, ne okno pod ním (přidání hráče)
-  const onKey = (e) => { if (e.key === 'Escape') { e.stopImmediatePropagation(); e.preventDefault(); close() } }
+  const onKey = (e) => { if (e.key === 'Escape') { e.stopImmediatePropagation(); e.preventDefault(); close(true) } }
   const at = (i, n, r) => { const a = -Math.PI / 2 + (2 * Math.PI * i) / n; return `left:${50 + r * Math.cos(a)}%;top:${50 + r * Math.sin(a)}%` }
   const draw = () => {
     const ok = t && h && have.has(`${t}-${h}`)
@@ -434,10 +434,10 @@ export function bitWheel(cat, cur, onPick, startQ = '') {
   bg.innerHTML = '<div class="modal rw bw" role="dialog" aria-modal="true" aria-label="Výběr bitu"></div>'
   const box = bg.firstElementChild
   const prevFocus = document.activeElement
-  const close = () => { bg.remove(); document.removeEventListener('keydown', onKey, true); prevFocus?.focus?.({ preventScroll: true }) }
+  const close = (now) => { now === true ? bg.remove() : removeAfterTap(bg); document.removeEventListener('keydown', onKey, true); prevFocus?.focus?.({ preventScroll: true }) }   // klepnutí: ghost click, Esc: hned
   const done = (r) => { close(); onPick(r.name) }
   const onKey = (e) => {
-    if (e.key === 'Escape') { e.stopImmediatePropagation(); e.preventDefault(); close() }
+    if (e.key === 'Escape') { e.stopImmediatePropagation(); e.preventDefault(); close(true) }
     else if ((e.key === 'Enter' || e.key === ' ') && e.target.matches?.('.bw-k')) { e.preventDefault(); done(rOf.get(e.target.dataset.bit)) }
   }
   let k0 = 0

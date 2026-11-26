@@ -2959,6 +2959,13 @@ async function trChooseBey(slot, i) {
 const TW_TEETH = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "M"]
 const TW_HEIGHTS = ["50", "55", "60", "65", "70", "75", "80", "85"]
 const TW_SPECIAL = [["Turbo", "Tr"], ["Operate", "Op"]]
+// po zavření kolečka klepnutím může telefon „dojet“ klik i na to, co je pod ním – chvíli kliky spolkni
+function eatGhostClicks(ms = 450) {
+  const eat = (e) => { e.stopPropagation(); e.preventDefault() }
+  const types = ["click", "pointerup", "touchend", "mouseup"]
+  types.forEach(t => document.addEventListener(t, eat, true))
+  setTimeout(() => types.forEach(t => document.removeEventListener(t, eat, true)), ms)
+}
 function trRatchetWheel(cur, curBit, onPick) {
   const box = document.getElementById("trWheel")
   const have = new Set(tr.parts.filter(p => p.category === "ratchet").map(p => p.name))
@@ -2966,7 +2973,7 @@ function trRatchetWheel(cur, curBit, onPick) {
   const m = /^([0-9M])-(\d+)$/.exec(cur || "")
   let t = m?.[1] ?? null, h = m?.[2] ?? null
   let pickT = false, pickH = false                 // zavře se, až vybereš obě řady (předvyplněné se nepočítá)
-  const done = (val) => { box.classList.add("hidden"); onPick(val) }
+  const done = (val) => { eatGhostClicks(); box.classList.add("hidden"); onPick(val) }
   const at = (i, n, r) => { const a = -Math.PI / 2 + (2 * Math.PI * i) / n; return `left:${50 + r * Math.cos(a)}%;top:${50 + r * Math.sin(a)}%` }
   const draw = () => {
     const ok = t && h && have.has(`${t}-${h}`)
@@ -3066,7 +3073,7 @@ function trBitWheel(cur, onPick, startQ = "") {
     vv?.removeEventListener("resize", fit); vv?.removeEventListener("scroll", fit); removeEventListener("resize", fit)
     document.removeEventListener("keydown", onKey, true)
   }
-  const done = (p) => { close(); onPick(p.name, special(p)) }
+  const done = (p) => { eatGhostClicks(); close(); onPick(p.name, special(p)) }
   let best = null
   const showBest = (p, hint) => {
     bestBtn.disabled = !p

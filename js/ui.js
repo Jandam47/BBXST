@@ -193,3 +193,14 @@ export function finishLine(c) {
   if (!fsum(c)) return html`<span class="faint">–</span>`
   return html`${FINISHES.filter(([k]) => c[k]).map(([k, l]) => html`<span class="fin-chip ${k}">${l} ${c[k]}</span>`)}${c.plus2 ? html`<span class="fin-chip">+2 ${c.plus2}</span>` : ''}`
 }
+
+// Překryvné okno (kolečko) zavřené klepnutím: na telefonu může „dojet“ klik i na to, co je pod ním
+// (ghost click). Okno proto ještě chvíli zůstane neviditelné nahoře a všechny kliky na něj spolkne.
+export function removeAfterTap(el, ms = 450) {
+  if (!el || el.dataset.closing) return
+  el.dataset.closing = '1'
+  el.classList.add('closing')
+  const eat = (e) => { e.stopPropagation(); e.preventDefault() }
+  for (const t of ['click', 'pointerdown', 'pointerup', 'touchstart', 'touchend', 'mousedown', 'mouseup']) el.addEventListener(t, eat, true)
+  setTimeout(() => el.remove(), ms)
+}

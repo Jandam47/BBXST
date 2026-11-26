@@ -312,6 +312,9 @@ Komunikuj **česky**, celé UI je česky.
 - **Měsíční kontrola dílů**: naplánovaná úloha (2. den v měsíci, 20:13) porovná kyoganken (Takara Tomy) i nové Hasbro
   produkty (beysandbricks.com/hasbro-beyblades, obchody, zprávy) s `bey_parts` a případně otevře PR s novým
   `NN-parts-RRRR-MM.sql` (Hasbro-only díly = Hasbro název, Hasbro názvy Takara dílů = aliases; do DB nic nezapisuje).
+- **Ghost click**: kolečka zavřená klepnutím (ratchet / bit v parts.js, „Založ akci“ a další přes `openCreateWheel`) nemizí hned –
+  `removeAfterTap` v ui.js je ~0,45 s nechá neviditelná nahoře a spolkne kliky, ať klepnutí nepropadne na tlačítko pod nimi
+  (Esc zavře hned; testy na „je zavřeno“ hledají `.cw-overlay:not(.closing)`). BBXST kolečka: `eatGhostClicks()`.
 - `vendor/` – supabase-js, qrcode-generator, html5-qrcode (lokálně, kvůli slabé síti v hale).
 - `sw.js` – service worker (síť první, cache jako záloha).
 - Vzhled: cyberpunk (černé pozadí s mřížkou, azurová `--cyan` + purpurová `--magenta`, žlutá `--bolt` jen pro

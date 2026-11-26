@@ -20,12 +20,12 @@ const ITEMS = () => {
 }
 
 export function openCommWheel(onClose) {
-  if (document.querySelector('.cw-overlay')) return
+  if (document.querySelector('.cw-overlay:not(.closing)')) return
   const close = openCreateWheel({ label: 'Komunikace', children: ITEMS() }, { title: 'Komunikace', hint: 'Kam chceš jít?', label: 'Komunikace' })
   // zavření bez výběru (střed, Esc, klik vedle) – výběr mění adresu, ten se pozná podle hashchange
   if (onClose) {
     const h = location.hash
-    const ov = document.querySelector('.cw-overlay')
+    const ov = document.querySelector('.cw-overlay:not(.closing)')
     new MutationObserver((_, mo) => { if (!ov.isConnected) { mo.disconnect(); if (location.hash === h) onClose() } })
       .observe(document.body, { childList: true })
   }

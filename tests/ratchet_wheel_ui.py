@@ -41,7 +41,10 @@ with sync_playwright() as p:
     have = sql("select string_agg(split_part(name, '-', 2), ',') from bey_parts where category = 'ratchet' and name like '3-%'").split(',')
     assert not set(dis) & set(have), (dis, have)
     pg.screenshot(path=OUT + '290_rw_dial.png')
-    pg.click('.rw-k[data-h="60"]'); pg.wait_for_selector('.rw-dial', state='detached')
+    pg.click('.rw-k[data-h="60"]')
+    # ghost click: klepnutí hned po výběru nepropadne na stránku (kolečko ho spolkne), pak kolečko zmizí
+    pg.mouse.click(5, 300); assert pg.evaluate("document.querySelector('.rw-bg.closing') !== null")
+    pg.wait_for_selector('.rw-dial', state='detached')
     assert pg.input_value(R + ' input') == '3-60'
     assert pg.inner_text('[data-bey="0"] .bey-preview') == '→ Dran Sword 3-60F', pg.inner_text('[data-bey="0"] .bey-preview')
     # znovu otevřít: předvyplněné 3-60, změna jen výšky přes Použít

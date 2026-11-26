@@ -4,7 +4,7 @@
 //  Listy vedou do editoru s předvybraným druhem (#/new?f=…, #/new/event?type=…) nebo do formuláře komunitního tréninku.
 // ════════════════════════════════════════════════════════════════
 import { ICONS } from './icons.js'
-import { esc } from './ui.js'
+import { esc, removeAfterTap } from './ui.js'
 
 export function createTree({ level = 0, leads = [], leagues = [], onCommunity }) {
   const org = level >= 2
@@ -68,9 +68,10 @@ export function openCreateWheel(tree, { title = 'Co chceš založit?', hint = 'V
   ov.className = 'cw-overlay'
   ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-modal', 'true'); ov.setAttribute('aria-label', label)
   const prevFocus = document.activeElement
-  const close = () => { ov.remove(); removeEventListener('keydown', key); prevFocus?.focus?.() }
+  // klepnutím zavřené kolečko chvíli spolkne kliky (ghost click na telefonu); Esc ho zavře hned
+  const close = (now) => { now === true ? ov.remove() : removeAfterTap(ov); removeEventListener('keydown', key); prevFocus?.focus?.() }
   const key = (e) => {
-    if (e.key === 'Escape') { e.preventDefault(); stack.length > 1 ? back() : close() }
+    if (e.key === 'Escape') { e.preventDefault(); stack.length > 1 ? back() : close(true) }
     if ((e.key === 'Enter' || e.key === ' ') && e.target.matches?.('.cw-sec')) { e.preventDefault(); pick(+e.target.dataset.i) }
   }
   const back = () => { stack.pop(); draw(-1) }

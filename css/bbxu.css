@@ -1838,3 +1838,7 @@ html[data-theme=ronin] {
 .ch-pop .ch-btns { width: 100%; margin-top: 6px; }
 @keyframes chPulse { 50% { transform: scale(1.12); } }
 @media (prefers-reduced-motion: reduce) { .ch-pop .ch-ico { animation: none; } }
+
+/* zavřené kolečko: chvíli neviditelné nahoře, ať klepnutí nepropadne na stránku pod ním (removeAfterTap v ui.js) */
+.modal-bg.closing, .cw-overlay.closing { opacity: 0 !important; transition: opacity .15s; }
+.modal-bg.closing *, .cw-overlay.closing * { pointer-events: none !important; }
