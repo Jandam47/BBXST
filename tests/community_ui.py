@@ -119,8 +119,10 @@ with sync_playwright() as p:
     r1 = sql(f"select id from registrations where tournament_id = '{tid}' and nick = 'Hrac1'")
     p2.click(f'[data-challenge="{r1}"]'); p2.wait_for_selector('.tr-wait')
     go(p1, f'#/t/{tid}/me'); p1.wait_for_selector('.tr-call')
-    shot(p1, '137_training_call')
-    p1.click('.tr-call [data-accept]'); p1.wait_for_url(re.compile(r'bbxst\.html\?training='))
+    p1.wait_for_selector('.modal .ch-pop')                     # vyskakovací okno výzvy (43)
+    assert 'Hrac2' in p1.inner_text('.ch-pop') and 'vyzývá' in p1.inner_text('.ch-pop')
+    shot(p1, '137_training_call', full=False)
+    p1.click('.ch-pop [data-ch=yes]'); p1.wait_for_url(re.compile(r'bbxst\.html\?training='))
     mid = sql(f"select id from training_matches where tournament_id = '{tid}'")
     assert sql(f"select status from training_matches where id = '{mid}'") == 'active'
 

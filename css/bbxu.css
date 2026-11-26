@@ -1828,3 +1828,13 @@ html[data-theme=ronin] {
 .home-find #t-q { flex: 1 1 auto; min-width: 0; }
 .home-find #t-region { flex: 0 0 auto; width: auto; max-width: 58%; }
 .f select:disabled { opacity: .75; }
+
+/* výzva na tréninku – okno Přijmout / Odmítnout (43, js/challenge.js) */
+.ch-pop { text-align: center; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.ch-pop .ch-ico { font-size: 42px; line-height: 1; color: var(--bolt); text-shadow: 0 0 18px rgba(var(--bolt-rgb), .55); animation: chPulse 1.2s ease-in-out infinite; }
+.ch-pop h2 { margin: 0; font-size: 21px; }
+.ch-pop h2::before { display: none; }
+.ch-pop h2 b { color: var(--bolt); }
+.ch-pop .ch-btns { width: 100%; margin-top: 6px; }
+@keyframes chPulse { 50% { transform: scale(1.12); } }
+@media (prefers-reduced-motion: reduce) { .ch-pop .ch-ico { animation: none; } }

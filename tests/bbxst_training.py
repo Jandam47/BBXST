@@ -79,8 +79,11 @@ with sync_playwright() as p:
     mid = sql(f"select id from training_matches where tournament_id = '{tid}'")
     assert sql(f"select status from training_matches where id = '{mid}'") == 'pending'
 
-    # ── C: kolečko ukazuje „vyzval tě“ → přijmout ──
+    # ── C: v BBXST samo vyskočí okno výzvy → POZDĚJI, v kolečku „vyzval tě“ → zase okno → PŘIJMOUT ──
     c.goto(BASE + 'bbxst.html'); c.wait_for_selector('body.has-training')
+    c.wait_for_selector('#jChYes'); assert 'Hrac1' in c.inner_text('#jBox')
+    c.screenshot(path=OUT + '152a_bbxst_challenge_popup.png')
+    c.click('#jChLater'); c.wait_for_selector('#jOverlay.hidden', state='attached')
     drag(c, '#trainBtn', 140, -40); c.wait_for_selector('.trP.incoming')
     c.screenshot(path=OUT + '152_bbxst_circle_incoming.png')
     c.click('.trP.incoming'); c.wait_for_selector('#jYes'); c.click('#jYes')

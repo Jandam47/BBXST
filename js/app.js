@@ -3,6 +3,7 @@
 // ════════════════════════════════════════════════════════════════
 import { sb, state, configured, initAuth, onState, isLoggedIn, systemNotify, rpc, q } from './supa.js'
 import { html, mount, $, toast } from './ui.js'
+import { challengePopup, challengeResolved, challengeFromUrl, startChallengeWatch } from './challenge.js'
 import * as Home from './views/home.js'
 import * as Tournament from './views/tournament.js'
 import * as Players from './views/players.js'
@@ -190,10 +191,10 @@ function watchTraining() {
     .on('postgres_changes', { event: '*', schema: 'public', table: 'training_matches' }, async ({ eventType, new: m }) => {
       if (!m?.id || seen.get(m.id) === m.status) return
       seen.set(m.id, m.status)
+      if (m.status !== 'pending') challengeResolved(m.id)
       if (m.status === 'pending' && mine.has(m.p2_reg) && eventType === 'INSERT') {
-        const n = await nick(m.p1_reg)
-        toast(html`<a href="#/t/${m.tournament_id}/me"><b>${n}</b> tě vyzývá na trénink – potvrď výzvu.</a>`, 'call', 10000)
-        systemNotify(`${n} tě vyzývá na souboj`, 'Komunitní trénink', 'tr-' + m.id); navigator.vibrate?.([200, 100, 200])
+        challengePopup(m.id)                                       // okno Přijmout / Odmítnout
+        if (document.hidden) systemNotify(`${await nick(m.p1_reg)} tě vyzývá na souboj`, 'Komunitní trénink', 'tr-' + m.id)
       } else if (m.status === 'active' && eventType === 'UPDATE' && mine.has(m.p1_reg)) {   // INSERT active = bot
         const n = await nick(m.p2_reg)
         toast(html`<a href="bbxst.html?training=${m.id}"><b>${n}</b> přijal výzvu – otevřít BBXST.</a>`, 'call', 10000)
@@ -235,12 +236,13 @@ async function boot() {
   watchTraining()
   watchUnread()
   syncPush()
+  startChallengeWatch()
   onState((evt) => {
     renderChrome()
     watchMyMatches()
     watchFashion()
     watchTraining()
-      if (evt !== 'TOKEN_REFRESHED') watchUnread()
+    if (evt !== 'TOKEN_REFRESHED') { watchUnread(); startChallengeWatch() }
     if (evt === 'SIGNED_IN') syncPush()
     if (evt === 'PASSWORD_RECOVERY') Auth.newPasswordModal()
     if (evt === 'SIGNED_IN' && isLoggedIn() && state.profile && !state.profile.nick && !document.querySelector('#f-onb')) Auth.onboardingModal()
@@ -251,6 +253,7 @@ async function boot() {
     history.replaceState(null, '', location.pathname + '#/')
   }
   window.addEventListener('hashchange', route)
+  window.addEventListener('hashchange', challengeFromUrl)      // odkaz z notifikace výzvy (?vyzva=)
   // záložka Hráči: kolečko Standings · Komunity · Ligy · Trénink (bez přechodu)
   document.querySelector('.tabbar a[data-tab="players"]')?.addEventListener('click', (e) => {
     e.preventDefault()
@@ -262,6 +265,7 @@ async function boot() {
     Komunikace.openCommWheel()
   })
   await route()
+  challengeFromUrl()
   if (isRecovery && state.user) Auth.newPasswordModal()
   else if (isLoggedIn() && state.profile && !state.profile.nick) Auth.onboardingModal()
 }

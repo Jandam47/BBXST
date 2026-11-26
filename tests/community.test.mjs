@@ -109,6 +109,27 @@ let b = await one(pl[1], 'training_board', [tid])
 assert.equal(b.players.length, 4); assert.equal(b.players.find(p => p.nick === 'COut' + sfx).guest, true)
 step('trénink zakládá leader/zástupce; členové se přidají, pozvaný hráč taky; jen jeden trénink naráz')
 
+// ── výzva: notifikace s tlačítky Přijmout / Odmítnout, odmítnutí z notifikace (43) ──
+await as(pl[0], 'select push_subscribe($1,$2,$3)', [`https://push.example/${pl[0].id}`, 'key', 'auth'])
+const anonCall = async (sql, params) => {
+  await db.query("select set_config('request.jwt.claims', '', false)"); await db.query('set role anon')
+  try { return (await db.query(sql, params)).rows } finally { await db.query('reset role') }
+}
+{ const mx = await one(pl[2], 'training_challenge', [tid, r0])
+  const ob = (await db.query(`select * from push_outbox where tag = $1 order by id desc limit 1`, ['tr-' + mx])).rows[0]
+  assert.ok(ob && ob.user_ids.includes(pl[0].id), 'push vyzvanému')
+  assert.equal(ob.url, `#/t/${tid}/me?vyzva=${mx}`)
+  assert.deepEqual(ob.data.actions.map(a => a.action), ['accept', 'decline'])
+  assert.equal(ob.data.accept_url, `bbxst.html?training=${mx}&accept=1`)
+  const tok = ob.data.decline.token
+  assert.equal(ob.data.decline.match, mx)
+  await fails(pl[2], 'select action_token from training_matches where id = $1', [mx], /permission/)       // klíč klient nepřečte
+  assert.equal((await anonCall('select training_decline_token($1, gen_random_uuid()) r', [mx]))[0].r, false, 'cizí klíč neprojde')
+  assert.equal((await anonCall('select training_decline_token($1, $2) r', [mx, tok]))[0].r, true)
+  assert.equal((await db.query('select status from training_matches where id = $1', [mx])).rows[0].status, 'declined')
+  assert.equal((await anonCall('select training_decline_token($1, $2) r', [mx, tok]))[0].r, false, 'jen jednou') }
+step('výzva: push s Přijmout / Odmítnout, odmítnutí z notifikace jednorázovým klíčem')
+
 // ── výzva a souboje ───────────────────────────────────────────────
 const mid = await one(pl[1], 'training_challenge', [tid, r0])
 assert.equal(await one(pl[1], 'training_challenge', [tid, r0]), mid, 'stejná dvojice = stejná výzva')

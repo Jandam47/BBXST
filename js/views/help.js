@@ -115,6 +115,7 @@ const S = [
     <ul>
       <li>Trénink zakládá leader nebo zástupce komunity. Přidat se může člen nebo pozvaný hráč.</li>
       <li>V BBXST zelené tlačítko <b>TRAINING</b> → vyber soupeře → on výzvu potvrdí. Zapisovat můžete oba.</li>
+      <li>Když tě někdo vyzve, v BBXU i v BBXST vyskočí okno <b>Přijmout / Odmítnout</b>. Přijmout tě rovnou pošle do BBXST se zápasem. V notifikaci na telefonu jsou tlačítka Přijmout / Odmítnout taky (Odmítnout funguje bez otevření aplikace); klepnutí na notifikaci otevře trénink s tím oknem.</li>
       <li><b>Judge na tréninku</b>: v kolečku hráčů klepni na <b>JUDGE</b> – uvidíš, kdo s kým právě hraje a jaké je skóre. Vyber dvojici a zapisuješ souboje za ně (body, beye, setup). Odejdeš v SETUPu tlačítkem <b>ODEJÍT (JUDGE)</b>; hráči vidí, kdo je judguje.</li>
       <li><b>SETUP</b>: mód 3v3 / 1v1, body na hru, tournament mode (bey se v sadě neopakuje – u nové výzvy je zapnutý, vypneš ho tady) a sestavy. Podržením beye upravíš jeho díly – ratchet i bit se vybírají na kolečku jako v registraci. Změněná sestava se uloží do decku hráče na tomhle tréninku, takže ji má i v dalších výzvách. Při výběru beye jsou nahoře i tvoje <b>★ oblíbené buildy</b> z profilu.</li>
       <li>Tahací <b>RESET</b> začne novou hru, odehrané souboje zůstanou v historii. Trénovat jde i proti botovi.</li>

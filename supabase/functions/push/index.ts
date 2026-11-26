@@ -4,6 +4,7 @@
 //  Nastavení čte ze soukromé tabulky bbx_settings (service role): push_secret, vapid_public, vapid_private,
 //  vapid_subject. Ze secrets jen automatické SUPABASE_URL a SUPABASE_SERVICE_ROLE_KEY.
 //  Nasazení: verify_jwt = false (ověřuje se sdílené heslo z bbx_settings).
+//  push_outbox.data (43) se přidá do payloadu (actions, accept_url, decline + api pro odmítnutí na pozadí).
 // ════════════════════════════════════════════════════════════════
 import webpush from 'npm:web-push@3.6.7'
 import { createClient } from 'npm:@supabase/supabase-js@2'
@@ -34,7 +35,10 @@ Deno.serve(async (req) => {
 
   const { data: subs } = await sb.from('push_subscriptions').select('*').in('user_id', msg.user_ids)
   webpush.setVapidDetails(c.vapid_subject || 'https://bbxu.cz', c.vapid_public, c.vapid_private)
-  const payload = JSON.stringify({ title: msg.title, body: msg.body, url: msg.url, tag: msg.tag })
+  // doplňky (43): tlačítka akcí + adresa API pro akci na pozadí (anon klíč je veřejný, akci ověří jednorázový klíč)
+  const extra = msg.data && typeof msg.data === 'object' ? msg.data : {}
+  if (extra.decline) extra.api = { url: env('SUPABASE_URL'), key: env('SUPABASE_ANON_KEY') }
+  const payload = JSON.stringify({ title: msg.title, body: msg.body, url: msg.url, tag: msg.tag, ...extra })
 
   let sent = 0, failed = 0
   const gone: string[] = []

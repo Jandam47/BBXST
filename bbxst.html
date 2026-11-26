@@ -2566,7 +2566,8 @@ function trLeaveJudge() {
   return rpc("training_judge", { p_match: tr.match.id, p_on: false }).catch(() => {})
 }
 
-async function trLoadMatch(id, quiet) {
+async function trLoadMatch(id, quiet, autoAccept) {
+  trAsked.add(id)
   let st
   try { st = await rpc("training_state", { p_match: id }) } catch (e) {
     if (quiet && !isNetErr(e)) { try { localStorage.removeItem(TR_KEY) } catch (x) {} ; return }   // obnova po startu: už nejsem judge
@@ -2574,12 +2575,12 @@ async function trLoadMatch(id, quiet) {
   }
   if (st.status === "pending") {
     if (st.me === 2) {
-      if (!await jConfirm(`<b>${esc(st.p1.nick)}</b> tě vyzývá na trénink. Přijmout?`, "PŘIJMOUT")) return
+      if (!autoAccept && !await jConfirm(`<b>${esc(st.p1.nick)}</b> tě vyzývá na trénink. Přijmout?`, "PŘIJMOUT")) return
       try { await rpc("training_respond", { p_match: id, p_accept: true }) } catch (e) { return jAlert(esc(e.message)) }
       st = await rpc("training_state", { p_match: id })
     } else return trWait(st)
   }
-  if (st.status !== "active") { try { localStorage.removeItem(TR_KEY) } catch (e) {} ; return jAlert(st.status === "declined" ? `${esc(st.p2.nick)} výzvu odmítl.` : "Tenhle souboj už je ukončený.") }
+  if (st.status !== "active") { try { localStorage.removeItem(TR_KEY) } catch (e) {} ; if (quiet) return; return jAlert(st.status === "declined" ? `${esc(st.p2.nick)} výzvu odmítl.` : "Tenhle souboj už je ukončený.") }
   if (!trainingMode && !(await enterTraining(true))) return
   if (tr.match?.id !== id) trLeaveJudge()
   trUnload()
@@ -3259,11 +3260,53 @@ async function trNewBey(slot, i, preset) {
 })()
 
 /* otevření z BBXU (bbxst.html?training=<id>) nebo pokračování rozehraného tréninku */
+/* ── výzva na mě: vyskakovací okno PŘIJMOUT / ODMÍTNOUT (polling my_training + realtime) ── */
+const trAsked = new Set()
+let trChTimer = null, trChCh = null, trChOpen = null
+function trWatchChallenges() {
+  clearInterval(trChTimer)
+  trChTimer = setInterval(() => { if (!document.hidden) trCheckChallenges(true) }, 10000)
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) trCheckChallenges(true) })
+  trCheckChallenges(false)
+}
+async function trCheckChallenges(reload) {
+  if (reload) await trLoadInfo()
+  const me = tr.info?.me?.reg
+  if (sb && me && !trChCh) {
+    trChCh = sb.channel("trch-" + me)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "training_matches", filter: `p2_reg=eq.${me}` }, () => trCheckChallenges(true))
+      .subscribe()
+  }
+  if (trChOpen && !(tr.info?.matches || []).some(m => m.id === trChOpen && m.status === "pending")) {   // vyřízeno jinde
+    if (!document.getElementById("jOverlay").classList.contains("hidden") && document.getElementById("jChYes")) jHide()
+    trChOpen = null
+  }
+  const inc = (tr.info?.matches || []).find(m => m.incoming && m.status === "pending" && !trAsked.has(m.id))
+  if (!inc || !document.getElementById("jOverlay").classList.contains("hidden")) return    // jiné okno – zkusí se příště
+  trAsked.add(inc.id); trChOpen = inc.id
+  if (navigator.userActivation?.hasBeenActive) navigator.vibrate?.([200, 100, 200])
+  jShow(`<h3>VÝZVA</h3><p><b style="color:var(--gold)">${esc(inc.opponent)}</b> tě vyzývá na souboj</p>
+    <div class="jRow"><button class="qr-btn cancel" id="jChNo">ODMÍTNOUT</button><button class="qr-btn confirm" id="jChYes">PŘIJMOUT</button></div>
+    <div class="jRow"><button class="qr-btn cancel" id="jChLater">POZDĚJI</button></div>`)
+  document.getElementById("jChLater").onclick = () => { trChOpen = null; jHide() }
+  document.getElementById("jChNo").onclick = async () => {
+    trChOpen = null; jHide()
+    try { await rpc("training_respond", { p_match: inc.id, p_accept: false }); showOverlay("VÝZVA ODMÍTNUTA", "xtreme") } catch (e) { jAlert(esc(e.message)) }
+  }
+  document.getElementById("jChYes").onclick = async () => {
+    trChOpen = null; jHide()
+    trLoadMatch(inc.id, false, true)
+  }
+}
+
 ;(async function trBoot() {
-  const id = new URLSearchParams(location.search).get("training")
+  const qs = new URLSearchParams(location.search)
+  const id = qs.get("training"), accept = qs.get("accept") === "1"     // accept=1: Přijmout z notifikace
   if (id) window.history.replaceState(null, "", location.pathname)
   const info = await trLoadInfo()
-  if (id) return trLoadMatch(id)
+  if (id) trAsked.add(id)                  // otevřeno s výzvou (z BBXU / notifikace) – okno výzvy znovu neukazovat
+  trWatchChallenges()
+  if (id) return trLoadMatch(id, false, accept)
   let saved = null
   try { saved = localStorage.getItem(TR_KEY) } catch (e) {}
   if (saved && info && !OPENED_WITH_MATCH && !readLocal()?.match_id) trLoadMatch(saved, true)
