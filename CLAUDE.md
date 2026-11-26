@@ -22,7 +22,7 @@ Komunikuj **česky**, celé UI je česky.
   (podržení beye v setupu = úprava jeho dílů, předvyplněné; ratchet se vybírá na kolečku – vnitřní kruh zuby
   0–9 + M, vnější výška 50–85, jen existující kombinace z `bey_parts`; Turbo / Operate = bit s ratchetem;
   bit na kolečku `trBitWheel` = stejné výseče ve třech řadách s hledáním jako `bitWheel` v BBXU, velikost podle
-  `visualViewport`, aby ho klávesnice nezakryla).
+  `visualViewport`, aby ho klávesnice nezakryla; na výšku jsou tlačítka koleček nad a pod kolečkem, na šířku po boku).
   Změněná sestava v SETUPu (41, `training_setup`) se uloží hráči do decku na tréninku (`registrations.deck`) – jen když se
   jména beyů liší od předchozí sestavy výzvy; platí pro oba hráče (i bota), mění hráč i judge. Další výzvy ji převezmou.
   Výběr beye do slotu (`trChooseBey`): nahoře „★ MOJE OBLÍBENÉ“ = vlastní `fav_builds` (35, `trLoadFavs`, cache 60 s, jen účet),
