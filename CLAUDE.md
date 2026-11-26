@@ -30,7 +30,7 @@ Komunikuj **česky**, celé UI je česky.
   **Výzva – okno Přijmout / Odmítnout** (43): BBXU `js/challenge.js` (`challengePopup`: realtime INSERT ve `watchTraining`,
   `checkChallenges` = `my_training` při startu / návratu do aplikace / každých 20 s, odkaz `#/…?vyzva=<výzva>`; Přijmout →
   `training_respond` → `bbxst.html?training=<id>`); BBXST `trCheckChallenges` (polling `my_training` 10 s + realtime na
-  `p2_reg`, okno PŘIJMOUT / ODMÍTNOUT / POZDĚJI, `trAsked` = jednou za relaci), `bbxst.html?training=<id>&accept=1` přijme bez ptaní.
+  `p2_reg`, okno jen PŘIJMOUT / ODMÍTNOUT, `trAsked` = jednou za relaci; BBXU okno nejde zavřít klikem vedle), `bbxst.html?training=<id>&accept=1` přijme bez ptaní.
   Push výzvy má tlačítka akcí: `push_outbox.data` + `bbx_push(…, p_data)` → Edge Function přidá do payloadu → sw.js
   `actions`; Přijmout = otevře `accept_url`, Odmítnout = na pozadí `training_decline_token(výzva, klíč)` (anon, jednorázový
   `training_matches.action_token`, klientům nečitelný; adresu a klíč API bere SW z js/config.js). iOS tlačítka nemá → klepnutí.

@@ -3286,9 +3286,7 @@ async function trCheckChallenges(reload) {
   trAsked.add(inc.id); trChOpen = inc.id
   if (navigator.userActivation?.hasBeenActive) navigator.vibrate?.([200, 100, 200])
   jShow(`<h3>VÝZVA</h3><p><b style="color:var(--gold)">${esc(inc.opponent)}</b> tě vyzývá na souboj</p>
-    <div class="jRow"><button class="qr-btn cancel" id="jChNo">ODMÍTNOUT</button><button class="qr-btn confirm" id="jChYes">PŘIJMOUT</button></div>
-    <div class="jRow"><button class="qr-btn cancel" id="jChLater">POZDĚJI</button></div>`)
-  document.getElementById("jChLater").onclick = () => { trChOpen = null; jHide() }
+    <div class="jRow"><button class="qr-btn cancel" id="jChNo">ODMÍTNOUT</button><button class="qr-btn confirm" id="jChYes">PŘIJMOUT</button></div>`)
   document.getElementById("jChNo").onclick = async () => {
     trChOpen = null; jHide()
     try { await rpc("training_respond", { p_match: inc.id, p_accept: false }); showOverlay("VÝZVA ODMÍTNUTA", "xtreme") } catch (e) { jAlert(esc(e.message)) }

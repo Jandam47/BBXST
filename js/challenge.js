@@ -7,7 +7,7 @@ import { state, rpc, isLoggedIn, errMsg } from './supa.js'
 import { html, modal, toast, busy } from './ui.js'
 
 let open = null                 // { id, close }
-const asked = new Set()         // výzvy, které už se v téhle relaci ukázaly (Později = neotravovat znovu)
+const asked = new Set()         // výzvy, které už se v téhle relaci ukázaly
 let timer = null
 
 export const bbxstTraining = (id) => `bbxst.html?training=${id}`
@@ -33,8 +33,8 @@ export async function challengePopup(mid, { force = false } = {}) {
         <button class="btn grow" data-ch="no">Odmítnout</button>
         <button class="btn grow primary" data-ch="yes">Přijmout</button>
       </div>
-      <button class="btn ghost sm" data-close>Později</button>
     </div>`, {
+    dismissable: false,                                   // jen Přijmout / Odmítnout
     onClose: () => { if (open?.id === mid) open = null },
     onMount: (box, close) => {
       box.querySelector('[data-ch=yes]').onclick = (e) => busy(e.currentTarget, async () => {

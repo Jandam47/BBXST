@@ -49,7 +49,8 @@ with sync_playwright() as p:
     # 1) BBXU: okno výzvy po startu aplikace → Odmítnout
     m1 = challenge()
     c.goto(BASE + 'index.html#/'); c.reload(); c.wait_for_selector('.modal .ch-pop')
-    assert 'Hrac1' in c.inner_text('.ch-pop')
+    assert 'Hrac1' in c.inner_text('.ch-pop') and 'Později' not in c.inner_text('.ch-pop')
+    c.mouse.click(5, 5); c.wait_for_timeout(300); assert c.locator('.modal .ch-pop').count() == 1, 'klik vedle okno nezavře'
     c.screenshot(path=OUT + '400_bbxu_challenge_popup.png')
     c.click('.ch-pop [data-ch=no]'); c.wait_for_selector('.modal .ch-pop', state='detached')
     assert status(m1) == 'declined'
