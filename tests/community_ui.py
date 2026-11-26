@@ -97,8 +97,13 @@ with sync_playwright() as p:
     p1.click('[data-act=deck]'); p1.wait_for_selector('#f-deck')
     pick(p1, 0, 'blade', 'dran sw'); pick(p1, 0, 'ratchet', '360'); pick(p1, 0, 'bit', 'flat')
     pick(p1, 1, 'blade', 'dran sw'); pick(p1, 1, 'ratchet', '360'); pick(p1, 1, 'bit', 'flat')   # stejný bey 2× je OK
-    pick(p1, 2, 'blade', 'hells sc'); pick(p1, 2, 'ratchet', '460'); pick(p1, 2, 'bit', 'taper')
+    pick(p1, 2, 'blade', 'hells sc'); pick(p1, 2, 'bit', 'taper')
+    # na tréninku jde bey bez ratchetu (44)
+    p1.click('#f-deck [data-bey="2"] [data-combo="ratchet"] input'); p1.wait_for_selector('[data-rw-none]')
+    p1.click('[data-rw-none]'); p1.wait_for_selector('.rw-bg', state='detached')
+    assert p1.inner_text('#f-deck [data-bey="2"] .bey-preview') == '→ Hells Scythe T', p1.inner_text('#f-deck [data-bey="2"] .bey-preview')
     p1.click('#f-deck button.primary'); p1.wait_for_selector('#deck-box .pass-beys')
+    assert 'Hells Scythe T' in p1.inner_text('#deck-box .pass-beys')
 
     # člen se přidá (bez decku), zástupce pozve hráče mimo komunitu
     p2 = players[2]

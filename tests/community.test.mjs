@@ -105,6 +105,14 @@ await fails(pl[1], `insert into registrations (tournament_id, nick) values ($1,'
 // deck: opakované díly OK, max 3
 await as(pl[1], `update registrations set deck = $1 where id = $2`, [JSON.stringify([...DECK, DECK[0]]), r1])
 await fails(pl[1], `update registrations set deck = $1 where id = $2`, [JSON.stringify([...DECK, ...DECK]), r1], /1 až 3/)
+// bey bez ratchetu: na tréninku OK (44), jinde (oblíbené, mimo trénink) ratchet povinný
+{ const NR = [{ type: 'bx', blade: 'Dran Sword', bit: 'Flat' }, { type: 'cx', lock: 'Dran', main: 'Brave', assist: 'Slash', bit: 'Ball' }]
+  await as(pl[1], `update registrations set deck = $1 where id = $2`, [JSON.stringify(NR), r1])
+  const rr = (await db.query('select bey1, bey2, deck from registrations where id = $1', [r1])).rows[0]
+  assert.equal(rr.bey1, 'Dran Sword F'); assert.equal(rr.bey2, 'Dran Brave SB'); assert.equal(rr.deck[0].ratchet, undefined)
+  await fails(pl[1], 'insert into fav_builds (bey) values ($1)', [JSON.stringify(NR[0])], /ratchet/i)
+  await assert.rejects(db.query(`select bbx_compose_bey($1::jsonb, 1)`, [JSON.stringify(NR[0])]), /ratchet/i)
+  await as(pl[1], `update registrations set deck = $1 where id = $2`, [JSON.stringify([...DECK, DECK[0]]), r1]) }
 let b = await one(pl[1], 'training_board', [tid])
 assert.equal(b.players.length, 4); assert.equal(b.players.find(p => p.nick === 'COut' + sfx).guest, true)
 step('trénink zakládá leader/zástupce; členové se přidají, pozvaný hráč taky; jen jeden trénink naráz')
@@ -182,6 +190,11 @@ const d0 = (await db.query('select deck from registrations where id = $1', [r0])
   await as(pl[1], 'select training_setup($1,$2)', [mid, JSON.stringify({ lineup: { p2: cur.map(({ name, ...x }) => x) } })])
   await db.query("update registrations set updated_at = updated_at where id = $1", [r0]) }
 assert.deepEqual((await db.query('select deck from registrations where id = $1', [r0])).rows[0].deck, d0, 'beze změny se deck nepřepíše')
+// SETUP: bey bez ratchetu (44)
+await as(pl[0], 'select training_setup($1,$2)', [mid, JSON.stringify({ lineup: { p1: [{ type: 'bx', blade: 'Hells Scythe', bit: 'Taper' }] } })])
+assert.equal((await one(pl[0], 'training_state', [mid])).settings.lineup.p1[0].name, 'Hells Scythe T')
+assert.equal((await db.query('select bey1 from registrations where id = $1', [r1])).rows[0].bey1, 'Hells Scythe T')
+await as(pl[0], 'select training_setup($1,$2)', [mid, JSON.stringify({ lineup: { p1: [{ type: 'bx', blade: 'Hells Scythe', ratchet: '4-60', bit: 'Taper' }] } })])
 step('výzva → potvrzení → oba zapisují souboje, body na hru (5) i neomezeně, undo, změna sestavy')
 
 // ── judge cizí dvojice (40) ──

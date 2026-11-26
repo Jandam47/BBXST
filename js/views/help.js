@@ -114,6 +114,7 @@ const S = [
   ['training', 'Komunitní trénink', html`
     <ul>
       <li>Trénink zakládá leader nebo zástupce komunity. Přidat se může člen nebo pozvaný hráč.</li>
+      <li>Deck na trénink má 1–3 beye, díly se můžou opakovat a <b>ratchet je nepovinný</b> – na kolečku ratchetu je <i>Bez ratchetu</i> (i v BBXST SETUPu). Na turnaji ratchet vybrat musíš.</li>
       <li>V BBXST zelené tlačítko <b>TRAINING</b> → vyber soupeře → on výzvu potvrdí. Zapisovat můžete oba.</li>
       <li>Když tě někdo vyzve, v BBXU i v BBXST vyskočí okno <b>Přijmout / Odmítnout</b>. Přijmout tě rovnou pošle do BBXST se zápasem. V notifikaci na telefonu jsou tlačítka Přijmout / Odmítnout taky (Odmítnout funguje bez otevření aplikace); klepnutí na notifikaci otevře trénink s tím oknem.</li>
       <li><b>Judge na tréninku</b>: v kolečku hráčů klepni na <b>JUDGE</b> – uvidíš, kdo s kým právě hraje a jaké je skóre. Vyber dvojici a zapisuješ souboje za ně (body, beye, setup). Odejdeš v SETUPu tlačítkem <b>ODEJÍT (JUDGE)</b>; hráči vidí, kdo je judguje.</li>

@@ -219,6 +219,12 @@ with sync_playwright() as p:
     a.click('#nbRatchet'); a.wait_for_selector('#trWheel:not(.hidden)')
     a.click('.twK.t[data-t="4"]'); a.click('.twK.h[data-h="60"]'); a.wait_for_selector('#trWheel', state='hidden'); a.wait_for_timeout(450)
     assert a.input_value('#nbRatchet') == '4-60' and a.input_value('#nbBit') == '', 'normální ratchet zruší Turbo'
+    # BEZ RATCHETU (44): ratchet se vymaže
+    a.click('#nbRatchet'); a.wait_for_selector('#trWheel:not(.hidden) #twNone')
+    a.click('#twNone'); a.wait_for_selector('#trWheel', state='hidden'); a.wait_for_timeout(450)
+    assert a.input_value('#nbRatchet') == '' and 'bez ratchetu' in a.get_attribute('#nbRatchet', 'placeholder')
+    a.click('#nbRatchet'); a.wait_for_selector('#trWheel:not(.hidden) #twNone.on')
+    a.click('.twK.t[data-t="4"]'); a.click('.twK.h[data-h="60"]'); a.wait_for_selector('#trWheel', state='hidden'); a.wait_for_timeout(450)
     # bit na kolečku s výsečemi a hledáním uprostřed
     a.click('#nbBit'); a.wait_for_selector('#trWheel:not(.hidden) .tbDial')
     nbits = int(sql("select count(*) from bey_parts where category = 'bit' and active"))

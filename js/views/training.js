@@ -206,10 +206,10 @@ export async function render(main, [id, tabArg]) {
         <div class="row between"><h3>Můj deck</h3>
           <div class="seg seg-sm" role="radiogroup" aria-label="Počet beyů">${[1, 2, 3].map(k => html`<button type="button" data-n="${k}" class="${k === n ? 'on' : ''}">${k}</button>`)}</div></div>
         ${deckEditor(deck, n)}
-        <p class="hint">Na tréninku se díly můžou opakovat.</p>
+        <p class="hint">Na tréninku se díly můžou opakovat a ratchet je nepovinný.</p>
         <div class="row"><button type="button" class="btn grow" data-act="cancel">Zpět</button><button class="btn primary grow">Uložit deck</button></div>
       </form>`)
-      getDeck = bindDeckEditor(slot.querySelector('[data-deck]'), cat, { distinct: false })
+      getDeck = bindDeckEditor(slot.querySelector('[data-deck]'), cat, { distinct: false, freeRatchet: true })
     }
     let getDeck
     paint()

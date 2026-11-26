@@ -35,6 +35,7 @@ with sync_playwright() as p:
     combo(pg, '[data-bey="0"] [data-combo="bit"]', 'flat')
     pg.click(R + ' input'); pg.wait_for_selector('.rw-dial')
     assert pg.locator('.rw-specials .rw-sp').count() == 2, 'Turbo a Operate'
+    assert pg.locator('[data-rw-none]').count() == 0, 'v registraci turnaje „Bez ratchetu“ není'
     # 0 zubů neexistuje? zkontroluj, že nedostupné kombinace jsou zakázané
     pg.click('.rw-k[data-t="3"]')
     dis = pg.evaluate("[...document.querySelectorAll('.rw-k.h')].filter(b => b.disabled).map(b => b.dataset.h)")

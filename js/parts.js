@@ -68,7 +68,7 @@ export async function loadParts() {
 }
 
 // ── název beye (náhled; konečný název skládá databáze stejně) ──
-export function composeName(cat, b) {
+export function composeName(cat, b, { free = false } = {}) {
   if (!b) return null
   const bit = cat.find(['bit'], b.bit)
   let name, prefix = '', integrated = false
@@ -91,7 +91,7 @@ export function composeName(cat, b) {
   if (!bit) return null
   integrated = integrated || bit.integrated
   const tail = bit.abbr || ' ' + bit.name
-  if (integrated) return `${name} ${(prefix + tail).trim()}`
+  if (integrated || (free && !String(b.ratchet || '').trim())) return `${name} ${(prefix + tail).trim()}`   // trénink: bez ratchetu
   const r = cat.find(['ratchet'], b.ratchet)
   if (!r) return null
   return `${name} ${(prefix + r.name + tail).trim()}`
@@ -225,7 +225,8 @@ export function deckEditor(deck, n = 3) {
     </fieldset>`)}</div>`
 }
 
-export function bindDeckEditor(root, cat, { distinct = true, favorites = true } = {}) {
+export function bindDeckEditor(root, cat, { distinct = true, favorites = true, freeRatchet = false } = {}) {
+  const nameOpt = { free: freeRatchet }   // trénink: ratchet nepovinný
   const cards = [...root.querySelectorAll('[data-bey]')]
   const val = (card, key) => card.querySelector(`[data-combo="${key}"] input`)?.value.trim() || ''
   const readBey = (card) => card.dataset.type === 'cx'
@@ -244,9 +245,9 @@ export function bindDeckEditor(root, cat, { distinct = true, favorites = true } 
     const integ = (blade && blade.integrated) || (bit && bit.integrated)
     const rWrap = card.querySelector('[data-combo="ratchet"]'), rIn = rWrap.querySelector('input')
     rIn.disabled = !!(blade && blade.integrated)   // s ratchetem v bitu jde kolečko otevřít a ratchet vrátit
-    rIn.placeholder = integ ? (bit && bit.integrated ? `v bitu (${bit.name})` : 'v ceně dílu') : 'vyber na kolečku'
+    rIn.placeholder = integ ? (bit && bit.integrated ? `v bitu (${bit.name})` : 'v ceně dílu') : freeRatchet ? 'bez ratchetu · vyber na kolečku' : 'vyber na kolečku'
     if (integ) { rIn.value = ''; rWrap.classList.remove('bad', 'ok') }
-    const name = composeName(cat, b)
+    const name = composeName(cat, b, nameOpt)
     card.querySelector('.bey-preview').innerHTML = name ? `→ <b>${esc(name)}</b>` : '<span class="faint">Doplň díly ze seznamu</span>'
     card.classList.toggle('complete', !!name)
   }
@@ -258,15 +259,15 @@ export function bindDeckEditor(root, cat, { distinct = true, favorites = true } 
     ratchetWheel(cat, input.value.trim(), bitIn.value.trim(), (v) => {
       const curBit = cat.find(['bit'], bitIn.value)
       if (v.bit) bitIn.value = v.bit
-      else if (curBit?.integrated) bitIn.value = ''        // normální ratchet → pryč s Turbo / Operate
+      else if (curBit?.integrated && !v.none) bitIn.value = ''        // normální ratchet → pryč s Turbo / Operate
       input.value = v.ratchet
       for (const w of [input.closest('[data-combo]'), bitIn.closest('[data-combo]')]) {
-        const ok = cat.find(w.dataset.cats.split(','), w.querySelector('input').value)
+        const val = w.querySelector('input').value, ok = cat.find(w.dataset.cats.split(','), val)
         w.classList.toggle('ok', !!ok); w.classList.remove('bad')
       }
       refresh(card)
       input.focus({ preventScroll: true })
-    })
+    }, { free: freeRatchet })
   }
   const openBit = (input, q = '') => {
     if (document.querySelector('.bw-bg:not(.closing)')) return
@@ -318,18 +319,19 @@ export function bindDeckEditor(root, cat, { distinct = true, favorites = true } 
     card.classList.add('fav-filled'); setTimeout(() => card.classList.remove('fav-filled'), 900)
   }
   const api = { count: cards.length, setBey, isComplete: (i) => cards[i]?.classList.contains('complete'),
-    nameOf: (i) => composeName(cat, readBey(cards[i])) }
+    nameOf: (i) => composeName(cat, readBey(cards[i]), nameOpt) }
   if (favorites) import('./favorites.js').then(m => m.deckToolbar(root, api)).catch(() => {})
 
   // vrátí deck, nebo vyhodí chybu s popisem, co chybí
   function getDeck() {
     const deck = cards.map(readBey)
-    const names = deck.map(b => composeName(cat, b))
+    const names = deck.map(b => composeName(cat, b, nameOpt))
     names.forEach((n, i) => {
       if (!n) {
         const card = cards[i]
         card.querySelectorAll('[data-combo]:not([hidden])').forEach(w => {
           const input = w.querySelector('input')
+          if (freeRatchet && w.dataset.combo === 'ratchet' && !input.value.trim()) return   // trénink: ratchet nepovinný
           if (!input.disabled && !cat.find(w.dataset.cats.split(','), input.value)) w.classList.add('bad')
         })
         card.scrollIntoView({ behavior: 'smooth', block: 'center' })
@@ -346,7 +348,7 @@ export function bindDeckEditor(root, cat, { distinct = true, favorites = true } 
 // ── kolečko ratchetů (stejně jako v BBXST): vnitřní kruh zuby, vnější výška; Turbo / Operate = ratchet v bitu ──
 const RW_TEETH = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'M']
 const RW_HEIGHTS = ['50', '55', '60', '65', '70', '75', '80', '85']
-export function ratchetWheel(cat, cur, curBit, onPick) {
+export function ratchetWheel(cat, cur, curBit, onPick, { free = false } = {}) {
   const have = new Set((cat.byCat.ratchet || []).map(r => r.name))
   const specials = (cat.byCat.bit || []).filter(r => r.integrated)
   const m = /^([0-9M])-(\d+)$/.exec(cur || '')
@@ -374,6 +376,7 @@ export function ratchetWheel(cat, cur, curBit, onPick) {
       </div>
       ${specials.length ? `<div class="rw-specials">${specials.map(r => `<button type="button" class="rw-sp ${norm(curBit) === r.n ? 'on' : ''}" data-sp="${esc(r.name)}">
         ${esc(r.name)}<small>${r.abbr ? esc(r.abbr) + ' · ' : ''}ratchet je v bitu</small></button>`).join('')}</div>` : ''}
+      ${free ? `<button type="button" class="rw-none ${!cur && !specials.some(r => norm(curBit) === r.n) ? 'on' : ''}" data-rw-none>Bez ratchetu<small>jen na tréninku</small></button>` : ''}
       <div class="row" style="margin-top:14px">
         <button type="button" class="btn grow" data-rw-back>Zpět</button>
         <button type="button" class="btn primary grow" data-rw-ok ${ok ? '' : 'disabled'}>Použít</button>
@@ -391,6 +394,7 @@ export function ratchetWheel(cat, cur, curBit, onPick) {
       draw()
     })
     box.querySelectorAll('[data-sp]').forEach(b => b.onclick = () => done({ ratchet: '', bit: b.dataset.sp }))
+    box.querySelector('[data-rw-none]')?.addEventListener('click', () => done({ ratchet: '', none: true }))
     box.querySelector('[data-rw-ok]').onclick = () => ok && done({ ratchet: `${t}-${h}` })
     box.querySelector('[data-rw-back]').onclick = close
   }
