@@ -136,7 +136,7 @@ export async function render(main, [id], ctx) {
       <div class="grow">
         <h1>${p.nick}</h1>
         <div class="muted">${p.region || 'Kraj neuveden'} · rating <b class="num" style="color:var(--text)">${p.rating}</b></div>
-        <div class="row wrap" style="margin-top:6px;gap:6px">${ROLES.filter(x => x.level > 0 && x.level <= lvl).map(x => html`<span class="pill role">${x.label}</span>`)}${p.cashier ? html`<span class="pill role cash">💰 Pokladník</span>` : ''}</div>
+        <div class="row wrap" style="margin-top:6px;gap:6px">${ROLES.filter(x => x.level > 0 && x.level <= lvl).map(x => html`<span class="pill role">${x.label}</span>`)}${p.cashier ? html`<span class="pill role cash">💰 Pokladník</span>` : ''}${p.camera ? html`<span class="pill role cash">🎥 Kameraman</span>` : ''}</div>
       </div>
       ${own ? html`<div class="prof-btns">
         <button class="prof-fav" data-act="choose" aria-label="Choose wheel – oblíbené buildy a decky" title="Oblíbené buildy a decky">${raw(ICONS.star)}</button>
@@ -184,7 +184,9 @@ export async function render(main, [id], ctx) {
       })}
       <label class="check"><span>💰 Pokladník <span class="faint small">· vybírá vstupné na turnajích</span></span>
         <input type="checkbox" data-cashier ${p.cashier ? 'checked' : ''}></label>
-      <p class="hint">Vyšší funkce zahrnuje nižší: admin je i organizátor a judge, organizátor je i judge. Pokladník je funkce navíc – organizátor ho pak může vybrat u turnaje se vstupným.</p>
+      <label class="check"><span>🎥 Kameraman <span class="faint small">· vysílá arénu v Živě${p.camera === null || p.camera === undefined ? (lvl >= 1 ? ' (podle role)' : '') : p.camera === false && lvl >= 1 ? ' (odebráno)' : ''}</span></span>
+        <input type="checkbox" data-camera ${(p.camera ?? lvl >= 1) ? 'checked' : ''}></label>
+      <p class="hint">Vyšší funkce zahrnuje nižší: admin je i organizátor a judge, organizátor je i judge. Pokladník je funkce navíc – organizátor ho pak může vybrat u turnaje se vstupným. Kameraman (vysílání arény v Živě) mají judge a výš automaticky, jde jim ale odebrat a přidělit i hráči.</p>
     </div>` : ''}
     ${own ? '' : leagueRolesCard(lgs.roles, lvl)}
 
@@ -252,6 +254,10 @@ export async function render(main, [id], ctx) {
     const label = ROLES.find(x => x.key === target).label
     if (!await confirmBox(`Nastavit ${p.nick} funkci: ${label}?`, { ok: 'Nastavit' })) { cb.checked = !cb.checked; return }
     try { await rpc('set_user_role', { p_user: id, p_role: target }); toast('Funkce změněna.', 'ok'); render(main, [id]) }
+    catch (err) { cb.checked = !cb.checked; toast(errMsg(err), 'err') }
+  })
+  on(main, 'change', '[data-camera]', async (e, cb) => {
+    try { await rpc('set_camera', { p_user: id, p_on: cb.checked }); toast('Funkce změněna.', 'ok'); render(main, [id]) }
     catch (err) { cb.checked = !cb.checked; toast(errMsg(err), 'err') }
   })
   on(main, 'change', '[data-cashier]', async (e, cb) => {
@@ -537,10 +543,11 @@ function privacySheet(rerender) {
 
 // ── lidé s funkcí (admin): přehled + hledání hráče; funkce se mění v jeho profilu ──
 async function staffSheet() {
-  const rows = await q(sb.from('profiles').select('id,nick,avatar,role,cashier').not('nick', 'is', null)
-    .or('role.neq.player,cashier.eq.true')).catch(() => [])
+  const rows = await q(sb.from('profiles').select('id,nick,avatar,role,cashier,camera').not('nick', 'is', null)
+    .or('role.neq.player,cashier.eq.true,camera.not.is.null')).catch(() => [])
   const groups = [...ROLES].reverse().filter(r => r.level > 0).map(r => [r, rows.filter(x => x.role === r.key)])
   const cash = rows.filter(x => x.cashier)
+  const cam = rows.filter(x => x.camera === true), camOff = rows.filter(x => x.camera === false)
   const li = (x) => html`<a class="li" href="#/p/${x.id}"><span class="av">${x.avatar}</span><span class="grow ellipsis">${x.nick}</span></a>`
   sheet(html`
     <h2>Lidé s funkcí</h2>
@@ -548,6 +555,8 @@ async function staffSheet() {
     <div id="st-r" class="list" style="margin-top:8px"></div>
     ${groups.map(([r, l]) => l.length ? html`<h3 style="margin-top:14px">${r.label} <span class="faint small">${l.length}</span></h3><div class="list">${l.map(li)}</div>` : '')}
     ${cash.length ? html`<h3 style="margin-top:14px">💰 Pokladník <span class="faint small">${cash.length}</span></h3><div class="list">${cash.map(li)}</div>` : ''}
+    ${cam.length ? html`<h3 style="margin-top:14px">🎥 Kameraman navíc <span class="faint small">${cam.length}</span></h3><div class="list">${cam.map(li)}</div>` : ''}
+    ${camOff.length ? html`<h3 style="margin-top:14px">🎥 Kameraman odebrán <span class="faint small">${camOff.length}</span></h3><div class="list">${camOff.map(li)}</div>` : ''}
     <p class="hint">Funkci změníš v profilu hráče (karta Funkce).</p>`, (m) => {
     let tm
     on(m, 'input', '#st-q', (e, el) => {

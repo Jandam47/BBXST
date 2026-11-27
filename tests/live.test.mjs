@@ -72,5 +72,52 @@ await db.query(`insert into matches (tournament_id, key, stage, round, pos, p1_r
 assert.equal((await sentTo(fan)).length, 0)
 step('push sledujícímu: zápas na aréně, výsledek; po zrušení sledování nic')
 
+// ── video z arény (46): kameraman, vysílání, převzetí, ukončení ──
+{
+  const judge = await newUser('LJudge' + sfx), cam = await newUser('LCam' + sfx), adm = await newUser('LAdm' + sfx)
+  await db.query("update profiles set role = 'judge' where id = $1", [judge.id])
+  await db.query("update profiles set role = 'admin' where id = $1", [adm.id])
+  assert.equal((await as(judge, 'select live_video_me() r'))[0].r, true, 'judge má kameramana automaticky')
+  assert.equal((await as(cam, 'select live_video_me() r'))[0].r, false, 'hráč ne')
+  await fails(cam, "select live_video_start($1, 1, 'kanal_cam')", [t.id], /kameraman/)
+  await fails(cam, "update profiles set camera = true where id = auth.uid()", [], /admin/)
+  await fails(judge, 'select set_camera($1, true)', [cam.id], /admin/)
+  await as(adm, 'select set_camera($1, true)', [cam.id])
+  assert.equal((await as(cam, 'select live_video_me() r'))[0].r, true)
+  await as(adm, 'select set_camera($1, false)', [judge.id])
+  assert.equal((await as(judge, 'select live_video_me() r'))[0].r, false, 'judgovi jde odebrat')
+  await as(adm, 'select set_camera($1, true)', [judge.id])
+  assert.equal((await db.query('select camera from profiles where id = $1', [judge.id])).rows[0].camera, null, 'zpět na výchozí podle role')
+  await fails(judge, "select live_video_start($1, 9, 'kanal')", [t.id], /aréna/)
+  await fails(judge, "select live_video_start($1, 1, 'https://example.com/x')", [t.id], /Twitchi/)
+  // odkazy: Twitch kanál / twitch.tv / YouTube
+  const parse = async (u) => (await db.query('select provider, channel from bbx_parse_stream($1)', [u])).rows[0]
+  assert.deepEqual(await parse('BBX_Pardubice'), { provider: 'twitch', channel: 'bbx_pardubice' })
+  assert.deepEqual(await parse('https://www.twitch.tv/BBX_Pardubice?sr=a'), { provider: 'twitch', channel: 'bbx_pardubice' })
+  assert.deepEqual(await parse('m.twitch.tv/adam47'), { provider: 'twitch', channel: 'adam47' })
+  assert.deepEqual(await parse('https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=1'), { provider: 'youtube', channel: 'dQw4w9WgXcQ' })
+  assert.deepEqual(await parse('https://youtu.be/dQw4w9WgXcQ'), { provider: 'youtube', channel: 'dQw4w9WgXcQ' })
+  assert.deepEqual(await parse('https://youtube.com/live/dQw4w9WgXcQ?si=x'), { provider: 'youtube', channel: 'dQw4w9WgXcQ' })
+  // vysílání: start, seznam (i anon), převzetí, ukončení organizátorem
+  assert.deepEqual((await as(judge, "select live_video_start($1, 1, 'twitch.tv/JudgeCam') r", [t.id]))[0].r, { provider: 'twitch', channel: 'judgecam' })
+  let list = await as(null, 'select * from live_video_list($1)', [t.id])
+  assert.equal(list.length, 1); assert.equal(list[0].nick, judge.nick); assert.equal(list[0].channel, 'judgecam'); assert.equal(list[0].can_stop, false)
+  assert.equal((await as(judge, 'select * from live_video_list($1)', [t.id]))[0].mine, true)
+  await as(judge, "select live_video_start($1, 2, 'JudgeCam')", [t.id])           // jeden telefon = jedna aréna
+  list = await as(null, 'select * from live_video_list($1)', [t.id])
+  assert.deepEqual(list.map(x => x.arena), [2])
+  await as(cam, "select live_video_start($1, 2, 'https://youtu.be/dQw4w9WgXcQ')", [t.id])   // převzetí
+  list = await as(null, 'select * from live_video_list($1)', [t.id])
+  assert.equal(list[0].nick, cam.nick); assert.equal(list[0].provider, 'youtube')
+  await fails(null, "select live_video_start($1, 1, 'x_anon')", [t.id], /permission/)
+  await as(a, 'select live_video_stop($1, 2)', [t.id])            // cizí hráč nic nezmění
+  assert.equal((await as(null, 'select * from live_video_list($1)', [t.id])).length, 1)
+  assert.equal((await as(org, 'select * from live_video_list($1)', [t.id]))[0].can_stop, true)
+  await as(org, 'select live_video_stop($1, 2)', [t.id])
+  assert.equal((await as(null, 'select * from live_video_list($1)', [t.id])).length, 0)
+  await fails(cam, 'select * from live_streams', [], /permission/)
+  step('video z arény: kameraman (judge auto, admin přidělí / odebere), Twitch / YouTube odkazy, převzetí, ukončení')
+}
+
 await db.end()
 console.log(`${ok} kroků prošlo`)

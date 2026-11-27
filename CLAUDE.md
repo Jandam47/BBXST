@@ -62,7 +62,7 @@ Komunikuj **česky**, celé UI je česky.
   (vnitřní → vnější, počet podle obvodu; Turbo / Operate žlutě), uprostřed hledání (zkratka → název → slovo → alias), nevyhovující zhasnou, Enter /
   tlačítko uprostřed vezme nejlepší shodu, písmeno na poli bitu otevře kolečko s hledáním. Tip na zkratky nahoře.
 - `js/config.js` – **obsahuje Adamovy živé klíče Supabase. Nikdy ho neměň ani nepřepisuj.**
-- `supabase/schema.sql`, `02-parts.sql`, `03-live-score.sql`, `04-security-hardening.sql`, `05-judge-handover.sql`, `06-formats-stats.sql`, `07-parts-update.sql`, `08-judge-per-match.sql`, `09-pause.sql`, `10-fashion.sql`, `11-finishes.sql`, `12-rated.sql`, `13-communities.sql`, `14-training-extras.sql`, `15-training-bots.sql`, `16-training-reset.sql`, `17-chat-bazar.sql`, `18-chat-tournament-state.sql`, `19-account-reports.sql`, `20-push.sql`, `21-checkin-errors-backup.sql`, `22-leagues.sql`, `23-meetings.sql`, `24-judge-count.sql`, `25-reg-check.sql`, `26-judge-scan.sql`, `27-live.sql`, `28-cashier.sql`, `29-polls-feedback.sql`, `30-seen-sync.sql`, `31-community-standings.sql`, `32-parts-shatter-horus.sql`, `33-parts-hasbro-2026-11.sql`, `34-privacy-admin.sql`, `35-favorites.sql`, `36-stats.sql`, `37-tournament-stats.sql`, `38-regions.sql`, `39-training-delete.sql`, `40-training-judge.sql`, `41-training-lineup-save.sql`, `42-training-tourney-default.sql`, `43-training-challenge-actions.sql`, `44-training-no-ratchet.sql`, `45-banned-words.sql` – databáze (spuštěné v produkci, nové soubory
+- `supabase/schema.sql`, `02-parts.sql`, `03-live-score.sql`, `04-security-hardening.sql`, `05-judge-handover.sql`, `06-formats-stats.sql`, `07-parts-update.sql`, `08-judge-per-match.sql`, `09-pause.sql`, `10-fashion.sql`, `11-finishes.sql`, `12-rated.sql`, `13-communities.sql`, `14-training-extras.sql`, `15-training-bots.sql`, `16-training-reset.sql`, `17-chat-bazar.sql`, `18-chat-tournament-state.sql`, `19-account-reports.sql`, `20-push.sql`, `21-checkin-errors-backup.sql`, `22-leagues.sql`, `23-meetings.sql`, `24-judge-count.sql`, `25-reg-check.sql`, `26-judge-scan.sql`, `27-live.sql`, `28-cashier.sql`, `29-polls-feedback.sql`, `30-seen-sync.sql`, `31-community-standings.sql`, `32-parts-shatter-horus.sql`, `33-parts-hasbro-2026-11.sql`, `34-privacy-admin.sql`, `35-favorites.sql`, `36-stats.sql`, `37-tournament-stats.sql`, `38-regions.sql`, `39-training-delete.sql`, `40-training-judge.sql`, `41-training-lineup-save.sql`, `42-training-tourney-default.sql`, `43-training-challenge-actions.sql`, `44-training-no-ratchet.sql`, `45-banned-words.sql`, `46-live-video.sql` – databáze (spuštěné v produkci, nové soubory
   spouští Adam). Živé skóre: BBXST v judge módu posílá po každém bodu `live_score` → `matches.live_p1/p2`
   (TV rozpis, vstupenka, seznamy); trigger `bbx_clear_live` ho maže po uložení hry.
   Rozehraná hra: BBXST posílá s `live_score` i `p_state` → `matches.live_state` (souboje v orientaci p1/p2,
@@ -93,6 +93,16 @@ Komunikuj **česky**, celé UI je česky.
   pavouk (`bracketHtml` z tournament.js, „Skrýt odehrané“), poslední výsledky, pořadí. **Režie**: jedna aréna přes celou
   plochu, lišta arén + AUTO (aréna s posledním děním, drží aspoň 12 s). Volby v `localStorage bbxu_live_*`.
   Realtime + polling 15 s.
+  **Video z arény** (46): kameraman vysílá z aplikace **Twitch** v telefonu (zdarma, bez karty, neomezeně diváků, Twitch nahrává) a
+  v Živě přes 🎥 Vysílat (`castPicker`) napíše kanál / twitch.tv/… / odkaz na YouTube (`bbx_parse_stream`, pamatuje se
+  `bbxu_live_cast_url`) a vybere arénu → `live_video_start`. `live_streams` (aréna = 1 vysílání, provider twitch|youtube, channel;
+  nový kameraman převezme, jeden kameraman = jedna aréna), `live_video_list` (i anon, jen swiss/topcut), `live_video_stop`
+  (kameraman, organizátor, admin – ✕ pod videem), `live_video_me`. Divák: v kartě arény `.lv-vbox` (16:9) + popisek; přehrávač
+  (`player.twitch.tv?channel=…&parent=<hostname>` / `youtube-nocookie.com/embed/…`, ztlumený autoplay) je iframe ve vrstvě
+  `.lv-vlayer` v `<body>` umístěný nad `.lv-vbox` (`syncVideos` po draw, ResizeObserver, resize) – iframe by se při přesunu v DOM
+  načetl znovu. `📹 Video` vyp/zap = `bbxu_live_video`. Polling vysílání 10 s. (Cloudflare Realtime / LiveKit zamítnuto – karta.)
+  **Kameraman** = `profiles.camera` (null = podle role: judge+ ano; true = přidělená hráči, false = odebraná), mění jen admin 3+
+  (`set_camera`, karta Funkce v profilu; „Lidé s funkcí“ ukazuje přidělené / odebrané).
 - BBXST po dohraném zápase (`afterMatchNext`): „Další na aréně N“ s tlačítky ◂ BBXU · ZPĚT (jen zavře nabídku, judge mód
   zůstane zapnutý bez zápasu) · NAČÍST ZÁPAS. Dialogy `.jBox` mají nadpis, text i řadu tlačítek na středu.
   Lišta judge bez zápasu nemá poznámku (`#judgeInfo` prázdné); při skenu QR ukáže „naskenuj soupeře X“.
@@ -391,12 +401,12 @@ Potřebují lokální PostgreSQL 16, Node a pro UI Python Playwright + Chrome a 
 - `node tests/leagues.test.mjs` – ligy: práva správce / organizátorů, ligové turnaje, bodování a bilance (22).
 - `node tests/meetings.test.mjs` – meeting osobně / online, akce jen pro organizátory (23).
 - `node tests/judge-count.test.mjs` – počítadlo odjudgovaných zápasů (24).
-- `node tests/live.test.mjs` – Živě: decky po startu, sledování hráčů, push sledujícím (27).
+- `node tests/live.test.mjs` – Živě: decky po startu, sledování hráčů, push sledujícím (27), kameraman a vysílání – odkazy Twitch / YouTube (46).
 - `node tests/cashier.test.mjs` – pokladník, vstupné, zápis zaplaceno (28).
 - `node tests/account.test.mjs` – nahlášení a smazání účtu; `node tests/push.test.mjs` – odběry a push události (outbox).
 - `node tests/community.test.mjs` – komunity a komunitní trénink v DB (schválení, členové, trénink, výzvy, souboje, meta, standings 31).
 - `tests/ui-up.sh && python3 tests/ui_smoke.py && python3 tests/bbxst_judge.py && python3 tests/test_tools.py` – proklik v Chrome
-  (`tests/judge_handover.py`, `tests/formats_stats.py`, `tests/arenas_status.py`, `tests/fashion_ui.py`, `tests/community_ui.py`, `tests/bbxst_training.py`, `tests/training_bot_ui.py`, `tests/chat_ui.py`, `tests/komunikace_ui.py`, `tests/players_wheel_ui.py`, `tests/extras_ui.py`, `tests/checkin_ui.py`, `tests/leagues_ui.py`, `tests/install_ui.py`, `tests/create_wheel_ui.py`, `tests/tv_modes_ui.py`, `tests/points_hist_ui.py`, `tests/ratchet_wheel_ui.py`, `tests/live_ui.py` a `tests/cashier_ui.py`, `tests/profile_gear_ui.py`, `tests/favorites_ui.py`, `tests/stats_ui.py`, `tests/challenge_ui.py` každý zvlášť po čerstvém `ui-up.sh`: převzetí judge;
+  (`tests/judge_handover.py`, `tests/formats_stats.py`, `tests/arenas_status.py`, `tests/fashion_ui.py`, `tests/community_ui.py`, `tests/bbxst_training.py`, `tests/training_bot_ui.py`, `tests/chat_ui.py`, `tests/komunikace_ui.py`, `tests/players_wheel_ui.py`, `tests/extras_ui.py`, `tests/checkin_ui.py`, `tests/leagues_ui.py`, `tests/install_ui.py`, `tests/create_wheel_ui.py`, `tests/tv_modes_ui.py`, `tests/points_hist_ui.py`, `tests/ratchet_wheel_ui.py`, `tests/live_ui.py` a `tests/cashier_ui.py`, `tests/profile_gear_ui.py`, `tests/favorites_ui.py`, `tests/stats_ui.py`, `tests/challenge_ui.py`, `tests/live_video_ui.py` každý zvlášť po čerstvém `ui-up.sh`: převzetí judge;
   deathmatch přes testovací nástroje až po finále, vyhodnocení, meta, profil)
   (poslední: zkušební turnaj 16 hráčů přes testovací nástroje až po ukončení).
 Když měníš SQL, přidej nový soubor i do `tests/reset_db.sh`. Po změně logiky nebo DB pusť testy.

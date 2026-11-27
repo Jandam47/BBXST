@@ -4,8 +4,12 @@
 //  endy každé strany, historie bodů. Sledovaní hráči (localStorage, s účtem i push – 27),
 //  živý feed, poslední výsledky, pořadí, pavouk (skrýt dohrané), statistiky, režie (výběr arény).
 //  Bez přihlášení; decky přes live_decks (až po startu turnaje).
+//  Video z arény (46): kameraman (judge+ nebo přidělená funkce) vysílá z aplikace Twitch v telefonu
+//  a v Živě přes 🎥 Vysílat přiřadí kanál k aréně (live_video_start). Divák vidí přehrávač Twitche /
+//  YouTube nahoře v kartě arény. Přehrávač (iframe) se při přesunu v DOM znovu načte, proto žije
+//  ve vrstvě mimo <main> (.lv-vlayer) a jen se umisťuje nad místo v kartě (.lv-vbox). Polling 10 s.
 // ════════════════════════════════════════════════════════════════
-import { html, raw, mount, on, modal, fmtLeft, toast, busy } from '../ui.js'
+import { html, raw, mount, on, modal, fmtLeft, toast, busy, confirmBox } from '../ui.js'
 import { rpc, state, isLoggedIn, errMsg } from '../supa.js'
 import { enablePush, pushSupport } from '../push.js'
 import { load, queueOf, liveChannel, standingsFor, paused, ptHist, liveBattles, ptLabel, bracketHtml } from './tournament.js'
@@ -60,6 +64,23 @@ export async function render(main, [id]) {
   const feed = []                  // živé dění od otevření stránky
   let prev = null                  // minulý stav kvůli rozpoznání nových bodů a výsledků
   const nick = (reg) => d.pmap.get(reg)?.nick || '?'
+
+  // ── video z arén (46) ──
+  let streams = new Map()             // aréna → { provider, channel, nick, mine, can_stop }
+  let videoOn = pref('video', true)   // divák si může video vypnout (mobilní data)
+  let canCam = false                  // smím vysílat (kameraman)
+  const players = new Map()           // aréna → { key, el } – iframe ve vrstvě nad kartou
+  const layer = document.createElement('div')
+  layer.className = 'lv-vlayer'
+  document.body.append(layer)
+  const skey = (s) => s.provider + ':' + s.channel
+  const streamsKey = () => [...streams.values()].map(s => s.arena + '=' + skey(s)).join(',')
+  const myCast = () => [...streams.values()].find(s => s.mine)
+  const loadStreams = async () => {
+    try { streams = new Map((await rpc('live_video_list', { p_tournament: id })).map(s => [s.arena, s])) } catch {}
+  }
+  if (isLoggedIn() && !state.isAnon) rpc('live_video_me').then(v => { canCam = !!v; draw() }).catch(() => {})
+  await loadStreams()
 
   // ── rozdíl proti minulému stavu → události do feedu a vyskakovací hlášky ──
   const snapshot = () => new Map(d.matches.map(m => [m.id, {
@@ -140,15 +161,23 @@ export async function render(main, [id]) {
   function arenaCard(a, qa) {
     const [cur, ...rest] = qa
     const fol = cur && (follow.has(cur.p1_reg) || follow.has(cur.p2_reg))
-    if (!cur) return html`<section class="lv-arena idle" data-arena="${a}"><div class="lv-ah"><span class="lv-ano">${a}</span><span class="faint">Volná aréna</span></div></section>`
+    const vs = streams.get(a)
+    const slot = !vs ? '' : html`<div class="lv-vslot" data-vslot="${a}">
+      ${videoOn ? html`<div class="lv-vbox"></div>` : html`<button type="button" class="lv-voff" data-video>📹 Aréna se vysílá · zapnout video</button>`}
+      <div class="lv-vcap"><span class="lv-vlive"><i aria-hidden="true"></i>LIVE</span>
+        <span class="grow">${vs.provider === 'youtube' ? 'YouTube' : 'Twitch'} · 🎥 ${vs.nick}</span>
+        <a href="${streamUrl(vs)}" target="_blank" rel="noopener">Otevřít ↗</a>
+        ${vs.can_stop ? html`<button type="button" class="lv-vstop" data-vstop="${a}" aria-label="Ukončit vysílání arény ${a}" title="Ukončit vysílání">✕</button>` : ''}</div></div>`
+    if (!cur) return html`<section class="lv-arena idle ${vs ? 'has-video' : ''}" data-arena="${a}"><div class="lv-ah"><span class="lv-ano">${a}</span><span class="faint">Volná aréna</span></div>${slot}</section>`
     const live = cur.status === 'live'
     const g = live ? curGame(d, cur) : { battles: [] }
     const { set, no } = curSet(g.battles)
     const s1 = cur.live_p1 ?? 0, s2 = cur.live_p2 ?? 0
-    return html`<section class="lv-arena ${live ? 'live' : 'wait'} ${fol ? 'fol' : ''}" data-arena="${a}">
+    return html`<section class="lv-arena ${live ? 'live' : 'wait'} ${fol ? 'fol' : ''} ${vs ? 'has-video' : ''}" data-arena="${a}">
       <div class="lv-ah"><span class="lv-ano">${a}</span>
         <span class="lv-lab">${matchLabel(cur, d.t.top_cut, d.t.format)}${cur.best_of > 1 ? ` · BO${cur.best_of} · hra ${Math.min(cur.p1_wins + cur.p2_wins + 1, cur.best_of)} (${cur.p1_wins}:${cur.p2_wins})` : ''}</span>
         ${live ? html`<span class="lv-on">● hraje se</span>` : html`<span class="lv-next">na řadě</span>`}</div>
+      ${slot}
       <div class="lv-vs">
         <div class="lv-p l"><span class="lv-nick p1c">${follow.has(cur.p1_reg) ? html`<i class="lv-star">★ </i>` : ''}${nick(cur.p1_reg)}</span>${live ? sideFin(g.battles, 1) : ''}</div>
         <div class="lv-sc num">${live ? html`<b>${s1}</b><i>:</i><b>${s2}</b>` : html`<span class="faint">vs</span>`}</div>
@@ -269,6 +298,8 @@ export async function render(main, [id]) {
         <header class="lv-head">
           <div><h1>${t.name}</h1><div class="lv-sub">${running ? html`<span class="lv-dot" aria-hidden="true"></span><b>ŽIVĚ</b> · ` : ''}${phase} · <span data-clock>${hhmm()}</span></div></div>
           <div class="row wrap" style="gap:8px">
+            ${running && canCam ? html`<button class="btn sm ${myCast() ? 'primary' : ''}" data-cast>🎥 ${myCast() ? `Vysíláš arénu ${myCast().arena}` : 'Vysílat'}</button>` : ''}
+            ${running && streams.size ? html`<button class="btn sm ${videoOn ? '' : 'ghost'}" data-video aria-pressed="${videoOn}">${videoOn ? '📹 Video zap' : '📹 Video vyp'}</button>` : ''}
             ${running && anyLive ? html`<button class="btn sm ${dir != null ? 'primary' : ''}" data-dirmode aria-pressed="${dir != null}">🎬 Režie${dir != null ? ': zap' : ''}</button>` : ''}
             <button class="btn sm" data-follow>★ Sledovat hráče${fol.length ? ` (${fol.length})` : ''}</button>
             <a class="btn sm ghost btn-ico" href="#/t/${t.id}/tv">${raw(icon('tv'))}TV rozpis</a></div>
@@ -311,6 +342,76 @@ export async function render(main, [id]) {
         </div>
         <a class="btn sm tv-exit" href="#/t/${t.id}">Zavřít</a>
       </div>`)
+    syncVideos()
+  }
+
+  // ── divák: přehrávač Twitche / YouTube ve vrstvě nad místem v kartě (iframe se při přesunu v DOM načte znovu) ──
+  function streamUrl(s) {
+    return s.provider === 'youtube' ? `https://www.youtube.com/watch?v=${encodeURIComponent(s.channel)}` : `https://www.twitch.tv/${encodeURIComponent(s.channel)}`
+  }
+  function embedSrc(s) {
+    if (s.provider === 'youtube') return `https://www.youtube-nocookie.com/embed/${encodeURIComponent(s.channel)}?autoplay=1&mute=1&playsinline=1&rel=0`
+    return `https://player.twitch.tv/?channel=${encodeURIComponent(s.channel)}&parent=${encodeURIComponent(location.hostname)}&muted=true&autoplay=true`
+  }
+  function syncVideos() {
+    const want = new Set()
+    if (videoOn) for (const box of main.querySelectorAll('[data-vslot] .lv-vbox')) {
+      const a = Number(box.closest('[data-vslot]').dataset.vslot), s = streams.get(a)
+      if (!s) continue
+      want.add(a)
+      let p = players.get(a)
+      if (p && p.key !== skey(s)) { p.el.remove(); p = null }
+      if (!p) {
+        const el = document.createElement('div')
+        el.className = 'lv-vfloat'
+        const f = document.createElement('iframe')
+        f.src = embedSrc(s)
+        f.title = `Vysílání arény ${a}`
+        f.allow = 'autoplay; fullscreen; encrypted-media; picture-in-picture'
+        f.allowFullscreen = true
+        el.append(f); layer.append(el)
+        p = { key: skey(s), el }
+        players.set(a, p)
+      }
+      const r = box.getBoundingClientRect()
+      Object.assign(p.el.style, { left: `${r.left + scrollX}px`, top: `${r.top + scrollY}px`, width: `${r.width}px`, height: `${r.height}px` })
+      p.el.hidden = !r.width
+    }
+    for (const [a, p] of players) if (!want.has(a)) { p.el.remove(); players.delete(a) }
+  }
+  const ro = new ResizeObserver(() => syncVideos())
+  ro.observe(main)
+  addEventListener('resize', syncVideos)
+
+  // ── kameraman: přiřadit svůj kanál na Twitchi k aréně ──
+  function castPicker() {
+    const n = d.t.arena_count
+    modal(html`<h2>🎥 Vysílat arénu</h2>
+      <ol class="lv-caststeps small">
+        <li>V telefonu otevři aplikaci <b>Twitch</b> a spusť vysílání (<i>Go Live</i>). Telefon dej na stativ nebo ho opři.</li>
+        <li>Tady napiš svůj kanál a vyber arénu – divákům se v Živě ukáže u ní.</li></ol>
+      <label class="f"><span>Kanál na Twitchi</span>
+        <input class="input" id="cast-url" name="url" autocomplete="off" autocapitalize="off" spellcheck="false"
+          placeholder="jméno kanálu nebo twitch.tv/…" value="${pref('cast_url', '')}"></label>
+      <p class="faint small" style="margin-top:4px">Jde i odkaz na živé vysílání na YouTube.</p>
+      <div class="lv-castgrid">${Array.from({ length: n }, (_, i) => i + 1).map(a => {
+        const s = streams.get(a), m = queueOf(d, a)[0]
+        return html`<button type="button" class="lv-castbtn ${s ? 'busy' : ''}" data-cast-arena="${a}">
+          <b>Aréna ${a}</b><span>${m ? `${nick(m.p1_reg)} vs ${nick(m.p2_reg)}` : 'volno'}</span>
+          ${s ? html`<small>vysílá ${s.nick}${s.mine ? ' (ty)' : ' – převezmeš'}</small>` : ''}</button>`
+      })}</div>
+      <button class="btn block" data-close style="margin-top:12px">Zpět</button>`, {
+      onMount: (box, close) => on(box, 'click', '[data-cast-arena]', async (e, b) => {
+        const url = box.querySelector('#cast-url').value.trim()
+        if (!url) { toast('Napiš svůj kanál na Twitchi.', 'err'); return box.querySelector('#cast-url').focus() }
+        try {
+          await busy(b, () => rpc('live_video_start', { p_tournament: id, p_arena: Number(b.dataset.castArena), p_url: url }))
+          setPref('cast_url', url); close()
+          toast(`Aréna ${b.dataset.castArena} se vysílá.`, 'ok')
+          await loadStreams(); draw()
+        } catch (err) { toast(errMsg(err), 'err', 6000) }
+      }),
+    })
   }
 
   // ── sledování: místně vždy, s účtem a zapnutým upozorněním i na serveru (push) ──
@@ -364,6 +465,30 @@ export async function render(main, [id]) {
   }
 
   on(main, 'click', '[data-follow]', followModal)
+  on(main, 'click', '[data-cast]', async () => {
+    const mc = myCast()
+    if (!mc) return castPicker()
+    modal(html`<h2>🎥 Vysíláš arénu ${mc.arena}</h2>
+      <p class="muted">Ukončením zmizí video z Živě. Vysílání na Twitchi pak ukonči i v aplikaci.</p>
+      <div class="row wrap" style="margin-top:16px;gap:8px">
+        <button class="btn grow" data-close>Zpět</button>
+        <button class="btn grow" data-other>Jiná aréna</button>
+        <button class="btn grow danger" data-stop>Ukončit</button></div>`, {
+      onMount: (box, close) => {
+        box.querySelector('[data-other]').onclick = () => { close(); castPicker() }
+        box.querySelector('[data-stop]').onclick = async () => {
+          close()
+          try { await rpc('live_video_stop', { p_tournament: id, p_arena: mc.arena }); await loadStreams(); draw() } catch (e) { toast(errMsg(e), 'err') }
+        }
+      },
+    })
+  })
+  on(main, 'click', '[data-vstop]', async (e, b) => {
+    const a = Number(b.dataset.vstop)
+    if (!await confirmBox(`Ukončit vysílání arény ${a} v Živě?`, { ok: 'Ukončit', danger: true })) return
+    try { await rpc('live_video_stop', { p_tournament: id, p_arena: a }); await loadStreams(); draw() } catch (err) { toast(errMsg(err), 'err') }
+  })
+  on(main, 'click', '[data-video]', () => { videoOn = !videoOn; setPref('video', videoOn); draw() })
   on(main, 'click', '[data-push]', (e, b) => togglePush(b))
   on(main, 'click', '[data-dirmode]', () => { dir = dir == null ? 'auto' : null; dirShown = null; setPref('dir:' + id, dir); draw() })
   on(main, 'click', '[data-dir]', (e, b) => { dir = b.dataset.dir === 'auto' ? 'auto' : Number(b.dataset.dir); dirShown = null; setPref('dir:' + id, dir); draw() })
@@ -391,17 +516,23 @@ export async function render(main, [id]) {
   const refresh = async () => {
     if (busyLoad) { again = true; return }
     busyLoad = true
-    try { d = await load(id); await loadDecks(); diff(); draw() } catch {}
+    try { d = await load(id); await loadDecks(); await loadStreams(); diff(); draw() } catch {}
     busyLoad = false
     if (again) { again = false; refresh() }
   }
   const off = liveChannel(id, refresh)
   const poll = setInterval(refresh, 15000)           // pojistka, kdyby realtime vypadl (TV bez přihlášení)
+  const vpoll = setInterval(async () => {            // nová / skončená vysílání (malý dotaz)
+    const before = streamsKey(); await loadStreams()
+    if (streamsKey() !== before) draw()
+  }, 10000)
   const tick = setInterval(() => {
     const c = main.querySelector('[data-clock]'); if (c) c.textContent = hhmm()
     if (dir === 'auto') draw()                         // auto režie přepíná i bez nových dat
   }, 15000)
   window.addEventListener('bbx:countdown-over', draw)
-  return () => { off(); clearInterval(poll); clearInterval(tick); clearTimeout(flashT); window.removeEventListener('bbx:countdown-over', draw)
+  return () => { off(); clearInterval(poll); clearInterval(vpoll); clearInterval(tick)
+    ro.disconnect(); removeEventListener('resize', syncVideos); layer.remove()
+    clearTimeout(flashT); window.removeEventListener('bbx:countdown-over', draw)
     document.querySelector('.lv-flash')?.remove(); document.body.classList.remove('tv') }
 }
