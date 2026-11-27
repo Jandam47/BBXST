@@ -348,7 +348,7 @@ Komunikuj **česky**, celé UI je česky.
   každou zprávu jako hex s časem (změněné bajty tučně, odhad LE16), značky s poznámkou, kopírovat / stáhnout. `optionalServices`
   = 0xFF00–0xFFFF + běžné + Battle Pass `55c4f0xx-f8eb-11ec-b939-0242ac120002` + vlastní UUID (`localStorage bbxu_bp_extra`).
   Protokol (blog.simone.computer/reverse-beyblade-launch-tracker): data `55c4f002` (read / notify), příkazy `55c4f001` (write
-  without response, 1 bajt): `0x51` = hlavička `a0` (17 B: [3] 04 = připraveno / 00 po výstřelu, [4] baterie?, [7–8] rekord? LE
+  without response, 1 bajt): `0x51` = hlavička `a0` (17 B: [3] 04 = připraveno / 00 po výstřelu, [4] baterie (129 = 53 % podle jiné appky → % ≈ hodnota / 2,43, jeden bod kalibrace), [7–8] rekord? LE
   (u Adama 27881 – asi chybné měření), [9–10] výstřelů celkem LE, konec = MAC pozpátku), `0x74` = stránky `b0–b7` (tag + 16 B; 50 × LE16 ot./min, za nimi v b6 [104–105] výstřelů celkem, [106–107] uloženo, [102–103] neznámé; poslední bajt b7 = součet mod 256; služba `55c40000`; pořadí od nejstaršího, nejnovější poslední),
   **po každém výstřelu pošle sám** `a0` + `b0–b7` + `70–73` = průběh roztáčení: doba každé otáčky v jednotkách 8 µs (LE16, konec 0),
   ot./min = 7 500 000 / doba, výsledek výstřelu = nejkratší otáčka (ověřeno na 5 výstřelech; graf „Poslední výstřel“). `0x75` = smaže

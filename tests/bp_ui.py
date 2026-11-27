@@ -46,7 +46,7 @@ with sync_playwright() as p:
     assert pg.evaluate('window.__cmds') == [0x51, 0x74], pg.evaluate('window.__cmds')
     shots = pg.inner_text('#shots'); head = pg.text_content('#headInfo'); print('shots:', shots.replace('\n',' '), '|', head)
     assert '3234' in shots and '3953' in shots and '5126' in shots and 'nesedí' not in log_text(pg)
-    assert 'Výstřelů celkem: 3' in head and '3953' in head and 'připraveno ke' in head
+    assert 'Výstřelů celkem: 3' in head and '3953' in head and 'připraveno ke' in head and 'baterie ≈ 87 % (211)' in head
     assert 'a2 0c 00 05' in log and '[0]3234' in log and 'výstřel 1' in log, log
     assert pg.evaluate("document.querySelectorAll('.hex b').length") >= 3   # změněné bajty 2. zprávy: b0 0d 06
     pg.evaluate('window.__launch()'); pg.wait_for_timeout(100)

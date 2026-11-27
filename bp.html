@@ -165,9 +165,10 @@ function guess(bytes) {
 function decode(bytes) {
   const tag = bytes[0]
   if (tag === 0xa0 && bytes.length >= 17) {
+    // baterie: BB 129 = 53 % podle jiné appky → % ≈ BB / 2,43 (zatím jeden bod kalibrace)
     // a0 3a 00 RR BB 00 00 HH HH CC CC + MAC pozpátku (RR 04 = připraveno, BB baterie?, HH rekord? LE, CC výstřelů celkem LE)
     const hi = bytes[7] | (bytes[8] << 8), total = bytes[9] | (bytes[10] << 8)
-    $('#headInfo').textContent = `Výstřelů celkem: ${total} · rekord?: ${hi} · ${bytes[3] === 4 ? 'připraveno ke střelbě' : 'čeká'} · baterie?: ${bytes[4]}`
+    $('#headInfo').textContent = `Výstřelů celkem: ${total} · rekord?: ${hi} · ${bytes[3] === 4 ? 'připraveno ke střelbě' : 'čeká'} · baterie ≈ ${Math.min(100, Math.round(bytes[4] / 2.43))} % (${bytes[4]})`
     pages = {}
   } else if (tag >= 0xb0 && tag <= 0xb7 && bytes.length >= 17) {
     pages[tag] = bytes.slice(1, 17)
