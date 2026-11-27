@@ -11,6 +11,7 @@ import * as Fashion from './fashion.js'
 import * as Training from './training.js'
 import { loadParts, deckEditor, bindDeckEditor } from '../parts.js'
 import { STATS, fmtSecs } from '../stats.js'
+import { customOn, customize } from '../tvlayout.js'
 
 const cfg = window.BBX_CONFIG
 
@@ -712,6 +713,8 @@ export async function renderTV(main, [id]) {
   const k = await kindOf(id)
   if (Fashion.isFashion(k)) return Fashion.renderTV(main, [id])
   if (Training.isTraining(k)) return Training.renderTV(main, [id])
+  // vlastní rozložení okének (jen v tomhle zařízení) kreslí Živě – sdílí s ním data i dění
+  if (customOn()) return (await import('./live.js')).renderTV(main, [id])
   document.body.classList.add('tv')
   let d = await load(id, { hist: false })
   const clock = () => new Date().toLocaleTimeString('cs-CZ', { hour: '2-digit', minute: '2-digit' })
@@ -763,8 +766,12 @@ export async function renderTV(main, [id]) {
       <div class="tv-head"><h1>${t.name}</h1><div class="r">${phase} · ${clock()}</div></div>
       ${paused(t) ? html`<div class="tv-pause" data-countdown-box><b>PAUZA</b><span class="num" data-countdown="${t.pause_until}">${fmtLeft(t.pause_until)}</span></div>` : ''}
       ${body}
+      <button type="button" class="btn sm tv-cust" data-tvcust>⚙ Okna</button>
       <a class="btn sm tv-exit" href="#/t/${t.id}">Zavřít TV</a>`)
   }
+  on(main, 'click', '[data-tvcust]', () => customize(d.t.arena_count))
+  const onLayout = () => { if (customOn()) window.dispatchEvent(new HashChangeEvent('hashchange')) }
+  window.addEventListener('bbx:tvlayout', onLayout)
 
   // otočení / změna velikosti okna = jiný režim nebo jiná mřížka
   let lastKey = ''
@@ -780,7 +787,7 @@ export async function renderTV(main, [id]) {
   // pojistka, kdyby realtime vypadl
   const poll = setInterval(async () => { try { d = await load(id, { hist: false }); draw() } catch {} }, 60000)
   window.addEventListener('bbx:countdown-over', draw)
-  return () => { off(); clearInterval(tick); clearInterval(poll); window.removeEventListener('resize', onResize); window.removeEventListener('bbx:countdown-over', draw); document.body.classList.remove('tv') }
+  return () => { off(); clearInterval(tick); clearInterval(poll); window.removeEventListener('resize', onResize); window.removeEventListener('bbx:countdown-over', draw); window.removeEventListener('bbx:tvlayout', onLayout); document.body.classList.remove('tv') }
 }
 
 const landscape = () => innerWidth > innerHeight

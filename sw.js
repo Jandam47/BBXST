@@ -1,9 +1,9 @@
 // BBXU service worker – aplikace se načte i při slabém signálu v hale.
 // Data (turnaje, výsledky) jdou vždy živě ze Supabase, cachuje se jen „obal“ aplikace.
-const VERSION = 'bbxu-v98'
+const VERSION = 'bbxu-v99'
 const SHELL = [
   './', './index.html', './bbxst.html', './manifest.json', './css/bbxu.css',
-  './js/config.js', './js/app.js', './js/core.js', './js/supa.js', './js/ui.js', './js/challenge.js',
+  './js/config.js', './js/app.js', './js/core.js', './js/supa.js', './js/ui.js', './js/challenge.js', './js/tvlayout.js',
   './js/parts.js', './js/icons.js', './js/theme.js', './js/favorites.js', './js/views/favorites.js', './js/stats.js', './js/views/stats.js', './js/views/fashion.js', './js/views/communities.js', './js/views/training.js', './js/views/home.js', './js/views/tournament.js', './js/views/manage.js', './js/views/players.js',
   './js/views/profile.js', './js/views/chat.js', './js/views/komunikace.js', './js/views/polls.js', './js/views/feedback.js', './js/unread.js', './js/report.js', './js/share.js', './js/push.js', './js/errlog.js', './js/admin.js', './js/views/help.js', './js/views/leagues.js', './js/views/live.js', './js/install.js', './js/create-wheel.js', './js/regcheck.js', './js/views/auth.js', './js/views/meta.js',
   './vendor/supabase.js', './vendor/qrcode.js', './vendor/html5-qrcode.min.js',

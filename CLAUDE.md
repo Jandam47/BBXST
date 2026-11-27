@@ -78,6 +78,14 @@ Komunikuj **česky**, celé UI je česky.
   na šířku (`main.tv-land`) vše na jedné obrazovce – mřížka `fitGrid` (sloupce × řádky podle počtu arén a poměru
   obrazovky), písmo podle velikosti karty (container query `cqh/cqw`), fronta zkrácená na 2–6 zápasů + „+ N dalších“.
   Při otočení / změně velikosti se překreslí.
+  **Vlastní TV – okénka** (`js/tvlayout.js` + `renderTV` v live.js): vpravo dole `⚙ Okna` (`.tv-cust`) → `customize()` = přepínače
+  pro každou arénu (arena, queue, feed, decks, video) a celý turnaj (standings, bracket, results, clock, qr). Rozložení jen v zařízení
+  (`localStorage bbxu_tv_layout` = `{ wins: [{ k, a, x, y, w, h, z }] }`, x/y/w/h v % obrazovky, volně, i přes sebe); prázdné = výchozí
+  TV. `renderTV` v tournament.js při `customOn()` předá kreslení do live.js (`render(…, { tv: true })` → `drawTV`, sdílí data, dění,
+  decky i vysílání). Okna jsou trvalé `<section class="tvc-win">` (video iframe se nepřenačítá), obsah `.tvc-in` se napasuje
+  (`fitWinBody`: binární hledání měřítka, `transform: scale`, virtuální šířka ≥ `MIN_W[druh]`, aréna / decky / hodiny / QR na střed;
+  ResizeObserver na každém okně). `✎ Upravit` = lišta (přesun) + roh (velikost) + ✕, Esc konec; změny `bbx:tvlayout` přepínají
+  výchozí ↔ okénka. První okénka z výchozí TV se po zavření okna s přepínači rozmístí do mřížky (`tile`).
 - Historie bodů (`ptHist` / `matchHist` v tournament.js): žetony +1 / +2 O / +2 B / +2 / +3, remíza = R u obou – body hráče
   vlevo a vpravo u středu, v pořadí. Swiss řádky a Můj Status (`matchRow`): dohrané hry z `points` (`loadPoints`,
   stahuje se znovu jen po nové hře; BO3 = řádek na hru s číslem) + rozehraná z `matches.live_state`. TV: jen
@@ -406,7 +414,7 @@ Potřebují lokální PostgreSQL 16, Node a pro UI Python Playwright + Chrome a 
 - `node tests/account.test.mjs` – nahlášení a smazání účtu; `node tests/push.test.mjs` – odběry a push události (outbox).
 - `node tests/community.test.mjs` – komunity a komunitní trénink v DB (schválení, členové, trénink, výzvy, souboje, meta, standings 31).
 - `tests/ui-up.sh && python3 tests/ui_smoke.py && python3 tests/bbxst_judge.py && python3 tests/test_tools.py` – proklik v Chrome
-  (`tests/judge_handover.py`, `tests/formats_stats.py`, `tests/arenas_status.py`, `tests/fashion_ui.py`, `tests/community_ui.py`, `tests/bbxst_training.py`, `tests/training_bot_ui.py`, `tests/chat_ui.py`, `tests/komunikace_ui.py`, `tests/players_wheel_ui.py`, `tests/extras_ui.py`, `tests/checkin_ui.py`, `tests/leagues_ui.py`, `tests/install_ui.py`, `tests/create_wheel_ui.py`, `tests/tv_modes_ui.py`, `tests/points_hist_ui.py`, `tests/ratchet_wheel_ui.py`, `tests/live_ui.py` a `tests/cashier_ui.py`, `tests/profile_gear_ui.py`, `tests/favorites_ui.py`, `tests/stats_ui.py`, `tests/challenge_ui.py`, `tests/live_video_ui.py` každý zvlášť po čerstvém `ui-up.sh`: převzetí judge;
+  (`tests/judge_handover.py`, `tests/formats_stats.py`, `tests/arenas_status.py`, `tests/fashion_ui.py`, `tests/community_ui.py`, `tests/bbxst_training.py`, `tests/training_bot_ui.py`, `tests/chat_ui.py`, `tests/komunikace_ui.py`, `tests/players_wheel_ui.py`, `tests/extras_ui.py`, `tests/checkin_ui.py`, `tests/leagues_ui.py`, `tests/install_ui.py`, `tests/create_wheel_ui.py`, `tests/tv_modes_ui.py`, `tests/points_hist_ui.py`, `tests/ratchet_wheel_ui.py`, `tests/live_ui.py` a `tests/cashier_ui.py`, `tests/profile_gear_ui.py`, `tests/favorites_ui.py`, `tests/stats_ui.py`, `tests/challenge_ui.py`, `tests/live_video_ui.py`, `tests/tv_custom_ui.py` každý zvlášť po čerstvém `ui-up.sh`: převzetí judge;
   deathmatch přes testovací nástroje až po finále, vyhodnocení, meta, profil)
   (poslední: zkušební turnaj 16 hráčů přes testovací nástroje až po ukončení).
 Když měníš SQL, přidej nový soubor i do `tests/reset_db.sh`. Po změně logiky nebo DB pusť testy.

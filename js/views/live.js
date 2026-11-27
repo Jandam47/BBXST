@@ -9,12 +9,13 @@
 //  YouTube nahoře v kartě arény. Přehrávač (iframe) se při přesunu v DOM znovu načte, proto žije
 //  ve vrstvě mimo <main> (.lv-vlayer) a jen se umisťuje nad místo v kartě (.lv-vbox). Polling 10 s.
 // ════════════════════════════════════════════════════════════════
-import { html, raw, mount, on, modal, fmtLeft, toast, busy, confirmBox } from '../ui.js'
+import { html, raw, mount, on, modal, fmtLeft, toast, busy, confirmBox, qrSvg } from '../ui.js'
 import { rpc, state, isLoggedIn, errMsg } from '../supa.js'
 import { enablePush, pushSupport } from '../push.js'
 import { load, queueOf, liveChannel, standingsFor, paused, ptHist, liveBattles, ptLabel, bracketHtml } from './tournament.js'
 import { matchLabel, phaseName } from '../core.js'
 import { icon } from '../icons.js'
+import { loadLayout, saveLayout, customOn, customize, layoutChanged, winKey, winTitle, fitWin } from '../tvlayout.js'
 
 const FIN = { xtreme: ['X', 'Xtreme'], burst: ['B', 'Burst'], over: ['O', 'Over'], spin: ['S', 'Spin'] }
 const finOf = (b) => b.finish || (b.pts === 3 ? 'xtreme' : b.pts === 1 ? 'spin' : null)
@@ -39,7 +40,10 @@ function curSet(battles) {
   return { set: battles.slice(start), no: Math.floor(start / 3) + 1 }
 }
 
-export async function render(main, [id]) {
+// vlastní TV rozpis z okének (tvlayout.js) – stejná data a dění jako Živě
+export const renderTV = (main, params) => render(main, params, { tv: true })
+
+export async function render(main, [id], { tv: tvMode = false } = {}) {
   document.body.classList.add('tv')
   let d = await load(id)
   let follow = readFollow(id)
@@ -79,7 +83,7 @@ export async function render(main, [id]) {
   const loadStreams = async () => {
     try { streams = new Map((await rpc('live_video_list', { p_tournament: id })).map(s => [s.arena, s])) } catch {}
   }
-  if (isLoggedIn() && !state.isAnon) rpc('live_video_me').then(v => { canCam = !!v; draw() }).catch(() => {})
+  if (!tvMode && isLoggedIn() && !state.isAnon) rpc('live_video_me').then(v => { canCam = !!v; draw() }).catch(() => {})
   await loadStreams()
 
   // ── rozdíl proti minulému stavu → události do feedu a vyskakovací hlášky ──
@@ -158,10 +162,10 @@ export async function render(main, [id]) {
     return parts.length ? html`<div class="lv-fin">${parts.map(([f, n]) => html`<span class="lv-${f}" title="${FIN[f][1]} finish">${FIN[f][0]}<b>${n}</b></span>`)}</div>` : ''
   }
 
-  function arenaCard(a, qa) {
+  function arenaCard(a, qa, { video = true, decksOn = true, queue = true } = {}) {
     const [cur, ...rest] = qa
     const fol = cur && (follow.has(cur.p1_reg) || follow.has(cur.p2_reg))
-    const vs = streams.get(a)
+    const vs = video ? streams.get(a) : null
     const slot = !vs ? '' : html`<div class="lv-vslot" data-vslot="${a}">
       ${videoOn ? html`<div class="lv-vbox"></div>` : html`<button type="button" class="lv-voff" data-video>📹 Aréna se vysílá · zapnout video</button>`}
       <div class="lv-vcap"><span class="lv-vlive"><i aria-hidden="true"></i>LIVE</span>
@@ -183,9 +187,9 @@ export async function render(main, [id]) {
         <div class="lv-sc num">${live ? html`<b>${s1}</b><i>:</i><b>${s2}</b>` : html`<span class="faint">vs</span>`}</div>
         <div class="lv-p r"><span class="lv-nick p2c">${nick(cur.p2_reg)}${follow.has(cur.p2_reg) ? html`<i class="lv-star"> ★</i>` : ''}</span>${live ? sideFin(g.battles, 2) : ''}</div>
       </div>
-      ${live || decks.size ? html`<div class="lv-set"><div>${sideBeys(set, 1, cur.p1_reg)}</div><span class="lv-setno">${!live ? 'decky' : g.battles.length ? `sada ${no}` : 'první sada'}</span><div>${sideBeys(set, 2, cur.p2_reg)}</div></div>` : ''}
+      ${decksOn && (live || decks.size) ? html`<div class="lv-set"><div>${sideBeys(set, 1, cur.p1_reg)}</div><span class="lv-setno">${!live ? 'decky' : g.battles.length ? `sada ${no}` : 'první sada'}</span><div>${sideBeys(set, 2, cur.p2_reg)}</div></div>` : ''}
       ${live ? ptHist(g.battles) : ''}
-      ${rest.length ? html`<div class="lv-queue">Na řadě: ${rest.slice(0, 2).map((m, i) => html`${i ? ' · ' : ''}<span>${nick(m.p1_reg)} vs ${nick(m.p2_reg)}</span>`)}${rest.length > 2 ? ` · +${rest.length - 2}` : ''}</div>` : ''}
+      ${queue && rest.length ? html`<div class="lv-queue">Na řadě: ${rest.slice(0, 2).map((m, i) => html`${i ? ' · ' : ''}<span>${nick(m.p1_reg)} vs ${nick(m.p2_reg)}</span>`)}${rest.length > 2 ? ` · +${rest.length - 2}` : ''}</div>` : ''}
     </section>`
   }
 
@@ -269,6 +273,7 @@ export async function render(main, [id]) {
   }
 
   const draw = () => {
+    if (tvMode) return drawTV()
     const { t } = d
     const st = t.kind === 'tournament' && t.status !== 'registration' ? standingsFor(d) : []
     const arenas = Array.from({ length: t.arena_count }, (_, i) => i + 1).map(a => ({ a, q: queueOf(d, a) }))
@@ -414,6 +419,174 @@ export async function render(main, [id]) {
     })
   }
 
+  // ═══ vlastní TV: okénka (rozložení v tvlayout.js, jen tohle zařízení) ═══
+  let layout = loadLayout(), editing = false, tvRoot = null
+  const wins = new Map()                       // klíč okna → { w, el, body, inner, vkey }
+  // změna velikosti okna (tažení, lišta v ✎ Upravit, otočení obrazovky) → obsah se znovu napasuje
+  const wro = new ResizeObserver((ents) => { for (const e of ents) { const o = [...wins.values()].find(x => x.body === e.target); if (o) fitWinBody(o) } })
+  const liveUrl = () => `${location.origin}${location.pathname}#/t/${id}/live`
+  const results = (n) => d.matches.filter(m => m.status === 'done' && !m.is_bye && m.p1_reg && m.p2_reg && m.winner_reg)
+    .sort((a, b) => new Date(b.finished_at || 0) - new Date(a.finished_at || 0)).slice(0, n)
+  const phaseOf = (t) => t.status === 'swiss' ? `${phaseName(t)} · kolo ${t.current_round}/${t.swiss_rounds}` : t.status === 'topcut' ? (t.top_cut === 2 ? 'Finále' : `Top ${t.top_cut}`) : t.status === 'finished' ? 'Konec turnaje' : 'Registrace'
+  function tvContent(w) {
+    const { t } = d, a = w.a, head = html`<div class="tvw-h">${winTitle(w)}</div>`
+    switch (w.k) {
+      case 'arena': return arenaCard(a, queueOf(d, a), { video: false, decksOn: false, queue: false })
+      case 'decks': {
+        const cur = queueOf(d, a)[0]
+        if (!cur) return html`${head}<p class="tvw-none">Volná aréna</p>`
+        const live = cur.status === 'live', g = live ? curGame(d, cur) : { battles: [] }, { set, no } = curSet(g.battles)
+        return html`${head}<div class="tvw-vs"><b class="p1c">${nick(cur.p1_reg)}</b><span>${live ? (g.battles.length ? `sada ${no}` : 'první sada') : 'decky'}</span><b class="p2c">${nick(cur.p2_reg)}</b></div>
+          ${decks.size || live ? html`<div class="lv-set"><div>${sideBeys(set, 1, cur.p1_reg)}</div><span></span><div>${sideBeys(set, 2, cur.p2_reg)}</div></div>` : html`<p class="tvw-none">Decky se ukážou po startu turnaje.</p>`}`
+      }
+      case 'queue': {
+        const q = queueOf(d, a)
+        return html`${head}${q.length ? html`<ol class="tvw-q">${q.map((m, i) => html`<li class="${m.status === 'live' ? 'live' : ''}"><span class="num">${i + 1}.</span>
+          <span class="p1c">${nick(m.p1_reg)}</span><i>vs</i><span class="p2c">${nick(m.p2_reg)}</span>
+          <small>${m.status === 'live' ? (m.live_p1 != null ? `● ${m.live_p1}:${m.live_p2}` : '● hraje se') : i === 0 ? 'na řadě' : ''}</small></li>`)}</ol>` : html`<p class="tvw-none">Fronta je prázdná.</p>`}`
+      }
+      case 'feed': {
+        const f = feed.filter(e => e.arena === a).slice(0, 14)
+        return html`${head}${f.length ? html`<ul class="lv-feed">${f.map(e => html`<li class="k-${e.kind} ${e.fol ? 'fol' : ''}"><span class="faint num">${e.at}</span><span>${e.text}</span></li>`)}</ul>`
+          : html`<p class="tvw-none">Tady se objeví každý bod a výsledek, jak padají.</p>`}`
+      }
+      case 'standings': {
+        if (t.status === 'finished') return html`<div class="tvw-h">Konečné pořadí</div><ol class="lv-st">${d.players.filter(p => p.final_place).sort((x, y) => x.final_place - y.final_place)
+          .map(p => html`<li><span class="num">${p.final_place}.</span><span class="grow">${p.nick}</span></li>`)}</ol>`
+        const st = t.kind === 'tournament' && t.status !== 'registration' ? standingsFor(d) : []
+        return html`${head}${st.length ? html`<ol class="lv-st tvw-st">${st.map(x => html`<li class="${follow.has(x.id) ? 'fol' : ''}"><span class="num">${x.rank}.</span><span class="grow">${x.nick}</span>
+          <span class="num faint">${x.wins}–${x.losses}</span><b class="num">${x.main}</b><span class="num faint">${x.aux1}</span></li>`)}</ol>`
+          : html`<p class="tvw-none">Pořadí bude po startu turnaje.</p>`}`
+      }
+      case 'bracket': return d.matches.some(m => m.stage !== 'swiss')
+        ? html`<div class="tvw-h">${t.top_cut === 2 ? 'Finále' : `Pavouk – top ${t.top_cut}`}</div><div class="lv-bracket">${bracketHtml(d, { hideDone: pref('hide_done', true), follow })}</div>`
+        : html`${head}<p class="tvw-none">Pavouk bude po Swissu.</p>`
+      case 'results': {
+        const r = results(10)
+        return html`${head}${r.length ? html`<ul class="lv-res">${r.map(m => { const w1 = m.winner_reg === m.p1_reg
+          return html`<li><span class="${w1 ? 'w' : ''}">${nick(m.p1_reg)}</span><b class="num">${m.best_of > 1 ? `${m.p1_wins}:${m.p2_wins}` : `${m.p1_score}:${m.p2_score}`}</b><span class="${w1 ? '' : 'w'}">${nick(m.p2_reg)}</span></li>` })}</ul>`
+          : html`<p class="tvw-none">Zatím žádný dohraný zápas.</p>`}`
+      }
+      case 'clock': return html`<div class="tvw-clock"><b class="num" data-clock>${hhmm()}</b><span>${t.name}</span><span class="faint">${phaseOf(t)}</span>
+        ${paused(t) ? html`<div class="tv-pause" data-countdown-box><b>PAUZA</b><span class="num" data-countdown="${t.pause_until}">${fmtLeft(t.pause_until)}</span></div>` : ''}</div>`
+      case 'qr': return html`<div class="tvw-qr">${raw(qrSvg(liveUrl()))}<b>Sleduj turnaj živě</b><span class="faint">Naskenuj a otevři Živě v telefonu</span></div>`
+    }
+    return ''
+  }
+  // obsah se vejde do okna: celý se zmenší / zvětší (transform), rozvržení se přepočítá na virtuální šířku
+  // nejmenší „virtuální“ šířka obsahu – aby se nicky a řádky nelámaly, obsah se radši zmenší
+  const MIN_W = { arena: 400, decks: 440, queue: 340, feed: 340, standings: 300, results: 340, clock: 240, qr: 240, bracket: 300 }
+  function fitWinBody(o) {
+    const W = o.body.clientWidth, H = o.body.clientHeight, inner = o.inner
+    if (!W || !H || o.w.k === 'video') return
+    let lo = 0.15, hi = Math.max(0.2, Math.min(6, W / (MIN_W[o.w.k] || 300))), best = lo
+    for (let i = 0; i < 11; i++) {
+      const s = (lo + hi) / 2
+      inner.style.width = `${W / s}px`
+      if (inner.scrollHeight * s <= H + 0.5 && inner.scrollWidth <= inner.clientWidth) { best = s; lo = s } else hi = s
+    }
+    inner.style.width = `${W / best}px`
+    // aréna, decky, hodiny a QR doprostřed okna; seznamy zůstanou nahoře
+    const dy = ['arena', 'decks', 'clock', 'qr'].includes(o.w.k) ? Math.max(0, (H - inner.scrollHeight * best) / 2) : 0
+    inner.style.transform = `translateY(${dy}px) scale(${best})`
+  }
+  function videoInto(o) {
+    const s = streams.get(o.w.a), key = s ? skey(s) : ''
+    if (o.vkey === key && o.inner.firstChild) return
+    o.vkey = key
+    o.inner.style.transform = ''; o.inner.style.width = ''
+    if (!s) { mount(o.inner, html`<div class="tvw-novideo"><b>Aréna ${o.w.a}</b><span>teď nevysílá</span></div>`); return }
+    const f = document.createElement('iframe')
+    f.src = embedSrc(s); f.title = `Vysílání arény ${o.w.a}`
+    f.allow = 'autoplay; fullscreen; encrypted-media; picture-in-picture'; f.allowFullscreen = true
+    o.inner.replaceChildren(f)
+  }
+  const place = (o) => Object.assign(o.el.style, { left: `${o.w.x}%`, top: `${o.w.y}%`, width: `${o.w.w}%`, height: `${o.w.h}%`, zIndex: o.w.z || 1 })
+  function syncWins() {
+    if (!tvRoot) {
+      main.replaceChildren()
+      tvRoot = document.createElement('div')
+      tvRoot.className = 'tvc'
+      mount(tvRoot, html`<div class="tvc-tools" role="toolbar" aria-label="TV rozpis">
+        <button type="button" class="btn sm" data-tvcust>⚙ Okna</button>
+        <button type="button" class="btn sm" data-tvedit aria-pressed="false">✎ Upravit</button>
+        <a class="btn sm" href="#/t/${id}">Zavřít TV</a></div>`)
+      main.append(tvRoot)
+    }
+    tvRoot.classList.toggle('editing', editing)
+    const edit = tvRoot.querySelector('[data-tvedit]')
+    edit.textContent = editing ? '✓ Hotovo' : '✎ Upravit'; edit.setAttribute('aria-pressed', editing); edit.classList.toggle('primary', editing)
+    const keep = new Set()
+    for (const w of layout.wins) {
+      if (w.a && w.a > d.t.arena_count) continue
+      const key = winKey(w); keep.add(key)
+      let o = wins.get(key)
+      if (!o) {
+        const el = document.createElement('section')
+        el.className = `tvc-win k-${w.k}`; el.dataset.win = key
+        el.setAttribute('aria-label', winTitle(w))
+        mount(el, html`<div class="tvc-bar"><span>${winTitle(w)}</span><button type="button" class="tvc-x" data-tvclose aria-label="Zavřít okno ${winTitle(w)}">✕</button></div>
+          <div class="tvc-body"><div class="tvc-in"></div></div><span class="tvc-rs" aria-hidden="true"></span>`)
+        tvRoot.append(el)
+        o = { el, body: el.querySelector('.tvc-body'), inner: el.querySelector('.tvc-in'), vkey: null }
+        wins.set(key, o); wro.observe(o.body)
+      }
+      o.w = w; place(o)
+    }
+    for (const [k, o] of wins) if (!keep.has(k)) { wro.unobserve(o.body); o.el.remove(); wins.delete(k) }
+  }
+  function drawTV() {
+    if (!customOn()) return
+    main.classList.remove('lv-dirmode', 'tv-land', 'tv-port')
+    syncWins()
+    for (const o of wins.values()) {
+      if (o.w.k === 'video') { videoInto(o); continue }
+      mount(o.inner, tvContent(o.w))
+    }
+    requestAnimationFrame(() => { for (const o of wins.values()) fitWinBody(o) })
+  }
+  const refit = () => { for (const o of wins.values()) fitWinBody(o) }
+  if (tvMode) {
+    // přesun (lišta okna) a změna velikosti (roh) v režimu ✎ Upravit; pozice v % obrazovky
+    let drag = null
+    on(main, 'pointerdown', '.tvc-win', (e, el) => {
+      if (!editing || e.target.closest('[data-tvclose]')) return
+      const o = wins.get(el.dataset.win); if (!o) return
+      o.w.z = Math.max(0, ...layout.wins.map(x => x.z || 0)) + 1; place(o)
+      const mode = e.target.closest('.tvc-rs') ? 'size' : e.target.closest('.tvc-bar') ? 'move' : null
+      if (!mode) return
+      e.preventDefault()
+      drag = { o, mode, sx: e.clientX, sy: e.clientY, x: o.w.x, y: o.w.y, w: o.w.w, h: o.w.h }
+      el.setPointerCapture?.(e.pointerId)
+      el.classList.add('dragging')
+    })
+    on(main, 'pointermove', '.tvc-win', (e) => {
+      if (!drag) return
+      const dx = (e.clientX - drag.sx) / innerWidth * 100, dy = (e.clientY - drag.sy) / innerHeight * 100, w = drag.o.w
+      if (drag.mode === 'move') { w.x = drag.x + dx; w.y = drag.y + dy } else { w.w = drag.w + dx; w.h = drag.h + dy }
+      fitWin(w); place(drag.o)
+      if (drag.mode === 'size') fitWinBody(drag.o)
+    })
+    const endDrag = () => { if (!drag) return; drag.o.el.classList.remove('dragging'); fitWinBody(drag.o); drag = null; saveLayout(layout) }
+    on(main, 'pointerup', '.tvc-win', endDrag)
+    on(main, 'pointercancel', '.tvc-win', endDrag)
+    on(main, 'click', '[data-tvclose]', (e, b) => {
+      const key = b.closest('.tvc-win').dataset.win
+      layout.wins = layout.wins.filter(w => winKey(w) !== key); saveLayout(layout); layoutChanged()
+    })
+    on(main, 'click', '[data-tvedit]', () => { editing = !editing; syncWins() })
+    on(main, 'click', '[data-tvcust]', () => customize(d.t.arena_count))
+  }
+  const onLayout = () => {
+    if (!tvMode) return
+    if (!customOn()) return window.dispatchEvent(new HashChangeEvent('hashchange'))   // zpět na výchozí TV
+    layout = loadLayout(); drawTV()
+  }
+  const onKey = (e) => { if (tvMode && editing && e.key === 'Escape' && !document.querySelector('.modal-bg')) { editing = false; syncWins() } }
+  window.addEventListener('bbx:tvlayout', onLayout)
+  window.addEventListener('keydown', onKey)
+  if (tvMode) addEventListener('resize', refit)
+
   // ── sledování: místně vždy, s účtem a zapnutým upozorněním i na serveru (push) ──
   const syncFollow = (reg, on) => pushOn ? rpc('live_follow_set', { p_reg: reg, p_on: on }).catch(e => toast(errMsg(e), 'err')) : null
   function followModal() {
@@ -534,5 +707,6 @@ export async function render(main, [id]) {
   return () => { off(); clearInterval(poll); clearInterval(vpoll); clearInterval(tick)
     ro.disconnect(); removeEventListener('resize', syncVideos); layer.remove()
     clearTimeout(flashT); window.removeEventListener('bbx:countdown-over', draw)
+    window.removeEventListener('bbx:tvlayout', onLayout); window.removeEventListener('keydown', onKey); removeEventListener('resize', refit); wro.disconnect()
     document.querySelector('.lv-flash')?.remove(); document.body.classList.remove('tv') }
 }

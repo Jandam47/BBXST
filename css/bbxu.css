@@ -502,6 +502,8 @@ body.tv main { max-width: none; padding: 3vh 4vw; }
 .tv-card.next { opacity: .6; }
 .tv-exit { position: fixed; right: 16px; bottom: 16px; opacity: .3; }
 .tv-exit:hover { opacity: 1; }
+.tv-cust { position: fixed; right: 132px; bottom: 16px; opacity: .3; }
+.tv-cust:hover, .tv-cust:focus-visible { opacity: 1; }
 
 /* ── modal / toast ─────────────────────────────────────── */
 .modal-bg {
@@ -1884,3 +1886,56 @@ html[data-theme=ronin] {
 .lv-castbtn small { font-size: 12px; color: #ff8aa0; }
 .lv-castbtn.busy { border-color: rgba(255,59,95,.4); }
 .lv-castbtn:focus-visible { outline: 2px solid var(--bolt); outline-offset: 2px; }
+
+/* ── Vlastní TV rozpis: okénka (tvlayout.js + live.js renderTV) ── */
+.tvc { position: fixed; inset: 0; overflow: hidden; }
+.tvc-win { position: absolute; display: flex; flex-direction: column; min-width: 0; min-height: 0;
+  background: rgba(6,10,16,.92); border: 1px solid rgba(var(--cyan-rgb),.28); border-radius: 12px; overflow: hidden; }
+.tvc-body { position: relative; flex: 1; min-height: 0; overflow: hidden; }
+.tvc-in { transform-origin: 0 0; padding: 12px; box-sizing: border-box; }
+.k-video .tvc-in { padding: 0; }
+.k-video .tvc-in, .k-video .tvc-in iframe { width: 100%; height: 100%; border: 0; display: block; }
+.tvc-in > .lv-arena { margin: 0; border: 0; background: none; box-shadow: none; padding: 0; }
+.tvc-bar { display: none; align-items: center; gap: 8px; padding: 6px 6px 6px 12px; background: rgba(var(--cyan-rgb),.14);
+  font-family: var(--display); font-weight: 700; font-size: 14px; cursor: move; touch-action: none; user-select: none; }
+.tvc-bar span { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tvc-x { width: 30px; height: 30px; border-radius: 50%; border: 1px solid rgba(255,59,95,.5); background: rgba(0,0,0,.4); color: #ff8aa0; cursor: pointer; }
+.tvc-rs { display: none; position: absolute; right: 0; bottom: 0; width: 30px; height: 30px; cursor: nwse-resize; touch-action: none;
+  background: linear-gradient(135deg, transparent 50%, var(--bolt) 50%, var(--bolt) 58%, transparent 58%, transparent 70%, var(--bolt) 70%, var(--bolt) 78%, transparent 78%); }
+.tvc.editing .tvc-win { border: 2px dashed rgba(var(--bolt-rgb),.65); }
+.tvc.editing .tvc-bar, .tvc.editing .tvc-rs { display: flex; }
+.tvc.editing .k-video iframe { pointer-events: none; }       /* při úpravě iframe nebere tažení */
+.tvc-win.dragging { opacity: .85; }
+.tvc-tools { position: fixed; right: 12px; bottom: 12px; z-index: 9000; display: flex; gap: 6px; opacity: .3; transition: opacity .2s; }
+.tvc-tools:hover, .tvc-tools:focus-within, .tvc.editing .tvc-tools { opacity: 1; }
+.tvw-h { font-family: var(--display); font-weight: 700; color: var(--cyan); letter-spacing: .04em; margin-bottom: 8px; font-size: 15px; }
+.tvw-none { color: var(--muted); margin: 6px 0; }
+.tvw-vs { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; margin-bottom: 8px; font-family: var(--display); }
+.tvw-vs span { color: var(--faint); font-size: 12px; }
+.tvw-q { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.tvw-q li { display: flex; align-items: baseline; gap: 8px; padding: 6px 10px; border-radius: 8px; background: rgba(255,255,255,.03); white-space: nowrap; }
+.tvw-q li.live { background: rgba(var(--bolt-rgb),.1); border: 1px solid rgba(var(--bolt-rgb),.35); }
+.tvw-q i { color: var(--faint); font-style: normal; font-size: .85em; }
+.tvw-q small { margin-left: auto; color: var(--bolt); }
+.tvw-st li { white-space: nowrap; }
+.tvw-clock { display: grid; justify-items: center; text-align: center; gap: 4px; }
+.tvw-clock > b { font-family: var(--display); font-size: 64px; line-height: 1; color: var(--bolt); }
+.tvw-clock .tv-pause { margin-top: 8px; }
+.tvw-qr { display: grid; justify-items: center; text-align: center; gap: 6px; }
+.tvw-qr svg { width: 220px; height: 220px; background: #fff; padding: 10px; border-radius: 8px; }
+.tvw-novideo { width: 100%; height: 100%; display: grid; place-content: center; text-align: center; gap: 4px; color: var(--muted); }
+.tvw-novideo b { font-family: var(--display); color: var(--text); font-size: 1.4em; }
+/* okno s přepínači okének */
+.tvc-groups { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; margin-top: 12px; }
+.tvc-grp { border: 1px solid var(--line); border-radius: 12px; padding: 8px 12px 10px; margin: 0; min-width: 0; }
+.tvc-grp legend { font-family: var(--display); font-weight: 700; color: var(--bolt); padding: 0 6px; }
+.tvc-sw { display: flex; align-items: center; gap: 10px; padding: 6px 0; cursor: pointer; }
+.tvc-sw input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.tvc-tg { flex: none; width: 40px; height: 22px; border-radius: 999px; background: rgba(255,255,255,.12); border: 1px solid var(--line); position: relative; transition: background .15s; }
+.tvc-tg::after { content: ''; position: absolute; left: 2px; top: 2px; width: 16px; height: 16px; border-radius: 50%; background: var(--muted); transition: transform .15s, background .15s; }
+.tvc-sw input:checked + .tvc-tg { background: rgba(var(--cyan-rgb),.35); border-color: var(--cyan); }
+.tvc-sw input:checked + .tvc-tg::after { transform: translateX(18px); background: var(--cyan); }
+.tvc-sw input:focus-visible + .tvc-tg { outline: 2px solid var(--bolt); outline-offset: 2px; }
+.tvc-sw b { display: block; font-weight: 600; }
+.tvc-sw small { display: block; color: var(--faint); font-size: 12px; }
+@media (prefers-reduced-motion: reduce) { .tvc-tg, .tvc-tg::after { transition: none; } }

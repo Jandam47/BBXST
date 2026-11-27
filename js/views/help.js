@@ -102,6 +102,7 @@ const S = [
       <li><b>🎬 Režie</b> ukáže jednu arénu přes celou obrazovku. Arénu přepneš v liště nahoře, <b>AUTO</b> sama skáče tam, kde se něco děje.</li>
       <li>Dál je tam pavouk top cutu (<i>Skrýt odehrané</i>), poslední výsledky, pořadí a rozbalovací <b>Statistiky turnaje</b>.</li>
       <li><b>TV rozpis</b> je pro obrazovku v hale: na šířku je všechno na jedné stránce, na výšku arény pod sebou. Sám neroluje.</li>
+      <li><b>Vlastní TV (okénka)</b>: v TV rozpisu vpravo dole <b>⚙ Okna</b> – zapni, co chceš vidět: pro každou arénu <i>Arénu</i>, <i>Frontu</i>, <i>Dění</i>, <i>Decky</i> a <i>Video</i> (Twitch), pro celý turnaj <i>Pořadí</i>, <i>Pavouk</i>, <i>Poslední výsledky</i>, <i>Hodiny a pauzu</i> a <i>QR na Živě</i>. Okénka se rozmístí sama, přes <b>✎ Upravit</b> je přesuneš (lišta nahoře), zvětšíš (roh vpravo dole) nebo zavřeš ✕. Obsah se vždy přizpůsobí velikosti okna. Rozložení si pamatuje jen to zařízení, <i>Výchozí TV</i> vrátí původní rozpis.</li>
     </ul>`],
   ['org', 'Pro organizátory', html`
     <ul>
