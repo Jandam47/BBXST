@@ -35,7 +35,7 @@ with sync_playwright() as p:
     errs = []; pg.on('pageerror', lambda e: errs.append(str(e)))
     pg.add_init_script(MOCK)
     pg.goto('http://127.0.0.1:8765/bp.html')
-    pg.click('#connect'); pg.wait_for_timeout(600)
+    pg.click('#connect'); pg.wait_for_timeout(1200)
     pg.fill('#note', 'výstřel 1'); pg.press('#note', 'Enter')
     st = pg.text_content('#status'); cnt = pg.text_content('#count')
     log = pg.inner_text('#log')

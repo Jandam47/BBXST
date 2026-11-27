@@ -164,16 +164,32 @@ function decode(bytes) {
     if (tag === 0xb7 && [0, 1, 2, 3, 4, 5, 6].every((i) => pages[0xb0 + i])) showShots()
   }
 }
+let prevVals = null
 function showShots() {
   const data = []; for (let i = 0; i < 8; i++) data.push(...pages[0xb0 + i])
   const sum = data.slice(0, 127).reduce((a, b) => a + b, 0) & 255, ok = sum === data[127]
   const vals = []; for (let i = 0; i < 50; i++) vals.push(data[2 * i] | (data[2 * i + 1] << 8))
-  const shots = vals.map((v, i) => ({ i: i + 1, v })).filter((x) => x.v > 0), max = Math.max(0, ...shots.map((x) => x.v))
-  $('#shots').innerHTML = shots.length ? shots.map((x) => `<div class="shot ${x.v === max ? 'top' : ''}"><div class="n">#${x.i}</div><div class="v">${x.v}</div></div>`).join('')
-    : '<p class="small muted">V Battle Passu nejsou žádné výstřely.</p>'
-  addLine({ kind: 'info', time: ts(), text: `Výstřely (${shots.length}${ok ? '' : ', nesedí kontrolní součet'}): ${shots.map((x) => x.v).join(', ')}` })
+  const le = (o) => data[o] | (data[o + 1] << 8)
+  // za výstřely (b6): [100–101] ?, [102–103] ?, [104–105] výstřelů celkem, [106–107] uloženo
+  const total = le(104), stored = le(106), unk = le(102)
+  // nejnovější: porovnání s minulým načtením (posun o jeden)
+  let newest = -1
+  if (prevVals && vals.join() !== prevVals.join()) {
+    if (vals.slice(0, 49).join() === prevVals.slice(1).join()) newest = 49
+    else if (vals.slice(1).join() === prevVals.slice(0, 49).join()) newest = 0
+    else { const n = vals.findIndex((v) => v > 0 && !prevVals.includes(v)); newest = n }
+  }
+  prevVals = vals
+  const shots = vals.map((v, i) => ({ i: i + 1, v, idx: i })).filter((x) => x.v > 0), max = Math.max(0, ...shots.map((x) => x.v))
+  const avg = shots.length ? Math.round(shots.reduce((a, x) => a + x.v, 0) / shots.length) : 0
+  const sorted = shots.map((x) => x.v).sort((a, b) => a - b), med = sorted.length ? sorted[sorted.length >> 1] : 0
+  $('#shots').innerHTML = (shots.length ? `<p class="small" style="grid-column:1/-1;margin:0">Uloženo ${stored || shots.length} · celkem vystřeleno ${total} · max ${max} · průměr ${avg} · medián ${med}${newest >= 0 ? ` · nejnovější = #${newest + 1}` : ''}<span class="muted"> · neznámé 0x${unk.toString(16)} (${unk})</span></p>`
+    + shots.map((x) => `<div class="shot ${x.v === max ? 'top' : ''}" ${x.idx === newest ? 'style="border-color:var(--cyan)"' : ''}><div class="n">#${x.i}${x.idx === newest ? ' · nový' : ''}</div><div class="v">${x.v}</div></div>`).join('')
+    : '<p class="small muted">V Battle Passu nejsou žádné výstřely.</p>')
+  addLine({ kind: 'info', time: ts(), text: `Výstřely (${shots.length}, celkem ${total}${ok ? '' : ', nesedí kontrolní součet'}${newest >= 0 ? `, nejnovější #${newest + 1}` : ''}): ${shots.map((x) => x.v).join(', ')}` })
   pages = {}
 }
+const wait = (ms) => new Promise((r) => setTimeout(r, ms))
 async function command(b) {
   if (!cmdChar) { status('Battle Pass nemá kanál pro příkazy – připoj se znovu.', 'err'); return }
   try { await cmdChar.writeValueWithoutResponse(new Uint8Array([b])); addLine({ kind: 'info', time: ts(), text: `→ příkaz 0x${b.toString(16)}` }) }
@@ -224,7 +240,7 @@ async function connect() {
         }
       }
     }
-    if (cmdChar) { $('#shotsCard').hidden = false; await command(0x51); await command(0x74) }
+    if (cmdChar) { $('#shotsCard').hidden = false; await command(0x51); await wait(500); await command(0x74) }
     if (!services.length) status('Připojeno, ale žádná služba není dostupná. Zjisti UUID v nRF Connect a napiš je do „Vlastní UUID“.', 'err')
     else status(`Připojeno · služeb ${services.length} · odebírám ${notifying} charakteristik. Teď vystřel!`, 'ok')
     $('#disconnect').disabled = false; $('#connect').disabled = true

@@ -349,7 +349,7 @@ Komunikuj **česky**, celé UI je česky.
   = 0xFF00–0xFFFF + běžné + Battle Pass `55c4f0xx-f8eb-11ec-b939-0242ac120002` + vlastní UUID (`localStorage bbxu_bp_extra`).
   Protokol (blog.simone.computer/reverse-beyblade-launch-tracker): data `55c4f002` (read / notify), příkazy `55c4f001` (write
   without response, 1 bajt): `0x51` = hlavička `a0` (17 B: [3] 04 = připraveno, [4] baterie?, [7–8] rekord LE, [9] počet výstřelů,
-  konec = MAC pozpátku), `0x74` = stránky `b0–b7` (tag + 16 B; 50 × LE16 ot./min, poslední bajt b7 = součet mod 256), `0x75` = smaže
+  konec = MAC pozpátku), `0x74` = stránky `b0–b7` (tag + 16 B; 50 × LE16 ot./min, za nimi v b6 [104–105] výstřelů celkem, [106–107] uloženo, [102–103] neznámé; poslední bajt b7 = součet mod 256; služba `55c40000`), `0x75` = smaže
   paměť (v UI není). Battle Pass drží posledních 50 výstřelů → stránka je po připojení sama načte (karta Výstřely v Battle Passu). Jen čtení dat z vlastního zařízení – žádné obcházení
   placeného obsahu ani kódů oficiální appky. Až bude formát známý: síla výstřelu do BBXST / stats.
 - `vendor/` – supabase-js, qrcode-generator, html5-qrcode (lokálně, kvůli slabé síti v hale).
