@@ -43,6 +43,10 @@
   .ln.info { color: var(--muted); }
   .guess { color: var(--muted); font-size: 11.5px; }
   .cnt { color: var(--cyan); font-weight: 700; }
+  #shots { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 6px; margin-top: 8px; }
+  .shot { background: #070d14; border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; }
+  .shot .n { color: var(--faint); font-size: 11px; } .shot .v { font-size: 18px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .shot.top { border-color: var(--bolt); } .shot.top .v { color: var(--bolt); }
 </style>
 </head>
 <body>
@@ -61,6 +65,18 @@
       Když po připojení žádná služba s daty není, zjisti UUID v aplikaci <b>nRF Connect</b> a napiš je sem (jedno na řádek), pak se připoj znovu.</p>
     <textarea id="extra" placeholder="např. 0000fff0-0000-1000-8000-00805f9b34fb"></textarea>
   </details>
+</div>
+
+<div class="card" id="shotsCard" hidden>
+  <div class="row" style="justify-content:space-between">
+    <h2 style="margin:0">Výstřely v Battle Passu</h2>
+    <div class="row">
+      <button class="primary" id="readShots">⟳ Načíst výstřely</button>
+      <button id="readHead">Hlavička</button>
+    </div>
+  </div>
+  <p class="small muted" id="headInfo" style="margin-top:8px"></p>
+  <div id="shots"></div>
 </div>
 
 <div class="card" id="servicesCard" hidden>
@@ -91,6 +107,9 @@ const $ = (s) => document.querySelector(s)
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))
 const LS = 'bbxu_bp_extra'
 let device = null, lines = [], last = {}
+// Battle Pass: data 55c4f002 (read / notify), příkazy 55c4f001 (write without response)
+const BP_DATA = '55c4f002-f8eb-11ec-b939-0242ac120002', BP_CMD = '55c4f001-f8eb-11ec-b939-0242ac120002'
+let cmdChar = null, pages = {}
 const short = (u) => /^0000([0-9a-f]{4})-0000-1000-8000-00805f9b34fb$/i.test(u) ? '0x' + u.slice(4, 8).toUpperCase() : u
 const hexOf = (dv) => Array.from(new Uint8Array(dv.buffer, dv.byteOffset, dv.byteLength), (b) => b.toString(16).padStart(2, '0'))
 const ts = () => { const d = new Date(); return d.toLocaleTimeString('cs-CZ', { hour12: false }) + '.' + String(d.getMilliseconds()).padStart(3, '0') }
@@ -104,6 +123,7 @@ function candidates() {
   list.push('6e400001-b5a3-f393-e0a9-e50e24dcca9e')                                // Nordic UART
   list.push('49535343-fe7d-4ae5-8fa9-9fafd205e455')                                // Microchip
   list.push('0000ffe0-0000-1000-8000-00805f9b34fb')
+  for (const hi of ['55c4f0', '55c400']) for (let x = 0; x < 16; x++) list.push(`${hi}${x.toString(16).padStart(2, '0')}-f8eb-11ec-b939-0242ac120002`)   // Battle Pass
   for (const l of ($('#extra').value || '').split(/[\s,;]+/)) {
     const u = l.trim().toLowerCase(); if (!u) continue
     if (/^0x[0-9a-f]{4}$/.test(u) || /^[0-9a-f]{4}$/.test(u)) list.push(base(parseInt(u.replace(/^0x/, ''), 16)))
@@ -132,7 +152,35 @@ function guess(bytes) {
   for (let i = 0; i + 1 < bytes.length; i++) out.push(`[${i}]${bytes[i] | (bytes[i + 1] << 8)}`)
   return out.length ? 'LE16: ' + out.join(' ') : ''
 }
+// a0 = hlavička (17 B), b0–b7 = výstřely (tag + 16 B); 50 × LE16, poslední bajt b7 = součet mod 256
+function decode(bytes) {
+  const tag = bytes[0]
+  if (tag === 0xa0 && bytes.length >= 17) {
+    const hi = bytes[7] | (bytes[8] << 8)      // a0 3a 00 RR BB 00 00 HH HH CC … (RR 04 = připraveno, BB baterie?, HH rekord LE, CC počet)
+    $('#headInfo').textContent = `Výstřelů celkem: ${bytes[9]} · rekord: ${hi} ot./min · ${bytes[3] === 4 ? 'připraveno ke střelbě' : 'nepřipraveno'} · baterie?: ${bytes[4]}`
+    pages = {}
+  } else if (tag >= 0xb0 && tag <= 0xb7 && bytes.length >= 17) {
+    pages[tag] = bytes.slice(1, 17)
+    if (tag === 0xb7 && [0, 1, 2, 3, 4, 5, 6].every((i) => pages[0xb0 + i])) showShots()
+  }
+}
+function showShots() {
+  const data = []; for (let i = 0; i < 8; i++) data.push(...pages[0xb0 + i])
+  const sum = data.slice(0, 127).reduce((a, b) => a + b, 0) & 255, ok = sum === data[127]
+  const vals = []; for (let i = 0; i < 50; i++) vals.push(data[2 * i] | (data[2 * i + 1] << 8))
+  const shots = vals.map((v, i) => ({ i: i + 1, v })).filter((x) => x.v > 0), max = Math.max(0, ...shots.map((x) => x.v))
+  $('#shots').innerHTML = shots.length ? shots.map((x) => `<div class="shot ${x.v === max ? 'top' : ''}"><div class="n">#${x.i}</div><div class="v">${x.v}</div></div>`).join('')
+    : '<p class="small muted">V Battle Passu nejsou žádné výstřely.</p>'
+  addLine({ kind: 'info', time: ts(), text: `Výstřely (${shots.length}${ok ? '' : ', nesedí kontrolní součet'}): ${shots.map((x) => x.v).join(', ')}` })
+  pages = {}
+}
+async function command(b) {
+  if (!cmdChar) { status('Battle Pass nemá kanál pro příkazy – připoj se znovu.', 'err'); return }
+  try { await cmdChar.writeValueWithoutResponse(new Uint8Array([b])); addLine({ kind: 'info', time: ts(), text: `→ příkaz 0x${b.toString(16)}` }) }
+  catch (e) { status('Příkaz neprošel: ' + e.message, 'err') }
+}
 function onValue(ch, dv) {
+  if (ch.toLowerCase().includes(BP_DATA)) decode(new Uint8Array(dv.buffer, dv.byteOffset, dv.byteLength))
   const hex = hexOf(dv), prev = last[ch] || []
   const changed = prev.length ? hex.map((h, i) => (h !== prev[i] ? i : -1)).filter((i) => i >= 0) : []
   last[ch] = hex
@@ -145,7 +193,7 @@ async function connect() {
   try {
     status('Vyber Battle Pass v seznamu…')
     device = await navigator.bluetooth.requestDevice({ acceptAllDevices: true, optionalServices: candidates() })
-    device.addEventListener('gattserverdisconnected', () => { status('Odpojeno.', 'err'); addLine({ kind: 'info', time: ts(), text: 'Zařízení se odpojilo.' }); $('#disconnect').disabled = true; $('#connect').disabled = false })
+    device.addEventListener('gattserverdisconnected', () => { cmdChar = null; status('Odpojeno.', 'err'); addLine({ kind: 'info', time: ts(), text: 'Zařízení se odpojilo.' }); $('#disconnect').disabled = true; $('#connect').disabled = false })
     status(`Připojuji k „${device.name || 'bez jména'}“…`)
     const server = await device.gatt.connect()
     addLine({ kind: 'info', time: ts(), text: `Připojeno: ${device.name || '(bez jména)'} · id ${device.id}` })
@@ -164,6 +212,7 @@ async function connect() {
         el.innerHTML = `<div class="uuid">${esc(short(c.uuid))}</div><div>${props.map((k) => `<span class="tag ${k === 'notify' || k === 'indicate' ? 'n' : ''}">${k}</span>`).join('')}</div><div class="small muted val"></div>`
         sv.append(el)
         const name = `${short(s.uuid)} / ${short(c.uuid)}`
+        if (c.uuid === BP_CMD) cmdChar = c
         if (p.read) {
           try { const v = await c.readValue(); el.querySelector('.val').textContent = 'hodnota: ' + hexOf(v).join(' '); onValue(name + ' (read)', v) } catch (e) { el.querySelector('.val').textContent = 'čtení: ' + e.message }
         }
@@ -175,6 +224,7 @@ async function connect() {
         }
       }
     }
+    if (cmdChar) { $('#shotsCard').hidden = false; await command(0x51); await command(0x74) }
     if (!services.length) status('Připojeno, ale žádná služba není dostupná. Zjisti UUID v nRF Connect a napiš je do „Vlastní UUID“.', 'err')
     else status(`Připojeno · služeb ${services.length} · odebírám ${notifying} charakteristik. Teď vystřel!`, 'ok')
     $('#disconnect').disabled = false; $('#connect').disabled = true
@@ -189,6 +239,8 @@ function asText() {
 }
 $('#connect').onclick = connect
 $('#disconnect').onclick = () => { try { device?.gatt?.disconnect() } catch {} }
+$('#readShots').onclick = () => command(0x74)
+$('#readHead').onclick = () => command(0x51)
 $('#mark').onclick = () => { addLine({ kind: 'mark', time: ts(), text: $('#note').value.trim() || 'značka' }); $('#note').value = ''; $('#note').focus() }
 $('#note').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('#mark').click() })
 $('#clear').onclick = () => { if (!lines.length || confirm('Smazat celý záznam?')) { lines = []; last = {}; $('#log').innerHTML = ''; $('#count').textContent = 0 } }
