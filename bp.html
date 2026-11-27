@@ -76,6 +76,15 @@
     </div>
   </div>
   <p class="small muted" id="headInfo" style="margin-top:8px"></p>
+  <div id="launch" hidden>
+    <div class="row" style="align-items:baseline;gap:10px;margin-top:6px">
+      <span class="muted small">Poslední výstřel</span>
+      <span id="lRpm" style="font-size:40px;font-weight:800;color:var(--bolt);font-variant-numeric:tabular-nums"></span>
+      <span class="muted small">ot./min</span>
+    </div>
+    <svg id="lCurve" viewBox="0 0 320 120" style="width:100%;height:auto;margin-top:6px" role="img" aria-label="Průběh roztáčení"></svg>
+    <p class="small muted" id="lInfo" style="margin:4px 0 0"></p>
+  </div>
   <div id="shots"></div>
 </div>
 
@@ -156,13 +165,37 @@ function guess(bytes) {
 function decode(bytes) {
   const tag = bytes[0]
   if (tag === 0xa0 && bytes.length >= 17) {
-    const hi = bytes[7] | (bytes[8] << 8)      // a0 3a 00 RR BB 00 00 HH HH CC … (RR 04 = připraveno, BB baterie?, HH rekord LE, CC počet)
-    $('#headInfo').textContent = `Výstřelů celkem: ${bytes[9]} · rekord: ${hi} ot./min · ${bytes[3] === 4 ? 'připraveno ke střelbě' : 'nepřipraveno'} · baterie?: ${bytes[4]}`
+    // a0 3a 00 RR BB 00 00 HH HH CC CC + MAC pozpátku (RR 04 = připraveno, BB baterie?, HH rekord? LE, CC výstřelů celkem LE)
+    const hi = bytes[7] | (bytes[8] << 8), total = bytes[9] | (bytes[10] << 8)
+    $('#headInfo').textContent = `Výstřelů celkem: ${total} · rekord?: ${hi} · ${bytes[3] === 4 ? 'připraveno ke střelbě' : 'čeká'} · baterie?: ${bytes[4]}`
     pages = {}
   } else if (tag >= 0xb0 && tag <= 0xb7 && bytes.length >= 17) {
     pages[tag] = bytes.slice(1, 17)
     if (tag === 0xb7 && [0, 1, 2, 3, 4, 5, 6].every((i) => pages[0xb0 + i])) showShots()
+  } else if (tag >= 0x70 && tag <= 0x73 && bytes.length >= 17) {
+    curve[tag] = bytes.slice(1, 17)
+    if (tag === 0x73 && [0, 1, 2].every((i) => curve[0x70 + i])) { showCurve(); curve = {} }
   }
+}
+// 70–73 = průběh roztáčení: doba každé otáčky v jednotkách 8 µs (LE16, konec = 0) → ot./min = 7 500 000 / doba
+let curve = {}
+function showCurve() {
+  const d = []; for (let i = 0; i < 4; i++) d.push(...curve[0x70 + i])
+  const per = []; for (let i = 0; i + 1 < d.length; i += 2) { const v = d[i] | (d[i + 1] << 8); if (!v) break; per.push(v) }
+  if (per.length < 2) return
+  let t = 0; const pts = per.map((p) => { t += p * 0.008; return { t, rpm: 7500000 / p } })
+  const peakI = pts.reduce((b, x, i) => (x.rpm > pts[b].rpm ? i : b), 0), peak = Math.round(pts[peakI].rpm)
+  const t0 = pts[0].t, T = Math.max(1, pts[pts.length - 1].t - t0), M = Math.max(1000, ...pts.map((x) => x.rpm)) * 1.08
+  const X = (x) => 6 + ((x.t - t0) / T) * 308, Y = (x) => 112 - (x.rpm / M) * 104
+  const line = pts.map((x) => `${X(x).toFixed(1)},${Y(x).toFixed(1)}`).join(' ')
+  $('#lCurve').innerHTML = `<line x1="6" y1="112" x2="314" y2="112" stroke="#1c2a3a"/>
+    <polyline points="${line}" fill="none" stroke="#19e3ff" stroke-width="2" stroke-linejoin="round"/>
+    ${pts.map((x, i) => `<circle cx="${X(x).toFixed(1)}" cy="${Y(x).toFixed(1)}" r="${i === peakI ? 4 : 2}" fill="${i === peakI ? '#ffd60a' : '#19e3ff'}"/>`).join('')}
+    <text x="${Math.min(260, X(pts[peakI]) + 6).toFixed(1)}" y="${Math.max(12, Y(pts[peakI]) - 6).toFixed(1)}" fill="#ffd60a" font-size="11" font-weight="700">${peak}</text>`
+  $('#lRpm').textContent = peak
+  $('#lInfo').textContent = `Vrchol po ${peakI + 1}. otáčce, ${Math.round(pts[peakI].t - t0)} ms od první otáčky · zaznamenaných otáček ${per.length}`
+  $('#launch').hidden = false; $('#shotsCard').hidden = false
+  addLine({ kind: 'mark', time: ts(), text: `VÝSTŘEL ${peak} ot./min (vrchol po ${peakI + 1}. otáčce) · doby otáček: ${per.join(' ')}` })
 }
 let prevVals = null
 function showShots() {
@@ -172,13 +205,8 @@ function showShots() {
   const le = (o) => data[o] | (data[o + 1] << 8)
   // za výstřely (b6): [100–101] ?, [102–103] ?, [104–105] výstřelů celkem, [106–107] uloženo
   const total = le(104), stored = le(106), unk = le(102)
-  // nejnovější: porovnání s minulým načtením (posun o jeden)
-  let newest = -1
-  if (prevVals && vals.join() !== prevVals.join()) {
-    if (vals.slice(0, 49).join() === prevVals.slice(1).join()) newest = 49
-    else if (vals.slice(1).join() === prevVals.slice(0, 49).join()) newest = 0
-    else { const n = vals.findIndex((v) => v > 0 && !prevVals.includes(v)); newest = n }
-  }
+  // pořadí v paměti: od nejstaršího, nejnovější je poslední
+  let newest = -1; for (let i = 49; i >= 0; i--) if (vals[i]) { newest = i; break }
   prevVals = vals
   const shots = vals.map((v, i) => ({ i: i + 1, v, idx: i })).filter((x) => x.v > 0), max = Math.max(0, ...shots.map((x) => x.v))
   const avg = shots.length ? Math.round(shots.reduce((a, x) => a + x.v, 0) / shots.length) : 0
