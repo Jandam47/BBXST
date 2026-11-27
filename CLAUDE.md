@@ -343,6 +343,11 @@ Komunikuj **česky**, celé UI je česky.
 - **Ghost click**: kolečka zavřená klepnutím (ratchet / bit v parts.js, „Založ akci“ a další přes `openCreateWheel`) nemizí hned –
   `removeAfterTap` v ui.js je ~0,45 s nechá neviditelná nahoře a spolkne kliky, ať klepnutí nepropadne na tlačítko pod nimi
   (Esc zavře hned; testy na „je zavřeno“ hledají `.cw-overlay:not(.closing)`). BBXST kolečka: `eatGhostClicks()`.
+- **Battle Pass průzkumník** (`bp.html`, samostatná stránka bez DB a bez odkazu z aplikace): Web Bluetooth (Chrome Android /
+  desktop, ne iOS) → připojí BEYBATTLE PASS (BX-09), vypíše služby a charakteristiky, přečte čitelné, odebírá notify a zapisuje
+  každou zprávu jako hex s časem (změněné bajty tučně, odhad LE16), značky s poznámkou, kopírovat / stáhnout. `optionalServices`
+  = 0xFF00–0xFFFF + běžné + vlastní UUID (`localStorage bbxu_bp_extra`). Jen čtení dat z vlastního zařízení – žádné obcházení
+  placeného obsahu ani kódů oficiální appky. Až bude formát známý: síla výstřelu do BBXST / stats.
 - `vendor/` – supabase-js, qrcode-generator, html5-qrcode (lokálně, kvůli slabé síti v hale).
 - `sw.js` – service worker (síť první, cache jako záloha).
 - Vzhled: cyberpunk (černé pozadí s mřížkou, azurová `--cyan` + purpurová `--magenta`, žlutá `--bolt` jen pro

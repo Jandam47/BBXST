@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#05080c">
+<title>Battle Pass – průzkumník Bluetooth</title>
+<link rel="icon" href="icons/bbxu-192.png">
+<style>
+  :root { --bg: #05080c; --card: #0b121b; --line: #1c2a3a; --text: #e8f1fb; --muted: #8aa0b6; --faint: #5b6f84;
+          --cyan: #19e3ff; --bolt: #ffd60a; --mag: #ff3fa4; --ok: #3ddc84; --err: #ff5c7a; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+         padding: max(14px, env(safe-area-inset-top)) 14px max(20px, env(safe-area-inset-bottom)); }
+  h1 { font-size: 20px; margin: 0 0 4px; color: var(--cyan); letter-spacing: .02em; }
+  h2 { font-size: 15px; margin: 18px 0 8px; color: var(--bolt); }
+  p { margin: 6px 0; }
+  .muted { color: var(--muted); } .small { font-size: 13px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px; margin-top: 12px; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  button, .btn { font: inherit; font-weight: 600; border-radius: 10px; border: 1px solid var(--line); background: #122030; color: var(--text);
+                 padding: 10px 14px; cursor: pointer; text-decoration: none; }
+  button.primary { background: var(--bolt); color: #111; border-color: var(--bolt); }
+  button.danger { border-color: rgba(255,92,122,.6); color: var(--err); background: transparent; }
+  button:disabled { opacity: .45; cursor: default; }
+  button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px solid var(--bolt); outline-offset: 2px; }
+  input, textarea { font: inherit; background: #070d14; color: var(--text); border: 1px solid var(--line); border-radius: 10px; padding: 9px 10px; width: 100%; }
+  textarea { min-height: 64px; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 13px; }
+  #status { font-weight: 600; } #status.ok { color: var(--ok); } #status.err { color: var(--err); }
+  .svc { border-top: 1px solid var(--line); padding: 8px 0; }
+  .svc:first-child { border-top: 0; }
+  .uuid { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12.5px; word-break: break-all; }
+  .chr { margin: 6px 0 0 10px; padding-left: 10px; border-left: 2px solid var(--line); }
+  .tag { display: inline-block; font-size: 11px; padding: 1px 7px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); margin-right: 4px; }
+  .tag.n { color: var(--cyan); border-color: rgba(25,227,255,.5); }
+  #log { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12.5px; max-height: 60vh; overflow: auto; }
+  .ln { padding: 6px 0; border-top: 1px solid #111c28; }
+  .ln:first-child { border-top: 0; }
+  .ln .t { color: var(--faint); }
+  .ln .c { color: var(--mag); }
+  .hex b { color: var(--bolt); font-weight: 700; }      /* bajt, který se změnil proti minulé zprávě */
+  .ln.mark { color: var(--bolt); font-family: system-ui, sans-serif; font-weight: 700; }
+  .ln.info { color: var(--muted); }
+  .guess { color: var(--muted); font-size: 11.5px; }
+  .cnt { color: var(--cyan); font-weight: 700; }
+</style>
+</head>
+<body>
+<h1>Battle Pass – průzkumník</h1>
+<p class="muted small">Připojí se k BEYBATTLE PASS (BX-09) přes Bluetooth a zapisuje všechno, co pošle. Funguje v Chromu na Androidu a na počítači (ne na iPhonu).</p>
+
+<div class="card">
+  <div class="row">
+    <button class="primary" id="connect">🔵 Připojit Battle Pass</button>
+    <button class="danger" id="disconnect" disabled>Odpojit</button>
+  </div>
+  <p id="status" class="small" role="status" style="margin-top:8px">Nepřipojeno.</p>
+  <details style="margin-top:6px">
+    <summary class="small muted">Vlastní UUID služeb (když se služba neukáže)</summary>
+    <p class="small muted">Prohlížeč pustí jen ke službám, které zná předem. Zkouším běžné (0xFF00–0xFFFF, Nordic UART, baterie…).
+      Když po připojení žádná služba s daty není, zjisti UUID v aplikaci <b>nRF Connect</b> a napiš je sem (jedno na řádek), pak se připoj znovu.</p>
+    <textarea id="extra" placeholder="např. 0000fff0-0000-1000-8000-00805f9b34fb"></textarea>
+  </details>
+</div>
+
+<div class="card" id="servicesCard" hidden>
+  <h2 style="margin-top:0">Služby a charakteristiky</h2>
+  <div id="services"></div>
+</div>
+
+<div class="card">
+  <div class="row" style="justify-content:space-between">
+    <h2 style="margin:0">Záznam <span class="cnt" id="count">0</span></h2>
+    <div class="row">
+      <button id="copy">📋 Kopírovat</button>
+      <button id="save">⬇ Stáhnout</button>
+      <button class="danger" id="clear">Smazat</button>
+    </div>
+  </div>
+  <div class="row" style="margin-top:10px">
+    <input id="note" placeholder="Poznámka, třeba: výstřel 1 – appka 4200 ot." aria-label="Poznámka do záznamu" style="flex:1;min-width:180px">
+    <button id="mark">📌 Značka</button>
+  </div>
+  <p class="small muted">Postup: připoj se, vystřel, ke každému výstřelu dej značku s tím, co ukázala oficiální appka (nebo jen „výstřel 1“). Pak záznam zkopíruj a pošli.</p>
+  <div id="log" aria-live="polite"></div>
+</div>
+
+<script>
+'use strict'
+const $ = (s) => document.querySelector(s)
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))
+const LS = 'bbxu_bp_extra'
+let device = null, lines = [], last = {}
+const short = (u) => /^0000([0-9a-f]{4})-0000-1000-8000-00805f9b34fb$/i.test(u) ? '0x' + u.slice(4, 8).toUpperCase() : u
+const hexOf = (dv) => Array.from(new Uint8Array(dv.buffer, dv.byteOffset, dv.byteLength), (b) => b.toString(16).padStart(2, '0'))
+const ts = () => { const d = new Date(); return d.toLocaleTimeString('cs-CZ', { hour12: false }) + '.' + String(d.getMilliseconds()).padStart(3, '0') }
+
+// kandidáti služeb: 16bitové 0xFF00–0xFFFF a pár běžných, + co uživatel napíše
+function candidates() {
+  const base = (x) => `0000${x.toString(16).padStart(4, '0')}-0000-1000-8000-00805f9b34fb`
+  const list = []
+  for (let x = 0xff00; x <= 0xffff; x++) if (x !== 0xfffd) list.push(base(x))      // 0xFFFD = FIDO (blokované)
+  for (const x of [0x180a, 0x180f, 0x1814, 0x1816, 0x181c, 0xfe59, 0xfee0, 0xfee1, 0xfef5]) list.push(base(x))
+  list.push('6e400001-b5a3-f393-e0a9-e50e24dcca9e')                                // Nordic UART
+  list.push('49535343-fe7d-4ae5-8fa9-9fafd205e455')                                // Microchip
+  list.push('0000ffe0-0000-1000-8000-00805f9b34fb')
+  for (const l of ($('#extra').value || '').split(/[\s,;]+/)) {
+    const u = l.trim().toLowerCase(); if (!u) continue
+    if (/^0x[0-9a-f]{4}$/.test(u) || /^[0-9a-f]{4}$/.test(u)) list.push(base(parseInt(u.replace(/^0x/, ''), 16)))
+    else if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(u)) list.push(u)
+  }
+  return [...new Set(list)]
+}
+
+function status(t, cls = '') { const s = $('#status'); s.textContent = t; s.className = 'small ' + cls }
+function addLine(l) {
+  lines.push(l)
+  const el = document.createElement('div')
+  el.className = 'ln ' + (l.kind || '')
+  if (l.kind === 'mark') el.textContent = `📌 ${l.time}  ${l.text}`
+  else if (l.kind === 'info') el.textContent = `${l.time}  ${l.text}`
+  else el.innerHTML = `<span class="t">${l.time}</span> <span class="c">${esc(l.ch)}</span> <span class="small muted">(${l.len} B)</span><br>
+    <span class="hex">${l.hex.map((h, i) => l.changed.includes(i) ? `<b>${h}</b>` : h).join(' ')}</span><br><span class="guess">${esc(l.guess)}</span>`
+  const log = $('#log'), atBottom = log.scrollTop + log.clientHeight >= log.scrollHeight - 30
+  log.append(el)
+  if (atBottom) log.scrollTop = log.scrollHeight
+  $('#count').textContent = lines.filter((x) => !x.kind).length
+}
+// odhad: 16bitová čísla na každé pozici (LE), ať jde rychle vidět otáčky
+function guess(bytes) {
+  const out = []
+  for (let i = 0; i + 1 < bytes.length; i++) out.push(`[${i}]${bytes[i] | (bytes[i + 1] << 8)}`)
+  return out.length ? 'LE16: ' + out.join(' ') : ''
+}
+function onValue(ch, dv) {
+  const hex = hexOf(dv), prev = last[ch] || []
+  const changed = prev.length ? hex.map((h, i) => (h !== prev[i] ? i : -1)).filter((i) => i >= 0) : []
+  last[ch] = hex
+  addLine({ time: ts(), ch, len: hex.length, hex, changed, guess: guess(hex.map((h) => parseInt(h, 16))) })
+}
+
+async function connect() {
+  if (!navigator.bluetooth) { status('Tenhle prohlížeč Bluetooth neumí. Otevři stránku v Chromu na Androidu nebo na počítači.', 'err'); return }
+  try { localStorage.setItem(LS, $('#extra').value) } catch {}
+  try {
+    status('Vyber Battle Pass v seznamu…')
+    device = await navigator.bluetooth.requestDevice({ acceptAllDevices: true, optionalServices: candidates() })
+    device.addEventListener('gattserverdisconnected', () => { status('Odpojeno.', 'err'); addLine({ kind: 'info', time: ts(), text: 'Zařízení se odpojilo.' }); $('#disconnect').disabled = true; $('#connect').disabled = false })
+    status(`Připojuji k „${device.name || 'bez jména'}“…`)
+    const server = await device.gatt.connect()
+    addLine({ kind: 'info', time: ts(), text: `Připojeno: ${device.name || '(bez jména)'} · id ${device.id}` })
+    const services = await server.getPrimaryServices()
+    const box = $('#services'); box.innerHTML = ''; $('#servicesCard').hidden = false
+    let notifying = 0
+    for (const s of services) {
+      const sv = document.createElement('div'); sv.className = 'svc'
+      sv.innerHTML = `<div><span class="tag">služba</span><span class="uuid">${esc(short(s.uuid))}</span></div>`
+      box.append(sv)
+      let chars = []
+      try { chars = await s.getCharacteristics() } catch (e) { sv.insertAdjacentHTML('beforeend', `<p class="small muted">Charakteristiky nejdou přečíst: ${esc(e.message)}</p>`) }
+      for (const c of chars) {
+        const p = c.properties, props = ['read', 'write', 'writeWithoutResponse', 'notify', 'indicate'].filter((k) => p[k])
+        const el = document.createElement('div'); el.className = 'chr'
+        el.innerHTML = `<div class="uuid">${esc(short(c.uuid))}</div><div>${props.map((k) => `<span class="tag ${k === 'notify' || k === 'indicate' ? 'n' : ''}">${k}</span>`).join('')}</div><div class="small muted val"></div>`
+        sv.append(el)
+        const name = `${short(s.uuid)} / ${short(c.uuid)}`
+        if (p.read) {
+          try { const v = await c.readValue(); el.querySelector('.val').textContent = 'hodnota: ' + hexOf(v).join(' '); onValue(name + ' (read)', v) } catch (e) { el.querySelector('.val').textContent = 'čtení: ' + e.message }
+        }
+        if (p.notify || p.indicate) {
+          try {
+            c.addEventListener('characteristicvaluechanged', (e) => onValue(name, e.target.value))
+            await c.startNotifications(); notifying++
+          } catch (e) { el.querySelector('.val').textContent = 'odběr: ' + e.message }
+        }
+      }
+    }
+    if (!services.length) status('Připojeno, ale žádná služba není dostupná. Zjisti UUID v nRF Connect a napiš je do „Vlastní UUID“.', 'err')
+    else status(`Připojeno · služeb ${services.length} · odebírám ${notifying} charakteristik. Teď vystřel!`, 'ok')
+    $('#disconnect').disabled = false; $('#connect').disabled = true
+  } catch (e) {
+    if (e.name === 'NotFoundError') status('Výběr zrušen.')
+    else status('Chyba: ' + e.message, 'err')
+  }
+}
+
+function asText() {
+  return lines.map((l) => l.kind === 'mark' ? `📌 ${l.time} ${l.text}` : l.kind === 'info' ? `# ${l.time} ${l.text}` : `${l.time} ${l.ch} | ${l.hex.join(' ')}`).join('\n')
+}
+$('#connect').onclick = connect
+$('#disconnect').onclick = () => { try { device?.gatt?.disconnect() } catch {} }
+$('#mark').onclick = () => { addLine({ kind: 'mark', time: ts(), text: $('#note').value.trim() || 'značka' }); $('#note').value = ''; $('#note').focus() }
+$('#note').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('#mark').click() })
+$('#clear').onclick = () => { if (!lines.length || confirm('Smazat celý záznam?')) { lines = []; last = {}; $('#log').innerHTML = ''; $('#count').textContent = 0 } }
+$('#copy').onclick = async () => {
+  try { await navigator.clipboard.writeText(asText()); status('Záznam zkopírován – vlož ho do chatu.', 'ok') }
+  catch { status('Kopírování nešlo, použij Stáhnout.', 'err') }
+}
+$('#save').onclick = () => {
+  const a = document.createElement('a')
+  a.href = URL.createObjectURL(new Blob([asText()], { type: 'text/plain' }))
+  a.download = `battlepass-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.txt`
+  a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000)
+}
+try { $('#extra').value = localStorage.getItem(LS) || '' } catch {}
+if (!navigator.bluetooth) status('Tenhle prohlížeč Bluetooth neumí. Otevři stránku v Chromu na Androidu nebo na počítači.', 'err')
+</script>
+</body>
+</html>
