@@ -1847,3 +1847,12 @@ html[data-theme=ronin] {
 /* zavřené kolečko: chvíli neviditelné nahoře, ať klepnutí nepropadne na stránku pod ním (removeAfterTap v ui.js) */
 .modal-bg.closing, .cw-overlay.closing { opacity: 0 !important; transition: opacity .15s; }
 .modal-bg.closing *, .cw-overlay.closing * { pointer-events: none !important; }
+
+/* zakázaná slova (45) – správa hlavního admina */
+.bw-words { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
+.bw-word { display: inline-flex; align-items: center; gap: 4px; padding: 1px 2px 1px 9px; border-radius: 999px;
+  background: var(--ink-2); border: 1px solid var(--line-soft); font-family: var(--display); font-weight: 700; font-size: 13px; }
+.bw-word small { display: none; }
+.bw-word.exact { border-style: dashed; border-color: rgba(var(--cyan-rgb),.45); }
+.bw-del { width: 28px; height: 28px; border-radius: 50%; border: 0; background: transparent; color: var(--muted); cursor: pointer; font-size: 13px; }
+.bw-del:hover, .bw-del:focus-visible { background: rgba(255,59,92,.18); color: var(--red); }

@@ -145,12 +145,21 @@ with sync_playwright() as p:
     a.click('.prof-gear'); a.wait_for_selector('.cw-overlay .cw-sec')
     assert 'Správa' in labels(a)
     sec(a, 'Správa')
-    assert labels(a) == ['Žádosti ke schválení', 'Nahlášený obsah', 'Chyby z telefonů', 'Záloha dat', 'Lidé s funkcí'], labels(a)
+    assert labels(a) == ['Žádosti ke schválení', 'Nahlášený obsah', 'Chyby z telefonů', 'Záloha dat', 'Lidé s funkcí', 'Zakázaná slova'], labels(a)
     a.screenshot(path=OUT + '310_admin_wheel.png')
     sec(a, 'Lidé s funkcí'); a.wait_for_selector('.modal h3')
     assert 'Org' in a.inner_text('.modal') or 'Organizátor' in a.inner_text('.modal')
     a.fill('#st-q', 'hrac'); a.wait_for_selector('#st-r .li')
     a.screenshot(path=OUT + '311_staff.png'); a.click('.modal [data-close]')
+    # zakázaná slova (45): seznam, přidat / odebrat, vyzkoušet
+    a.click('.prof-gear'); a.wait_for_selector('.cw-overlay:not(.closing) .cw-sec'); sec(a, 'Správa'); sec(a, 'Zakázaná slova')
+    a.wait_for_selector('.bw-word'); assert a.locator('.bw-word').count() > 20
+    a.fill('#bw-add [name=word]', 'Blbec'); a.click('#bw-add button'); a.wait_for_selector('[data-del="blbec"]')
+    a.fill('#bw-test', 'Ty blbec a k0k0t'); a.wait_for_function("document.querySelector('#bw-res').textContent.includes('*****')")
+    assert 'odmítne' in a.inner_text('#bw-res') and 'Ty ***** a *****' in a.inner_text('#bw-res'), a.inner_text('#bw-res')
+    a.screenshot(path=OUT + '312_banned_words.png')
+    a.click('[data-del="blbec"]'); a.wait_for_selector('[data-del="blbec"]', state='detached')
+    a.click('.modal [data-close]')
     o = ctx(b, 'org@test.cz'); o.goto(BASE + '#/me'); o.wait_for_selector('.prof-gear')
     o.click('.prof-gear'); o.wait_for_selector('.cw-overlay .cw-sec'); assert 'Správa' not in labels(o)
     assert o.locator('.admin-strip').count() == 0

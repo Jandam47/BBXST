@@ -8,7 +8,7 @@ const S = [
     <p>Na turnaj se přihlásíš i bez účtu – jako <b>host</b>. Výsledky se ti ale ukládají do profilu jen s účtem. Účet si můžeš založit kdykoli později – e-mailem nebo přes <b>Discord</b> – a registrace se ti do něj přenesou.</p>
     <ul>
       <li>Web najdeš na <b>bbxu.cz</b>. Aplikaci si přidej na plochu: <b>Profil → ozubené kolečko ⚙ → Aplikace → Instalace</b> (host bez účtu má kartu přímo v profilu). BBXU (turnaje) a BBXST (počítadlo / judge) se instalují zvlášť – na plochu si dej obě.</li>
-      <li>V profilu si nastav nick, avatara a kraj. Nick je vidět v pořadí i na TV.</li>
+      <li>V profilu si nastav nick, avatara a kraj. Nick je vidět v pořadí i na TV. Nick se sprostým nebo urážlivým slovem nejde uložit.</li>
     </ul>`],
   ['reg', 'Registrace a vstupenka', html`
     <ul>
@@ -130,7 +130,7 @@ const S = [
       <li><b>Info k turnaji</b> čte každý, píšou organizátoři. <b>Komunitní chat</b> vidí jen členové a pozvaní hosté. Ve <b>Zkušebním chatu</b> může psát každý s účtem.</li>
       <li><b>Ankety</b> zakládají organizátoři a admini: otázka, 2–10 možností, délka (od 15 minut po týden nebo vlastní konec), hlasování pro víc možností a anonymní režim. Hlasuje každý s účtem a do konce může hlas změnit. Výsledky uvidíš po hlasování, po skončení je vidí všichni. U anonymní ankety nikdo neuvidí, kdo jak hlasoval.</li>
       <li><b>Dotazy a připomínky</b> jsou soukromé – přečte je jen hlavní admin. Odpověď ti přijde zpátky do Komunikace (a na telefon, když máš zapnutá upozornění).</li>
-      <li>Nevhodnou zprávu v chatu nahlas přes <b>⚑</b>. Admin ji posoudí.</li>
+      <li>Sprostá slova se v chatu automaticky nahradí hvězdičkami. Nevhodnou zprávu nahlas přes <b>⚑</b>. Admin ji posoudí.</li>
     </ul>`],
   ['notify', 'Upozornění na telefonu', html`
     <ul>

@@ -161,5 +161,30 @@ const photos = await one(boss, 'bazar_delete', [ad])
 assert.equal(photos.length, 2)
 step('bazar: 1–3 fotky ve vlastní složce, soukromá vlákna zájemce ↔ prodejce, prodáno, smazání (admin)')
 
+// ── zakázaná slova (45) ──
+{
+  await nap(); await say(p1, 'volny', 'Ty jsi k0k0t, ale EPICKÝ hráč! Kuuurva… píčo')
+  const [m] = (await db.query("select body from chat_messages where room_id = 'volny' order by created_at desc limit 1")).rows
+  assert.equal(m.body, 'Ty jsi *****, ale EPICKÝ hráč! *******… ****')
+  await fails(p1, 'update profiles set nick = $1 where id = auth.uid()', ['K.u.r.v.a' + sfx], /nevhodné slovo/)
+  await fails(p2, 'update profiles set nick = $1 where id = auth.uid()', ['Fuck' + sfx], /nevhodné slovo/)
+  await as(p2, 'update profiles set nick = $1 where id = auth.uid()', ['EpicUser' + sfx])          // „pica“ jen jako celé slovo
+  await as(p2, 'update profiles set nick = $1 where id = auth.uid()', ['XPb' + sfx])
+  // nový účet s nevhodným nickem (Discord) dostane prázdný nick, registrace nepadne
+  const [nu] = (await db.query("insert into auth.users (is_anonymous, raw_user_meta_data) values (false, $1) returning id", [JSON.stringify({ nick: 'Zmrd' + sfx })])).rows
+  assert.equal((await db.query('select nick from profiles where id = $1', [nu.id])).rows[0].nick, null)
+  // správa: jen hlavní admin
+  await fails(p1, 'select banned_word_list()', [], /hlavního admina/)
+  await fails(p1, "select banned_word_set('blbec')", [], /hlavního admina/)
+  await as(boss, "select banned_word_set('blbec', true, false)")
+  assert.ok((await one(boss, 'banned_word_list')).some(w => w.word === 'blbec'))
+  assert.deepEqual(await one(boss, 'banned_word_test', ['ty blbče, ty BLBEC']), { nick_ok: false, chat: 'ty blbče, ty *****' })
+  await as(boss, "select banned_word_set('blbec', false)")
+  assert.equal((await one(boss, 'banned_word_test', ['BLBEC'])).nick_ok, true)
+  await fails(boss, "select banned_word_set('dvě slova')", [], /bez mezer/)
+  assert.equal(await one(null, 'nick_allowed', ['Sh1tLord']), false); assert.equal(await one(null, 'nick_allowed', ['Adam']), true)
+  step('zakázaná slova: chat hvězdičky, nick odmítne (i k.u.r.v.a / leet), nový účet bez nicku, správa jen hlavní admin')
+}
+
 await db.end()
 console.log(`${ok} kroků prošlo`)

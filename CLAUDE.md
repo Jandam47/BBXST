@@ -62,7 +62,7 @@ Komunikuj **česky**, celé UI je česky.
   (vnitřní → vnější, počet podle obvodu; Turbo / Operate žlutě), uprostřed hledání (zkratka → název → slovo → alias), nevyhovující zhasnou, Enter /
   tlačítko uprostřed vezme nejlepší shodu, písmeno na poli bitu otevře kolečko s hledáním. Tip na zkratky nahoře.
 - `js/config.js` – **obsahuje Adamovy živé klíče Supabase. Nikdy ho neměň ani nepřepisuj.**
-- `supabase/schema.sql`, `02-parts.sql`, `03-live-score.sql`, `04-security-hardening.sql`, `05-judge-handover.sql`, `06-formats-stats.sql`, `07-parts-update.sql`, `08-judge-per-match.sql`, `09-pause.sql`, `10-fashion.sql`, `11-finishes.sql`, `12-rated.sql`, `13-communities.sql`, `14-training-extras.sql`, `15-training-bots.sql`, `16-training-reset.sql`, `17-chat-bazar.sql`, `18-chat-tournament-state.sql`, `19-account-reports.sql`, `20-push.sql`, `21-checkin-errors-backup.sql`, `22-leagues.sql`, `23-meetings.sql`, `24-judge-count.sql`, `25-reg-check.sql`, `26-judge-scan.sql`, `27-live.sql`, `28-cashier.sql`, `29-polls-feedback.sql`, `30-seen-sync.sql`, `31-community-standings.sql`, `32-parts-shatter-horus.sql`, `33-parts-hasbro-2026-11.sql`, `34-privacy-admin.sql`, `35-favorites.sql`, `36-stats.sql`, `37-tournament-stats.sql`, `38-regions.sql`, `39-training-delete.sql`, `40-training-judge.sql`, `41-training-lineup-save.sql`, `42-training-tourney-default.sql`, `43-training-challenge-actions.sql`, `44-training-no-ratchet.sql` – databáze (spuštěné v produkci, nové soubory
+- `supabase/schema.sql`, `02-parts.sql`, `03-live-score.sql`, `04-security-hardening.sql`, `05-judge-handover.sql`, `06-formats-stats.sql`, `07-parts-update.sql`, `08-judge-per-match.sql`, `09-pause.sql`, `10-fashion.sql`, `11-finishes.sql`, `12-rated.sql`, `13-communities.sql`, `14-training-extras.sql`, `15-training-bots.sql`, `16-training-reset.sql`, `17-chat-bazar.sql`, `18-chat-tournament-state.sql`, `19-account-reports.sql`, `20-push.sql`, `21-checkin-errors-backup.sql`, `22-leagues.sql`, `23-meetings.sql`, `24-judge-count.sql`, `25-reg-check.sql`, `26-judge-scan.sql`, `27-live.sql`, `28-cashier.sql`, `29-polls-feedback.sql`, `30-seen-sync.sql`, `31-community-standings.sql`, `32-parts-shatter-horus.sql`, `33-parts-hasbro-2026-11.sql`, `34-privacy-admin.sql`, `35-favorites.sql`, `36-stats.sql`, `37-tournament-stats.sql`, `38-regions.sql`, `39-training-delete.sql`, `40-training-judge.sql`, `41-training-lineup-save.sql`, `42-training-tourney-default.sql`, `43-training-challenge-actions.sql`, `44-training-no-ratchet.sql`, `45-banned-words.sql` – databáze (spuštěné v produkci, nové soubory
   spouští Adam). Živé skóre: BBXST v judge módu posílá po každém bodu `live_score` → `matches.live_p1/p2`
   (TV rozpis, vstupenka, seznamy); trigger `bbx_clear_live` ho maže po uložení hry.
   Rozehraná hra: BBXST posílá s `live_score` i `p_state` → `matches.live_state` (souboje v orientaci p1/p2,
@@ -193,6 +193,12 @@ Komunikuj **česky**, celé UI je česky.
 - **Nahlášení** (19, `js/report.js`): ⚑ u zprávy v chatu (staré nahlášení z bazaru se dají dořešit); `report_create`
   (jen obsah, který hráč vidí, kopie obsahu do `snapshot`), admini (úroveň 3+) v profilu „Nahlášený obsah“
   (`report_list`, `report_resolve` smazat / ponechat, `report_count`).
+- **Zakázaná slova** (45): `banned_words` (word, `exact` = jen celé slovo; jinak i uvnitř slova), spravuje jen hlavní admin
+  (⚙ → Správa → Zakázaná slova, `wordsSheet` v profile.js: přidat / odebrat / vyzkoušet – `banned_word_list` / `_set` / `_test`).
+  Porovnání přes `bbx_norm_word` (malá písmena, bez diakritiky, leet 0→o 1→i 3→e 4→a 5→s 7→t @→a $→s, zdvojená písmena = jedno).
+  Nick (trigger `bbx_nick_censor` na `profiles` i `registrations`, `bbx_has_banned` po slovech i bez oddělovačů) se odmítne
+  („Nick obsahuje nevhodné slovo.“); nový účet z Discordu s nevhodným nickem dostane nick prázdný. Chat: trigger `chat_zz_censor`
+  (po `chat_fill`) nahradí slovo hvězdičkami (`bbx_censor`). Registrace účtu se ptá předem `nick_allowed` (i anon). Výchozí seznam CZ + EN v SQL.
 - **Smazání účtu** (19): profil → ⚙ → Profil → Smazání účtu → Smazat natrvalo (potvrzení nickem). `delete_my_account` smaže auth.users
   (kaskádou profil, zprávy, bazar, členství, odběry); registrace zůstanou anonymně („Smazaný hráč XXXX“).
   Ne hlavní admin, ne leader komunity. Fotky z bazaru klient smaže přes `bazar_my_photos`.

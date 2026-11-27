@@ -100,6 +100,8 @@ export async function render(main, [mode]) {
       // je nick volný?
       const taken = await q(sb.from('profiles').select('id').ilike('nick', nick.replace(/[%_]/g, '\\$&')).limit(1))
       if (taken.length) return toast('Tenhle nick už někdo má.', 'err')
+      const { data: nickOk } = await sb.rpc('nick_allowed', { p_nick: nick })   // zakázaná slova (45)
+      if (nickOk === false) return toast('Nick obsahuje nevhodné slovo. Zvol jiný.', 'err')
 
       if (state.isAnon) {
         // host → plný účet (zachová historii)

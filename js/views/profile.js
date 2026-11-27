@@ -365,6 +365,7 @@ const OPEN = {
   errors: () => adminBox('admin-err', adminErrors),
   requests: () => adminBox('admin-req', adminRequests),
   staff: () => staffSheet(),
+  words: () => wordsSheet(),
   privacy: (p, rerender) => privacySheet(rerender),
   share: (p) => shareSheet(p),
   theme: () => themeSheet(),
@@ -386,6 +387,7 @@ export async function openSettingsWheel(p, rerender, start) {
       { label: 'Chyby z telefonů', short: 'Chyby', icon: 'bug', badge: c.errors || null, run: OPEN.errors },
       { label: 'Záloha dat', short: 'Záloha', icon: 'disk', hidden: lvl < 4, badge: due ? '!' : null, run: OPEN.backup },
       { label: 'Lidé s funkcí', short: 'Funkce', icon: 'star', run: OPEN.staff },
+      { label: 'Zakázaná slova', short: 'Slova', icon: 'lock', hidden: lvl < 4, run: OPEN.words },
     ] }
   const vis = (n) => n.children ? { ...n, children: n.children.filter(c => !c.hidden).map(vis) } : n
   if (start === 'admin') return openCreateWheel(vis(admin), { title: 'Správa', hint: 'Co chceš vyřídit?', label: 'Správa' })
@@ -557,6 +559,57 @@ async function staffSheet() {
         mount(m.querySelector('#st-r'), res.map(li))
       }, 250)
     })
+  }, { wide: true })
+}
+
+// ── Zakázaná slova (45, jen hlavní admin): nick s nimi nejde uložit, v chatu se nahradí hvězdičkami ──
+function wordsSheet() {
+  sheet(html`
+    <h2>Zakázaná slova</h2>
+    <p class="hint">Nick s takovým slovem nejde uložit, v chatu se slovo nahradí hvězdičkami. Nevadí velká písmena, diakritika,
+      čísla místo písmen (k0k0t) ani zdvojená písmena. <b>Uvnitř slova</b> = chytí i delší tvary (<i>kurv</i> → kurva, kurvo…),
+      <b>jen celé slovo</b> = pro krátká slova, která jsou uvnitř běžných slov (<i>pica</i> nechytí EpicUser).</p>
+    <form id="bw-add" class="row" style="gap:8px;flex-wrap:wrap;margin-top:10px">
+      <input class="input grow" name="word" maxlength="40" required placeholder="Nové slovo" aria-label="Nové zakázané slovo" autocomplete="off" style="min-width:140px">
+      <label class="row small" style="gap:6px;align-items:center"><input type="checkbox" name="exact"> jen celé slovo</label>
+      <button class="btn primary">Přidat</button>
+    </form>
+    <input class="input" id="bw-test" placeholder="Vyzkoušet: napiš nick nebo zprávu" aria-label="Vyzkoušet text" autocomplete="off" style="margin-top:10px">
+    <p id="bw-res" class="small" aria-live="polite" style="min-height:2.6em;margin-top:6px"></p>
+    <div id="bw-list"><div class="spinner" aria-label="Načítám"></div></div>`, (m) => {
+    const list = m.querySelector('#bw-list')
+    const load = async () => {
+      let rows
+      try { rows = await rpc('banned_word_list') } catch (e) { return mount(list, html`<p class="bad-t">${errMsg(e)}</p>`) }
+      mount(list, rows.length ? html`<p class="small faint">${plural(rows.length, 'slovo', 'slova', 'slov')} · čárkovaně = jen celé slovo</p>
+        <div class="bw-words">${rows.map(r => html`<span class="bw-word ${r.exact ? 'exact' : ''}">
+          <span>${r.word}</span><small>${r.exact ? 'celé' : 'uvnitř'}</small>
+          <button type="button" class="bw-del" data-del="${r.word}" aria-label="Odebrat ${r.word}" title="Odebrat">✕</button></span>`)}</div>`
+        : html`<p class="hint">Seznam je prázdný.</p>`)
+    }
+    on(m, 'submit', '#bw-add', async (e, f) => {
+      e.preventDefault()
+      const d = formData(f)
+      try { await rpc('banned_word_set', { p_word: d.word, p_on: true, p_exact: !!d.exact }); f.reset(); toast('Přidáno.'); load(); test() }
+      catch (err) { toast(errMsg(err), 'err') }
+    })
+    on(m, 'click', '[data-del]', async (e, b) => {
+      try { await rpc('banned_word_set', { p_word: b.dataset.del, p_on: false }); load(); test() }
+      catch (err) { toast(errMsg(err), 'err') }
+    })
+    let tm
+    const res = m.querySelector('#bw-res'), inp = m.querySelector('#bw-test')
+    const test = async () => {
+      const v = inp.value.trim()
+      if (!v) return mount(res, '')
+      try {
+        const r = await rpc('banned_word_test', { p_text: v })
+        if (inp.value.trim() !== v) return
+        mount(res, html`Nick: <b class="${r.nick_ok ? 'ok-t' : 'bad-t'}">${r.nick_ok ? '✓ projde' : '✕ odmítne se'}</b><br>Chat: <span>${r.chat}</span>`)
+      } catch (err) { mount(res, html`<span class="bad-t">${errMsg(err)}</span>`) }
+    }
+    on(m, 'input', '#bw-test', () => { clearTimeout(tm); tm = setTimeout(test, 300) })
+    load()
   }, { wide: true })
 }
 
