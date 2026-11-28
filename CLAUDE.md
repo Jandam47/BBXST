@@ -353,7 +353,13 @@ Komunikuj **česky**, celé UI je česky.
   **po každém výstřelu pošle sám** `a0` + `b0–b7` + `70–73` = průběh roztáčení: doba každé otáčky v jednotkách 8 µs (LE16, konec 0),
   ot./min = 7 500 000 / doba, výsledek výstřelu = nejkratší otáčka (ověřeno na 5 výstřelech; graf „Poslední výstřel“). `0x75` = smaže
   paměť (v UI není). Battle Pass drží posledních 50 výstřelů → stránka je po připojení sama načte (karta Výstřely v Battle Passu). Jen čtení dat z vlastního zařízení – žádné obcházení
-  placeného obsahu ani kódů oficiální appky. Až bude formát známý: síla výstřelu do BBXST / stats.
+  placeného obsahu ani kódů oficiální appky.
+  **V BBXST** (bez DB): fialové tahací tlačítko `#bpBtn` vpravo nad menu (jen když je `navigator.bluetooth`, `body.has-bt`; táhni doleva / nahoru)
+  → `bpMenu`: Připojit (`requestDevice` s `namePrefix` BEYBLADE / BEYBATTLE, název u Adama `BEYBLADE_TOOL01`) / Statistika / Odpojit.
+  Připojený = `body.bp-on`: `#bpShot` nad +3 v `.center` ukazuje sílu posledního odpalu (nový odpal = počet v hlavičce +1 → nejnovější
+  hodnota z b-stránek), jinak „BATTLE PASS · baterie“. Dnešní odpaly v `localStorage bbxst_bp_session`; `bpStats` = Dnes + paměť
+  Battle Passu (poslední, nejsilnější, nejslabší, průměr, žetony). Výpadek = 3 pokusy o znovupřipojení. Test `tests/bbxst_bp_ui.py`
+  (statický server, mock Web Bluetooth, bez DB).
 - `vendor/` – supabase-js, qrcode-generator, html5-qrcode (lokálně, kvůli slabé síti v hale).
 - `sw.js` – service worker (síť první, cache jako záloha).
 - Vzhled: cyberpunk (černé pozadí s mřížkou, azurová `--cyan` + purpurová `--magenta`, žlutá `--bolt` jen pro

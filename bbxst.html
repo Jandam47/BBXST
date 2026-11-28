@@ -654,6 +654,33 @@ body.judge .trainBtn { display: none; }
 body.training .modeBtn:not(.trainBtn) { display: none; }
 body.training .trainBtn { color: var(--green); border-color: rgba(0,255,157,0.45); box-shadow: 0 0 22px rgba(0,255,157,0.3); background: #00160e; }
 .screenMode.train { box-shadow: inset 0 0 150px rgba(0,255,157,0.35); }
+/* ═════════════ BATTLE PASS (BX-09) – síla odpalu přes Bluetooth ═════════════ */
+body .modeBtn.bpBtn { left: auto; right: 16px; bottom: 92px; display: none; color: #c77dff; border-color: rgba(199,125,255,0.35); box-shadow: 0 0 18px rgba(199,125,255,0.2); background: #12081c; }
+.bpBtn .mode-label { font-size: 7px; letter-spacing: .5px; }
+body.has-bt .modeBtn.bpBtn { display: flex; }
+body.bp-on .modeBtn.bpBtn { color: white; border-color: #c77dff; box-shadow: 0 0 24px rgba(199,125,255,0.55); background: #2a0f45; }
+.screenMode.bp { box-shadow: inset 0 0 150px rgba(199,125,255,0.4); }
+.bpShot { position: absolute; left: 50%; bottom: calc(100% + 8px); transform: translateX(-50%); display: none; align-items: baseline; gap: 6px;
+  font-family: 'Orbitron', monospace; color: #c77dff; text-shadow: 0 0 18px rgba(199,125,255,0.7); white-space: nowrap; pointer-events: none; }
+body.bp-on .bpShot { display: flex; }
+.bpShot b { font-size: 30px; font-weight: 900; letter-spacing: 1px; color: white; }
+.bpShot small { font-size: 10px; letter-spacing: 2px; opacity: .8; }
+.bpShot.idle b { font-size: 13px; color: #c77dff; letter-spacing: 2px; }
+.bpShot.flash { animation: bpFlash .9s ease-out; }
+@keyframes bpFlash { 0% { transform: translateX(-50%) scale(1.5); filter: brightness(2); } 100% { transform: translateX(-50%) scale(1); filter: none; } }
+.qr-btn.bp { background: linear-gradient(135deg, #1c0a30, #2a0f45); color: #d9a8ff; border: 1px solid rgba(199,125,255,0.45); box-shadow: 0 0 14px rgba(199,125,255,0.2); }
+#bpStats > h3 { text-align: center; }
+.bpTiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 6px 0 10px; }
+.bpTile { background: #0a1520; border: 1px solid #1a3a4a; border-radius: 12px; padding: 8px 6px; text-align: center; }
+.bpTile small { display: block; font-size: 11px; letter-spacing: 1px; color: rgba(200,240,255,0.6); }
+.bpTile b { font-family: 'Orbitron', monospace; font-size: 18px; color: white; }
+.bpTile.max b { color: var(--gold); } .bpTile.min b { color: var(--red); }
+.bpSub { font-family: 'Orbitron', monospace; font-size: 11px; letter-spacing: 2px; color: #c77dff; margin: 10px 0 4px; text-align: left; }
+.bpChips { display: flex; flex-wrap: wrap; gap: 6px; }
+.bpChip { font-family: 'Orbitron', monospace; font-size: 13px; padding: 5px 8px; border-radius: 8px; background: #0a1520; border: 1px solid #1a3a4a; color: rgba(200,240,255,0.85); }
+.bpChip.max { border-color: var(--gold); color: var(--gold); } .bpChip.min { border-color: var(--red); color: var(--red); }
+.bpChip.new { box-shadow: 0 0 10px rgba(199,125,255,0.6); border-color: #c77dff; }
+
 .judgeBar.trainBar { display: none; }
 body.training .judgeBar.trainBar { display: flex; }
 body.judge .judgeBar.trainBar { display: none; }
@@ -1081,6 +1108,7 @@ body.judge.has-match.can-swap .swapBtn, body.training.has-tmatch.can-swap .swapB
 
 <!-- CENTER DRAG BUTTONS -->
 <div class="center">
+  <div class="bpShot idle" id="bpShot" aria-live="polite"><b>BATTLE PASS</b></div>
   <div class="dragBtn" data-points="3">+3 XTREME</div>
   <div class="dragWrapper">
     <div class="arrowGroup leftArrow"><span>‹</span><span>‹</span></div>
@@ -1112,6 +1140,11 @@ body.judge.has-match.can-swap .swapBtn, body.training.has-tmatch.can-swap .swapB
 <div class="modeBtn trainBtn" id="trainBtn" aria-label="Training mód">
   <span class="drag-label">DRAG TO</span>
   <span class="mode-label" id="trainLabel">TRAINING</span>
+</div>
+<!-- BATTLE PASS (táhni = připojit / statistika / odpojit) -->
+<div class="modeBtn bpBtn" id="bpBtn" aria-label="Battle Pass">
+  <span class="drag-label">DRAG TO</span>
+  <span class="mode-label">BATTLEPASS</span>
 </div>
 
 <!-- JUDGE BAR -->
@@ -3368,6 +3401,149 @@ async function trCheckChallenges(reload) {
     return jAlert(`Zápas <b>${esc(m.p1.nick)} vs ${esc(m.p2.nick)}</b> mezitím převzal <b>${esc(m.judge_nick || "jiný judge")}</b>.`)
   }
   loadMatch(m)
+})()
+
+
+/* ═════════════════════════════════════════════
+   BATTLE PASS (BX-09) – síla odpalu přes Web Bluetooth (protokol viz bp.html)
+   data 55c4f002 (notify), příkazy 55c4f001: 0x51 hlavička, 0x74 paměť 50 odpalů
+   po odpalu přijde sám a0 (počet +1) + b0–b7 (nejnovější = poslední) + 70–73
+═════════════════════════════════════════════ */
+const BP_SVC = "55c40000-f8eb-11ec-b939-0242ac120002", BP_DATA = "55c4f002-f8eb-11ec-b939-0242ac120002", BP_CMD = "55c4f001-f8eb-11ec-b939-0242ac120002"
+const bp = { dev: null, cmd: null, want: false, on: false, pages: {}, mem: [], total: null, battery: null, expect: false, retry: 0 }
+const BP_LS = "bbxst_bp_session"
+function bpSession() { try { const s = JSON.parse(localStorage.getItem(BP_LS) || "null"); return s && s.day === new Date().toDateString() ? s.shots : [] } catch { return [] } }
+function bpSaveShot(rpm) {
+  const shots = [{ rpm, t: Date.now() }, ...bpSession()].slice(0, 200)
+  try { localStorage.setItem(BP_LS, JSON.stringify({ day: new Date().toDateString(), shots })) } catch {}
+}
+const bpBatt = () => bp.battery == null ? "" : `${Math.min(100, Math.round(bp.battery / 2.43))} %`
+const bpFmt = (n) => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, " ")
+function bpLabel(rpm) {
+  const el = document.getElementById("bpShot")
+  if (rpm == null) { el.className = "bpShot idle"; el.innerHTML = `<b>BATTLE PASS${bp.battery != null ? " · " + bpBatt() : ""}</b>`; return }
+  el.className = "bpShot"; el.innerHTML = `<b>${bpFmt(rpm)}</b><small>RPM</small>`
+  void el.offsetWidth; el.classList.add("flash")
+}
+function bpState(on) {
+  bp.on = on
+  document.body.classList.toggle("bp-on", on)
+  if (on) { const last = bpSession()[0]; bpLabel(last && Date.now() - last.t < 10 * 60e3 ? last.rpm : null) }
+}
+function bpOnData(dv) {
+  const b = new Uint8Array(dv.buffer, dv.byteOffset, dv.byteLength), tag = b[0]
+  if (tag === 0xa0 && b.length >= 17) {
+    const total = b[9] | (b[10] << 8)
+    if (bp.total != null && total > bp.total) bp.expect = true
+    bp.total = total; bp.battery = b[4]
+    if (document.getElementById("bpShot").classList.contains("idle")) bpLabel(null)
+    bp.pages = {}
+  } else if (tag >= 0xb0 && tag <= 0xb7 && b.length >= 17) {
+    bp.pages[tag] = Array.from(b.slice(1, 17))
+    if (tag !== 0xb7 || ![0, 1, 2, 3, 4, 5, 6].every(i => bp.pages[0xb0 + i])) return
+    const d = []; for (let i = 0; i < 8; i++) d.push(...bp.pages[0xb0 + i])
+    bp.pages = {}
+    if ((d.slice(0, 127).reduce((a, x) => a + x, 0) & 255) !== d[127]) return
+    const vals = []; for (let i = 0; i < 50; i++) vals.push(d[2 * i] | (d[2 * i + 1] << 8))
+    bp.mem = vals.filter(v => v > 0)                    // od nejstaršího, nejnovější poslední
+    if (bp.expect && bp.mem.length) {
+      bp.expect = false
+      const rpm = bp.mem[bp.mem.length - 1]
+      bpSaveShot(rpm); bpLabel(rpm)
+      if (vibrateEnabled) navigator.vibrate?.(60)
+      if (!document.getElementById("jOverlay").classList.contains("hidden") && document.getElementById("bpStats")) bpStats()
+    }
+  }
+}
+async function bpCommand(c) { try { await bp.cmd?.writeValueWithoutResponse(new Uint8Array([c])) } catch {} }
+async function bpLink() {
+  const server = await bp.dev.gatt.connect()
+  const svc = await server.getPrimaryService(BP_SVC)
+  const data = await svc.getCharacteristic(BP_DATA)
+  bp.cmd = await svc.getCharacteristic(BP_CMD)
+  data.addEventListener("characteristicvaluechanged", e => bpOnData(e.target.value))
+  await data.startNotifications()
+  bp.retry = 0; bpState(true)
+  await bpCommand(0x51); await new Promise(r => setTimeout(r, 500)); await bpCommand(0x74)
+}
+async function bpConnect() {
+  if (!navigator.bluetooth) return bpMsg("Tenhle prohlížeč Bluetooth neumí. Battle Pass jde připojit v Chromu na Androidu.")
+  try {
+    bp.dev = await navigator.bluetooth.requestDevice({ filters: [{ namePrefix: "BEYBLADE" }, { namePrefix: "BEYBATTLE" }], optionalServices: [BP_SVC] })
+  } catch (e) { if (e.name !== "NotFoundError") bpMsg("Připojení nevyšlo: " + esc(e.message)); return }
+  bp.want = true; bp.total = null
+  bp.dev.addEventListener("gattserverdisconnected", bpLost)
+  try { await bpLink(); showOverlay("BATTLE PASS PŘIPOJEN", "win") }
+  catch (e) { bp.want = false; bpState(false); bpMsg("Battle Pass se nepřipojil: " + esc(e.message) + "<br>Je zapnutý a není připojený k jiné aplikaci?") }
+}
+async function bpLost() {
+  bpState(false); bp.cmd = null
+  if (!bp.want) return
+  if (bp.retry++ < 3) {                                 // výpadek signálu – zkus to znovu
+    document.body.classList.add("bp-on"); document.getElementById("bpShot").className = "bpShot idle"
+    document.getElementById("bpShot").innerHTML = "<b>BP · PŘIPOJUJI…</b>"
+    setTimeout(async () => { try { await bpLink() } catch { bpLost() } }, 1500 * bp.retry)
+    return
+  }
+  bp.want = false; document.body.classList.remove("bp-on")
+  showOverlay("BATTLE PASS ODPOJEN", "xtreme")
+}
+function bpDisconnect() { bp.want = false; try { bp.dev?.gatt?.disconnect() } catch {}; bpState(false) }
+function bpMsg(html) { jShow(`<h3>BATTLE PASS</h3><p>${html}</p><div class="jRow"><button class="qr-btn confirm" onclick="jHide()">OK</button></div>`) }
+function bpMenu() {
+  if (!bp.on) {
+    jShow(`<h3>BATTLE PASS</h3><p>Připoj BEYBATTLE PASS (BX-09) přes Bluetooth – po každém odpalu se nad +3 ukáže jeho síla.<br><small style="opacity:.7">Battle Pass nesmí být zároveň připojený k jiné aplikaci.</small></p>
+      <div class="jRow"><button class="qr-btn cancel" onclick="jHide()">ZPĚT</button><button class="qr-btn bp" id="bpGo">PŘIPOJIT BATTLE PASS</button></div>`)
+    document.getElementById("bpGo").onclick = () => { jHide(); bpConnect() }
+    return
+  }
+  jShow(`<h3>BATTLE PASS</h3><p>Připojeno${bp.battery != null ? " · baterie ≈ " + bpBatt() : ""}${bp.total != null ? " · odpalů celkem " + bp.total : ""}</p>
+    <div class="jRow"><button class="qr-btn cancel" id="bpOff">ODPOJIT</button><button class="qr-btn confirm" onclick="jHide()">ZPĚT</button><button class="qr-btn bp" id="bpSt">STATISTIKA</button></div>`)
+  document.getElementById("bpSt").onclick = bpStats
+  document.getElementById("bpOff").onclick = () => { jHide(); bpDisconnect(); showOverlay("BATTLE PASS ODPOJEN", "xtreme") }
+}
+function bpBlock(title, list, newest) {
+  if (!list.length) return `<div class="bpSub">${title}</div><p style="opacity:.6">Zatím žádný odpal.</p>`
+  const max = Math.max(...list), min = Math.min(...list), avg = Math.round(list.reduce((a, x) => a + x, 0) / list.length)
+  return `<div class="bpSub">${title} · ${list.length}×</div>
+    <div class="bpTiles"><div class="bpTile"><small>POSLEDNÍ</small><b>${bpFmt(list[0])}</b></div><div class="bpTile max"><small>NEJSILNĚJŠÍ</small><b>${bpFmt(max)}</b></div>
+      <div class="bpTile min"><small>NEJSLABŠÍ</small><b>${bpFmt(min)}</b></div><div class="bpTile"><small>PRŮMĚR</small><b>${bpFmt(avg)}</b></div></div>
+    <div class="bpChips">${list.slice(0, 20).map((v, i) => `<span class="bpChip ${v === max ? "max" : v === min ? "min" : ""} ${i === 0 && newest ? "new" : ""}">${bpFmt(v)}</span>`).join("")}</div>`
+}
+function bpStats() {
+  const sess = bpSession().map(x => x.rpm), mem = [...bp.mem].reverse()
+  jShow(`<div id="bpStats"><h3>BATTLE PASS · STATISTIKA</h3>
+    ${bpBlock("DNES", sess, true)}
+    ${bpBlock("PAMĚŤ BATTLE PASSU (POSLEDNÍCH 50)", mem, false)}
+    <p style="font-size:13px;opacity:.6;margin-top:10px">Hodnoty jsou otáčky za minutu (RPM). Žlutě nejsilnější, červeně nejslabší.</p>
+    <div class="jRow"><button class="qr-btn bp" id="bpReload">⟳ NAČÍST Z BATTLE PASSU</button><button class="qr-btn confirm" onclick="jHide()">ZPĚT</button></div></div>`, "wide")
+  document.getElementById("bpReload").onclick = () => bpCommand(0x74).then(() => setTimeout(() => { if (document.getElementById("bpStats")) bpStats() }, 1300))
+}
+/* tahací tlačítko BATTLE PASS (vpravo nad menu) – táhni doleva nebo nahoru */
+;(function () {
+  const btn = document.getElementById("bpBtn")
+  if (navigator.bluetooth) document.body.classList.add("has-bt")
+  let sx = 0, sy = 0, dragging = false
+  btn.addEventListener("pointerdown", e => { dragging = true; sx = e.clientX; sy = e.clientY; btn.setPointerCapture(e.pointerId) })
+  btn.addEventListener("pointermove", e => {
+    if (!dragging) return
+    const dx = e.clientX - sx, dy = e.clientY - sy
+    btn.style.transform = `translate(${dx}px,${dy}px)`
+    screenMode.classList.add("bp")
+    screenMode.classList.toggle("active", dx < -80 || dy < -80)
+  })
+  const end = (commit) => {
+    if (!dragging) return
+    btn.style.transform = ""
+    const go = commit && screenMode.classList.contains("active")
+    screenMode.classList.remove("active"); setTimeout(() => screenMode.classList.remove("bp"), 250)
+    dragging = false
+    if (!go) return
+    if (vibrateEnabled) navigator.vibrate?.(40)
+    bpMenu()
+  }
+  btn.addEventListener("pointerup", () => end(true))
+  btn.addEventListener("pointercancel", () => end(false))
 })()
 
 /* ── DEV INFO ── */
