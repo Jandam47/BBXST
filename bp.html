@@ -76,6 +76,7 @@
     </div>
   </div>
   <p class="small muted" id="headInfo" style="margin-top:8px"></p>
+  <p id="btnInfo" hidden style="margin:4px 0;padding:6px 10px;border:1px solid var(--bolt);border-radius:8px;color:var(--bolt);font-weight:700"></p>
   <div id="launch" hidden>
     <div class="row" style="align-items:baseline;gap:10px;margin-top:6px">
       <span class="muted small">Poslední výstřel</span>
@@ -118,7 +119,7 @@ const LS = 'bbxu_bp_extra'
 let device = null, lines = [], last = {}
 // Battle Pass: data 55c4f002 (read / notify), příkazy 55c4f001 (write without response)
 const BP_DATA = '55c4f002-f8eb-11ec-b939-0242ac120002', BP_CMD = '55c4f001-f8eb-11ec-b939-0242ac120002'
-let cmdChar = null, pages = {}
+let cmdChar = null, pages = {}, lastFlags = null, clicks = 0
 const short = (u) => /^0000([0-9a-f]{4})-0000-1000-8000-00805f9b34fb$/i.test(u) ? '0x' + u.slice(4, 8).toUpperCase() : u
 const hexOf = (dv) => Array.from(new Uint8Array(dv.buffer, dv.byteOffset, dv.byteLength), (b) => b.toString(16).padStart(2, '0'))
 const ts = () => { const d = new Date(); return d.toLocaleTimeString('cs-CZ', { hour12: false }) + '.' + String(d.getMilliseconds()).padStart(3, '0') }
@@ -167,6 +168,13 @@ function decode(bytes) {
   if (tag === 0xa0 && bytes.length >= 17) {
     // baterie: BB 129 = 53 % podle jiné appky → % ≈ BB / 2,43 (zatím jeden bod kalibrace)
     // a0 3a 00 RR BB 00 00 HH HH CC CC + MAC pozpátku (RR 04 = připraveno, BB baterie?, HH rekord? LE, CC výstřelů celkem LE)
+    // [3] příznaky: 0x04 = připraveno ke střelbě, 0x10 = přepne se při každém dvojkliku tlačítka
+    if (lastFlags !== null && ((bytes[3] ^ lastFlags) & 0x10)) {
+      clicks++; $('#btnInfo').textContent = `🔘 Dvojklik tlačítka · ${clicks}×`; $('#btnInfo').hidden = false
+      $('#btnInfo').animate([{ background: 'rgba(255,214,10,.35)' }, { background: 'transparent' }], 600)
+      addLine({ kind: 'mark', time: ts(), text: `🔘 DVOJKLIK TLAČÍTKA (${clicks}.)` })
+    }
+    lastFlags = bytes[3]
     const hi = bytes[7] | (bytes[8] << 8), total = bytes[9] | (bytes[10] << 8)
     $('#headInfo').textContent = `Výstřelů celkem: ${total} · rekord?: ${hi} · ${bytes[3] === 4 ? 'připraveno ke střelbě' : 'čeká'} · baterie ≈ ${Math.min(100, Math.round(bytes[4] / 2.43))} % (${bytes[4]})`
     pages = {}
@@ -238,7 +246,7 @@ async function connect() {
   try {
     status('Vyber Battle Pass v seznamu…')
     device = await navigator.bluetooth.requestDevice({ acceptAllDevices: true, optionalServices: candidates() })
-    device.addEventListener('gattserverdisconnected', () => { cmdChar = null; status('Odpojeno.', 'err'); addLine({ kind: 'info', time: ts(), text: 'Zařízení se odpojilo.' }); $('#disconnect').disabled = true; $('#connect').disabled = false })
+    device.addEventListener('gattserverdisconnected', () => { cmdChar = null; lastFlags = null; status('Odpojeno.', 'err'); addLine({ kind: 'info', time: ts(), text: 'Zařízení se odpojilo.' }); $('#disconnect').disabled = true; $('#connect').disabled = false })
     status(`Připojuji k „${device.name || 'bez jména'}“…`)
     const server = await device.gatt.connect()
     addLine({ kind: 'info', time: ts(), text: `Připojeno: ${device.name || '(bez jména)'} · id ${device.id}` })

@@ -15,7 +15,7 @@ MOCK = r"""
     mkChar('00002a19-0000-1000-8000-00805f9b34fb', { read: true }, []) ] }
   const bpData = mkChar('55c4f002-f8eb-11ec-b939-0242ac120002', { read: true, notify: true }, [])
   bpData.readValue = async () => new DataView(new Uint8Array([0xa0,0x3a,0,4,0xff,0,0,0,0x16,0x1d,0,0x35,0xb4,4,0x51,0xc4,0xda]).buffer)
-  const emit = (arr) => { bpData.value = new DataView(new Uint8Array(arr).buffer); bpData.dispatchEvent(new Event('characteristicvaluechanged')) }
+  const emit = window.__emit = (arr) => { bpData.value = new DataView(new Uint8Array(arr).buffer); bpData.dispatchEvent(new Event('characteristicvaluechanged')) }
   const bpCmd = { uuid: '55c4f001-f8eb-11ec-b939-0242ac120002', properties: { writeWithoutResponse: true }, writeValueWithoutResponse: async (v) => {
     window.__cmds = (window.__cmds || []).concat(v[0])
     if (v[0] === 0x51) emit([0xa0,0x3a,0,4,0xd3,0,0,0x71,0x0f,3,0,0x35,0xb4,4,0x51,0xc4,0xda])
@@ -50,6 +50,9 @@ with sync_playwright() as p:
     assert 'a2 0c 00 05' in log and '[0]3234' in log and 'výstřel 1' in log, log
     assert pg.evaluate("document.querySelectorAll('.hex b').length") >= 3   # změněné bajty 2. zprávy: b0 0d 06
     pg.evaluate('window.__launch()'); pg.wait_for_timeout(100)
+    pg.evaluate("window.__hdr = (f) => { const v = [0xa0,0x3a,0,f,0x81,0,0,0xe9,0x6c,0xf0,0,0x64,0x4c,4,0x51,0xc4,0xda]; window.__emit(v) }")
+    pg.evaluate('window.__hdr(0x10)'); pg.evaluate('window.__hdr(0x00)'); pg.evaluate('window.__hdr(0x00)'); pg.wait_for_timeout(50)
+    assert 'Dvojklik tlačítka · 2×' in pg.text_content('#btnInfo'), pg.text_content('#btnInfo')
     assert pg.text_content('#lRpm') == '6198', pg.text_content('#lRpm')
     assert 'po 7. otáčce' in pg.text_content('#lInfo'), pg.text_content('#lInfo')
     assert pg.evaluate("document.querySelectorAll('#lCurve circle').length") == 18
